@@ -105,6 +105,16 @@ table.trend tr:hover td { background:var(--scb-l); }
   opacity:0.55; transition:opacity .12s;
 }
 .drill-btn:hover { opacity:1; background:var(--scb-l); }
+
+/* iPad / iPhone: route pinch + drag gestures to Plotly instead of letting
+   Safari try to zoom the whole page. The Plotly modebar (top-right of the
+   chart) always shows tap-able zoom-in / zoom-out / reset buttons. */
+#bubble {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* drill-down modal drawer */
 #drill-overlay {
   display:none; position:fixed; inset:0; z-index:900;
@@ -480,6 +490,10 @@ function drawBubble() {
             gridcolor:"#eceff1", zerolinecolor:"#cccccc", zerolinewidth:1.5, ticksuffix:"%" },
     margin:{l:64,r:24,t:14,b:52}
   }, {scrollZoom:true, responsive:true, displaylogo:false,
+      // displayModeBar:true keeps the zoom-in / zoom-out / reset toolbar
+      // pinned visible so users on iPad / iPhone (where pinch-to-zoom on
+      // Plotly is unreliable in Safari) have tap-able zoom buttons.
+      displayModeBar:true,
       modeBarButtonsToRemove:["select2d","lasso2d","autoScale2d"]}).then(gd=>{
     if(!_bound){ _bound=true;
       gd.on("plotly_relayout", e=>{ if(!_placing && e && Object.keys(e).some(k=>k.indexOf("axis")>=0)) placeLabels(); });
