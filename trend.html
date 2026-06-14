@@ -513,27 +513,26 @@ function drawBubble() {
 // touch handler intercepts the gesture and calls Plotly.relayout directly.
 // ---------------------------------------------------------------------------
 function attachPinchZoom(gd){
-  let pinching = false;
-  let prevDist = 0;
+  let pinching = false, prevDist = 0, savedDragmode = "pan";
   const touchDist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-  function plotPx(centerX, centerY){
+  function plotPx(cx, cy){
     const sz = gd._fullLayout && gd._fullLayout._size;
     if (!sz) return null;
     const rect = gd.getBoundingClientRect();
-    return {
-      xFrac: (centerX - rect.left - sz.l) / sz.w,
-      yFrac: 1 - (centerY - rect.top - sz.t) / sz.h,
-    };
+    return { xFrac: (cx - rect.left - sz.l) / sz.w,
+             yFrac: 1 - (cy - rect.top - sz.t) / sz.h };
   }
   gd.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 2) return;
     pinching = true;
     prevDist = touchDist(e.touches[0], e.touches[1]);
-    e.preventDefault();
-  }, { passive: false });
+    savedDragmode = (gd._fullLayout && gd._fullLayout.dragmode) || "pan";
+    Plotly.relayout(gd, { dragmode: false });   // disable pan during pinch
+    e.preventDefault(); e.stopPropagation();
+  }, { passive: false, capture: true });
   gd.addEventListener("touchmove", (e) => {
     if (!pinching || e.touches.length !== 2) return;
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const newDist = touchDist(e.touches[0], e.touches[1]);
     if (newDist < 5 || prevDist < 5) return;
     const scale = newDist / prevDist;
@@ -555,10 +554,14 @@ function attachPinchZoom(gd){
       "yaxis.range": [yCD - frac.yFrac * yW, yCD + (1 - frac.yFrac) * yW],
     });
     prevDist = newDist;
-  }, { passive: false });
-  const stop = () => { pinching = false; prevDist = 0; };
-  gd.addEventListener("touchend", (e) => { if (e.touches.length < 2) stop(); });
-  gd.addEventListener("touchcancel", stop);
+  }, { passive: false, capture: true });
+  const stop = () => {
+    if (!pinching) return;
+    pinching = false; prevDist = 0;
+    Plotly.relayout(gd, { dragmode: savedDragmode || "pan" });  // restore pan
+  };
+  gd.addEventListener("touchend",    (e) => { if (e.touches.length < 2) stop(); }, true);
+  gd.addEventListener("touchcancel", stop, true);
 }
 
 const COLS = [
