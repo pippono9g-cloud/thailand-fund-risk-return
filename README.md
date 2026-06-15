@@ -1,24 +1,28 @@
-# Thailand Fund Risk Return Dashboard
+# Thailand Fund Dashboards
 
-Interactive risk-return scatter plot of all ~3,300 Thai mutual funds, with
-sub-category and SCB shelf filters, OR-style search, master-fund SD proxies,
-1-Year spider benchmark per fund, and Top-20 / Worst-20 tables.
+Four interactive dashboards covering ~3,300 Thai mutual funds, built from the
+Thailand SEC Open Data API (api.sec.or.th) and auto-refreshed daily at 11:00 AM
+Bangkok time.
 
-Open the live dashboard ➜ **[index.html](./index.html)**
+| Dashboard | Purpose |
+|---|---|
+| **[Risk Return](./index.html)** | Risk-return scatter with sub-category and SCB shelf filters, OR-style search, master-fund SD proxies, 1-Year spider benchmark, Top-20 / Worst-20 tables. |
+| **[Growth Comparison](./growth.html)** | Cumulative growth overlay — pick funds to compare price performance over 1W → Max. Raw NAV per class (ex-dividend dips visible). |
+| **[Trend](./trend.html)** | Sub-category return vs AUM-change bubble chart with drill-down per category. |
+| **[Portfolio Construction](./portfolio.html)** | Build a model portfolio of up to 15 funds with 0-100% weight sliders. Weighted 1Y expected return (manual override per fund), naive-weighted SD / Sharpe / Max Drawdown. |
 
-## Data
+## Dividend treatment
 
-Latest snapshot: **8 Jun 2026** (1,373 funds with 8-Jun NAV, 1,336 with 5-Jun NAV).
+Returns and risk stats use a **Total Return proxy**: dividend share classes (e.g. `LHSEMICON-D`) borrow the metrics of their sister Acc class (which auto-reinvests, so it IS the total-return series). 154 Div funds are covered this way. 22 pure-Div funds with no Acc sibling are tagged `price-only` — their numbers under-report total return.
 
-Source: Bloomberg / Morningstar feed via SCB CIO.
+The Growth Comparison chart intentionally keeps raw NAV per class so users can see price performance and ex-date dips.
 
-## How to update
+## Data freshness
 
-Replace `index.html` with the freshly rebuilt
-`Thailand_Fund_RiskReturn.html` from the corresponding weekly folder
-(e.g. `20260615/`, `20260622/`) — keep the filename `index.html` so GitHub
-Pages picks it up as the default page.
+Each dashboard's footer shows its own as-of date. The pipeline pulls the previous business day's NAVs after 11:00 AM each weekday.
+
+Source: Thailand SEC Open Data API (<https://api.sec.or.th>). Stats are computed locally from daily NAV history (no Morningstar dependency).
 
 ## License / usage
 
-For internal SCB CIO use unless otherwise approved.
+Research preview. For internal use; not investment advice.
