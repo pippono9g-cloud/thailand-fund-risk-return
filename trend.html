@@ -51,9 +51,33 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .date-range-row .dr-label { font-size:11px; font-weight:700; color:var(--scb); text-transform:uppercase; letter-spacing:0.04em; }
 .date-range-row .dr-field { display:inline-flex; align-items:center; gap:6px; }
 .date-range-row .dr-sub { font-size:11px; color:var(--mute); }
-.date-range-row input[type=date] { border:1px solid var(--rule); border-radius:6px; padding:4px 8px;
-                                    font-size:12.5px; color:var(--ink); background:#fff; font-family:inherit; }
-.date-range-row input[type=date]:focus { outline:none; border-color:var(--scb); }
+/* Custom DD Mon YYYY date picker — consistent format across all locales */
+.dp-trigger { border:1px solid var(--rule); border-radius:6px; padding:4px 12px;
+              font-size:12.5px; color:var(--ink); background:#fff; cursor:pointer;
+              font-family:inherit; min-width:108px; text-align:left;
+              font-variant-numeric:tabular-nums; }
+.dp-trigger:hover { border-color:var(--scb); }
+.dp-trigger:focus { outline:none; border-color:var(--scb); box-shadow:0 0 0 2px rgba(79,35,138,0.12); }
+.dp-popup { position:absolute; z-index:1000; margin-top:6px;
+            background:#fff; border:1px solid var(--rule); border-radius:8px;
+            box-shadow:0 6px 22px rgba(13,30,60,0.15); padding:12px;
+            width:240px; display:none; }
+.dp-popup.open { display:block; }
+.dp-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.dp-nav { background:none; border:1px solid transparent; border-radius:6px; cursor:pointer;
+          padding:4px 10px; font-size:14px; color:var(--scb); font-family:inherit; }
+.dp-nav:hover { background:var(--scb-l); }
+.dp-title { font-weight:700; font-size:13px; color:var(--ink); }
+.dp-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; font-size:11.5px; }
+.dp-dow { font-weight:700; color:var(--mute); text-align:center; padding:3px 0; font-size:10.5px;
+          text-transform:uppercase; letter-spacing:0.04em; }
+.dp-day { text-align:center; padding:5px 0; cursor:pointer; border-radius:5px;
+          color:var(--ink); font-variant-numeric:tabular-nums; }
+.dp-day.empty { cursor:default; }
+.dp-day:hover:not(.empty):not(.disabled) { background:var(--scb-l); color:var(--scb); }
+.dp-day.selected { background:var(--scb); color:#fff; font-weight:700; }
+.dp-day.disabled { color:#d4d8de; cursor:not-allowed; }
+.dr-field { position:relative; }
 .date-range-row .dr-active { font-size:11.5px; color:var(--scb); font-weight:600; padding:3px 9px;
                               background:var(--scb-l); border-radius:999px; }
 .pills { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 4px; }
@@ -221,8 +245,28 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
   </div>
   <div class="date-range-row">
     <span class="dr-label">Date range</span>
-    <span class="dr-field"><span class="dr-sub">From</span><input type="date" id="date-from"></span>
-    <span class="dr-field"><span class="dr-sub">To</span><input type="date" id="date-to"></span>
+    <span class="dr-field"><span class="dr-sub">From</span>
+      <button type="button" class="dp-trigger" id="dp-from-trigger" onclick="dpToggle('from', event)">—</button>
+      <div class="dp-popup" id="dp-from-popup">
+        <div class="dp-header">
+          <button type="button" class="dp-nav" onclick="dpStepMonth('from', -1)">‹</button>
+          <span class="dp-title" id="dp-from-title"></span>
+          <button type="button" class="dp-nav" onclick="dpStepMonth('from', 1)">›</button>
+        </div>
+        <div class="dp-grid" id="dp-from-grid"></div>
+      </div>
+    </span>
+    <span class="dr-field"><span class="dr-sub">To</span>
+      <button type="button" class="dp-trigger" id="dp-to-trigger" onclick="dpToggle('to', event)">—</button>
+      <div class="dp-popup" id="dp-to-popup">
+        <div class="dp-header">
+          <button type="button" class="dp-nav" onclick="dpStepMonth('to', -1)">‹</button>
+          <span class="dp-title" id="dp-to-title"></span>
+          <button type="button" class="dp-nav" onclick="dpStepMonth('to', 1)">›</button>
+        </div>
+        <div class="dp-grid" id="dp-to-grid"></div>
+      </div>
+    </span>
     <span class="dr-active" id="dr-active-label">Last 1 Year</span>
     <span style="flex:1"></span>
   </div>
@@ -470,7 +514,7 @@ function renderDrill(){
   $("drill-stats").innerHTML =
     (flow!=null?`<span>Implied flow <b class="${retCls(+flow)}">${flow>=0?"+":""}${flow} pp</b></span>`:"") +
     `<span>AUM change <b class="${retCls(wd.a??null)}">${fmtRet(wd.a??null)}</b></span>` +
-    `<span>${WINDOWS[W]} return <b class="${retCls(wd.r??null)}">${fmtRet(wd.r??null)}</b></span>` +
+    `<span>${currentWindowLabel()} return <b class="${retCls(wd.r??null)}">${fmtRet(wd.r??null)}</b></span>` +
     `<span>AUM <b>${(entry.aum||0).toFixed(1)} B THB</b></span>`;
 }
 
@@ -577,11 +621,87 @@ function presetDateRange(idx){
   return { from, to: lastIso };
 }
 
+/* ---------- Custom DD Mon YYYY date picker ---------- */
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_LONG  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const dpState = {
+  from: { value: null, viewYear: null, viewMonth: null },
+  to:   { value: null, viewYear: null, viewMonth: null }
+};
+const _dpBounds = { min: null, max: null };
+
+function _fmtDate(iso){
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTH_SHORT[m-1]} ${y}`;
+}
+function _isoFromYMD(y, m, d){
+  return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+}
+function dpRender(field){
+  const s = dpState[field];
+  const y = s.viewYear, m = s.viewMonth;
+  $(`dp-${field}-title`).textContent = `${MONTH_LONG[m-1]} ${y}`;
+  const firstDow  = new Date(Date.UTC(y, m-1, 1)).getUTCDay();   // 0..6 Sun..Sat
+  const daysInMo  = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let h = ["S","M","T","W","T","F","S"].map(d => `<div class="dp-dow">${d}</div>`).join("");
+  for (let i=0; i<firstDow; i++) h += `<div class="dp-day empty"></div>`;
+  for (let d=1; d<=daysInMo; d++) {
+    const iso = _isoFromYMD(y, m, d);
+    const cls = [];
+    if (iso === s.value) cls.push("selected");
+    if (_dpBounds.min && iso < _dpBounds.min) cls.push("disabled");
+    if (_dpBounds.max && iso > _dpBounds.max) cls.push("disabled");
+    h += `<div class="dp-day ${cls.join(" ")}" onclick="dpPick('${field}','${iso}',${cls.includes('disabled')})">${d}</div>`;
+  }
+  $(`dp-${field}-grid`).innerHTML = h;
+}
+function dpToggle(field, ev){
+  if (ev) ev.stopPropagation();
+  // close the other popup
+  const other = field === "from" ? "to" : "from";
+  $(`dp-${other}-popup`).classList.remove("open");
+  const popup = $(`dp-${field}-popup`);
+  const wasOpen = popup.classList.contains("open");
+  popup.classList.toggle("open");
+  if (!wasOpen) dpRender(field);
+}
+function dpStepMonth(field, delta){
+  const s = dpState[field];
+  s.viewMonth += delta;
+  while (s.viewMonth < 1)  { s.viewMonth += 12; s.viewYear--; }
+  while (s.viewMonth > 12) { s.viewMonth -= 12; s.viewYear++; }
+  dpRender(field);
+}
+function dpPick(field, iso, disabled){
+  if (disabled) return;
+  dpState[field].value = iso;
+  $(`dp-${field}-trigger`).textContent = _fmtDate(iso);
+  $(`dp-${field}-popup`).classList.remove("open");
+  applyCustomRange();
+}
+function dpSet(field, iso){
+  // Programmatic set (used by preset pills) — no recompute trigger
+  const [y, m] = iso.split("-").map(Number);
+  const s = dpState[field];
+  s.value = iso;
+  s.viewYear = y;
+  s.viewMonth = m;
+  $(`dp-${field}-trigger`).textContent = _fmtDate(iso);
+}
+// Close any open popup when clicking outside
+document.addEventListener("click", e => {
+  if (!e.target.closest(".dr-field")) {
+    $("dp-from-popup").classList.remove("open");
+    $("dp-to-popup").classList.remove("open");
+  }
+});
+
 // Sync the From/To inputs to a preset window WITHOUT triggering custom mode
 function syncDateInputsTo(idx){
   const r = presetDateRange(idx); if (!r) return;
-  $("date-from").value = r.from;
-  $("date-to").value   = r.to;
+  dpSet("from", r.from);
+  dpSet("to",   r.to);
   $("dr-active-label").textContent = "Last " + WINDOWS[idx];
 }
 
@@ -594,19 +714,14 @@ function setWin(i){
 }
 
 function applyCustomRange(){
-  const from = $("date-from").value;
-  const to   = $("date-to").value;
+  const from = dpState.from.value;
+  const to   = dpState.to.value;
   if (!from || !to) return;
-  if (from >= to) {
-    // invalid — silently ignore to avoid yelling at the user mid-type
-    return;
-  }
+  if (from >= to) return;   // invalid — silently ignore
   CUSTOM.from = from; CUSTOM.to = to; CUSTOM.cache = null;
-  $("dr-active-label").textContent = "Custom: " + from + " → " + to;
+  $("dr-active-label").textContent = `Custom: ${_fmtDate(from)} → ${_fmtDate(to)}`;
   drawPills(); drawBubble(); drawTable(); if(drCat) renderDrill();
 }
-$("date-from").onchange = applyCustomRange;
-$("date-to").onchange   = applyCustomRange;
 
 const CORNER_ANN = [
   { xref:"paper", yref:"paper", x:0.02, y:0.97, xanchor:"left", yanchor:"top",
@@ -669,7 +784,7 @@ function drawBubble() {
       hovertemplate:"<b>%{customdata[0]}</b><br>" +
         "Implied flow: %{customdata[3]}<br>" +
         "AUM change: %{customdata[4]}<br>" +
-        "Return ("+WINDOWS[W]+"): %{customdata[5]}<br>" +
+        "Return ("+currentWindowLabel()+"): %{customdata[5]}<br>" +
         "AUM now: %{customdata[1]:,.1f}B THB · %{customdata[2]} classes<extra></extra>" }
   ], {
     paper_bgcolor:"#ffffff", plot_bgcolor:"#ffffff",
@@ -678,9 +793,9 @@ function drawBubble() {
     dragmode:"pan",
     hoverlabel:{ bgcolor:"#ffffff", bordercolor:"#d1d5db", font:{color:"#1a1a1a", size:12.5}, align:"left" },
     annotations: CORNER_ANN,
-    xaxis:{ title:{text:"<b>"+WINDOWS[W]+" median return (%)</b>", font:{size:12,color:"#4d4d4d"}},
+    xaxis:{ title:{text:"<b>"+currentWindowLabel()+" median return (%)</b>", font:{size:12,color:"#4d4d4d"}},
             gridcolor:"#eceff1", zerolinecolor:"#cccccc", zerolinewidth:1.5, ticksuffix:"%" },
-    yaxis:{ title:{text:"<b>"+WINDOWS[W]+" AUM change (%)</b>", font:{size:12,color:"#4d4d4d"}},
+    yaxis:{ title:{text:"<b>"+currentWindowLabel()+" AUM change (%)</b>", font:{size:12,color:"#4d4d4d"}},
             gridcolor:"#eceff1", zerolinecolor:"#cccccc", zerolinewidth:1.5, ticksuffix:"%" },
     margin:{l:64,r:24,t:14,b:52}
   }, {scrollZoom:true, responsive:true, displaylogo:false,
@@ -767,9 +882,18 @@ const COLS = [
   {k:"n",   lbl:"CLASSES"}
 ];
 function setSort(i){ SORT = SORT.col===i ? {col:i,dir:-SORT.dir} : {col:i,dir:i===0?1:-1}; drawTable(); }
+// Active window label — preset name in normal mode, "From → To" in custom mode.
+// All bubble axis titles, hover templates, and rankings table headings flow
+// through this so labels never disagree with the data being shown.
+function currentWindowLabel(){
+  return (CUSTOM.from && CUSTOM.to)
+    ? `${_fmtDate(CUSTOM.from)} → ${_fmtDate(CUSTOM.to)}`
+    : WINDOWS[W];
+}
+
 function drawTable() {
   const noun = GROUPING === "main" ? "Main categories" : "Sub-categories";
-  $("tbl-title").textContent = noun + " ranked — " + WINDOWS[W];
+  $("tbl-title").textContent = noun + " ranked — " + currentWindowLabel();
   $("thead").innerHTML = COLS.map((c,i) =>
     `<th class="${SORT.col===i?'sorted':''}" onclick="setSort(${i})">${c.lbl}${SORT.col===i?(SORT.dir>0?" ▲":" ▼"):""}</th>`).join("");
   const R = rows().sort((x,y)=>{
@@ -806,15 +930,13 @@ function applyGrouping(g) {
 }
 $("group-select").addEventListener("change", e => applyGrouping(e.target.value));
 
-// Initialise the date inputs to mirror the default preset window (1Y at startup)
-syncDateInputsTo(W);
-// Bound the date inputs to the embedded daily grid range
+// Bound the picker to the embedded daily grid range
 if (DAILY_GRID.length) {
-  $("date-from").min = DAILY_GRID[0];
-  $("date-from").max = DAILY_GRID[DAILY_GRID.length-1];
-  $("date-to").min   = DAILY_GRID[0];
-  $("date-to").max   = DAILY_GRID[DAILY_GRID.length-1];
+  _dpBounds.min = DAILY_GRID[0];
+  _dpBounds.max = DAILY_GRID[DAILY_GRID.length-1];
 }
+// Initialise to the default preset window (1Y at startup)
+syncDateInputsTo(W);
 
 drawPills(); drawBubble(); drawTable(); initSearch();
 </script>
