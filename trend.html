@@ -67,7 +67,25 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .dp-nav { background:none; border:1px solid transparent; border-radius:6px; cursor:pointer;
           padding:4px 10px; font-size:14px; color:var(--scb); font-family:inherit; }
 .dp-nav:hover { background:var(--scb-l); }
-.dp-title { font-weight:700; font-size:13px; color:var(--ink); }
+.dp-title { font-weight:700; font-size:13px; color:var(--ink); background:none; border:1px solid transparent;
+            border-radius:6px; padding:4px 10px; cursor:pointer; font-family:inherit;
+            display:inline-flex; align-items:center; gap:5px; }
+.dp-title:hover { background:var(--scb-l); color:var(--scb); }
+.dp-title::after { content:"▾"; font-size:9px; color:var(--mute); }
+.dp-title.open::after { content:"▴"; }
+/* Month + Year selector (hidden until the title is clicked) */
+.dp-moyr { display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--rule); }
+.dp-moyr.open { display:block; }
+.dp-mo-label { font-size:10px; font-weight:700; color:var(--mute);
+               text-transform:uppercase; letter-spacing:0.04em; margin:4px 0 4px; }
+.dp-mo-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin-bottom:8px; }
+.dp-yr-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; max-height:108px; overflow-y:auto; }
+.dp-mo-grid button, .dp-yr-grid button {
+  padding:5px 0; font-size:11px; cursor:pointer; border:1px solid var(--rule);
+  background:#fff; border-radius:5px; color:var(--ink); font-family:inherit;
+}
+.dp-mo-grid button:hover, .dp-yr-grid button:hover { background:var(--scb-l); color:var(--scb); border-color:var(--scb); }
+.dp-mo-grid button.current, .dp-yr-grid button.current { background:var(--scb); color:#fff; border-color:var(--scb); font-weight:700; }
 .dp-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; font-size:11.5px; }
 .dp-dow { font-weight:700; color:var(--mute); text-align:center; padding:3px 0; font-size:10.5px;
           text-transform:uppercase; letter-spacing:0.04em; }
@@ -250,10 +268,16 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
       <div class="dp-popup" id="dp-from-popup">
         <div class="dp-header">
           <button type="button" class="dp-nav" onclick="dpStepMonth('from', -1)">‹</button>
-          <span class="dp-title" id="dp-from-title"></span>
+          <button type="button" class="dp-title" id="dp-from-title" onclick="dpToggleMoYr('from', event)"></button>
           <button type="button" class="dp-nav" onclick="dpStepMonth('from', 1)">›</button>
         </div>
         <div class="dp-grid" id="dp-from-grid"></div>
+        <div class="dp-moyr" id="dp-from-moyr">
+          <div class="dp-mo-label">Month</div>
+          <div class="dp-mo-grid" id="dp-from-mo-grid"></div>
+          <div class="dp-mo-label">Year</div>
+          <div class="dp-yr-grid" id="dp-from-yr-grid"></div>
+        </div>
       </div>
     </span>
     <span class="dr-field"><span class="dr-sub">To</span>
@@ -261,10 +285,16 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
       <div class="dp-popup" id="dp-to-popup">
         <div class="dp-header">
           <button type="button" class="dp-nav" onclick="dpStepMonth('to', -1)">‹</button>
-          <span class="dp-title" id="dp-to-title"></span>
+          <button type="button" class="dp-title" id="dp-to-title" onclick="dpToggleMoYr('to', event)"></button>
           <button type="button" class="dp-nav" onclick="dpStepMonth('to', 1)">›</button>
         </div>
         <div class="dp-grid" id="dp-to-grid"></div>
+        <div class="dp-moyr" id="dp-to-moyr">
+          <div class="dp-mo-label">Month</div>
+          <div class="dp-mo-grid" id="dp-to-mo-grid"></div>
+          <div class="dp-mo-label">Year</div>
+          <div class="dp-yr-grid" id="dp-to-yr-grid"></div>
+        </div>
       </div>
     </span>
     <span class="dr-active" id="dr-active-label">Last 1 Year</span>
@@ -672,6 +702,46 @@ function dpStepMonth(field, delta){
   while (s.viewMonth < 1)  { s.viewMonth += 12; s.viewYear--; }
   while (s.viewMonth > 12) { s.viewMonth -= 12; s.viewYear++; }
   dpRender(field);
+  dpCloseMoYr(field);
+}
+function dpToggleMoYr(field, ev){
+  if (ev) ev.stopPropagation();
+  const open = $(`dp-${field}-moyr`).classList.toggle("open");
+  $(`dp-${field}-title`).classList.toggle("open", open);
+  if (open) dpRenderMoYr(field);
+}
+function dpCloseMoYr(field){
+  $(`dp-${field}-moyr`).classList.remove("open");
+  $(`dp-${field}-title`).classList.remove("open");
+}
+function dpRenderMoYr(field){
+  const s = dpState[field];
+  // Month grid (Jan..Dec)
+  let mh = "";
+  for (let m=1; m<=12; m++) {
+    const cur = m === s.viewMonth ? "current" : "";
+    mh += `<button type="button" class="${cur}" onclick="dpPickMo('${field}',${m})">${MONTH_SHORT[m-1]}</button>`;
+  }
+  $(`dp-${field}-mo-grid`).innerHTML = mh;
+  // Year list — derive from data bounds
+  const yMin = _dpBounds.min ? +_dpBounds.min.slice(0,4) : s.viewYear - 5;
+  const yMax = _dpBounds.max ? +_dpBounds.max.slice(0,4) : s.viewYear;
+  let yh = "";
+  for (let y=yMax; y>=yMin; y--) {
+    const cur = y === s.viewYear ? "current" : "";
+    yh += `<button type="button" class="${cur}" onclick="dpPickYr('${field}',${y})">${y}</button>`;
+  }
+  $(`dp-${field}-yr-grid`).innerHTML = yh;
+}
+function dpPickMo(field, m){
+  dpState[field].viewMonth = m;
+  dpRender(field);
+  dpCloseMoYr(field);
+}
+function dpPickYr(field, y){
+  dpState[field].viewYear = y;
+  dpRender(field);
+  dpCloseMoYr(field);
 }
 function dpPick(field, iso, disabled){
   if (disabled) return;
