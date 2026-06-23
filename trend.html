@@ -861,7 +861,18 @@ function placeLabels(){
     }
     for(const a of L){ a.lx=Math.max(x0+a.w/2, Math.min(x1-a.w/2, a.lx)); a.ly=Math.max(y0+a.h/2, Math.min(y1-a.h/2, a.ly)); }
   }
-  const ann = L.map(a=>({ x:a.d.r, y:a.d.a, xref:"x", yref:"y",
+  // Auto-hide labels that still overlap after spreading — larger AUM keeps its label.
+  // The hidden categories still show their bubble + hover card; only the text is dropped.
+  L.sort((p,q)=>(q.d.aum||0)-(p.d.aum||0));
+  const kept=[];
+  for(const a of L){
+    let clash=false;
+    for(const b of kept){
+      if(Math.abs(a.lx-b.lx) < (a.w+b.w)/2 + 1 && Math.abs(a.ly-b.ly) < (a.h+b.h)/2 + 1){ clash=true; break; }
+    }
+    if(!clash) kept.push(a);
+  }
+  const ann = kept.map(a=>({ x:a.d.r, y:a.d.a, xref:"x", yref:"y",
     ax:a.lx-a.px, ay:a.ly-a.py, axref:"pixel", ayref:"pixel",
     text:a.d.cat, showarrow:true, arrowhead:0, arrowwidth:0.7, arrowcolor:"#c8ccd2",
     font:{size:9.5, color:"#3a3a3a"}, bgcolor:"rgba(255,255,255,0.72)", borderpad:1 }));
