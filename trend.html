@@ -98,16 +98,33 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .dr-field { position:relative; }
 .date-range-row .dr-active { font-size:11.5px; color:var(--scb); font-weight:600; padding:3px 9px;
                               background:var(--scb-l); border-radius:999px; }
-.pills { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 4px; }
-.wpill {
-  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
-  border:1.5px solid var(--rule); border-radius:999px; padding:5px 14px;
-  font-size:12.5px; font-weight:600; color:var(--grey); background:#fff;
-  transition: all .12s ease; user-select:none;
+/* window selector = single dropdown control (one window shown at a time) */
+.pills { display:inline-flex; align-items:center; gap:9px; flex-wrap:wrap; margin:12px 0 4px; position:relative; }
+.wsel-label { font-size:11.5px; font-weight:600; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+.wdrop { position:relative; }
+.wsel {
+  display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+  border:1.5px solid var(--ink); border-radius:999px; padding:6px 15px;
+  font-size:12.5px; font-weight:600; color:#fff; background:var(--ink);
+  transition: all .12s ease; user-select:none; min-width:118px;
 }
-.wpill .dot { width:9px; height:9px; border-radius:50%; }
-.wpill:hover { border-color:var(--cyan); color:var(--ink); }
-.wpill.active { border-color:var(--ink); background:var(--ink); color:#fff; }
+.wsel .dot { width:9px; height:9px; border-radius:50%; }
+.wsel .wsel-cur { flex:1; }
+.wsel .caret { font-size:9px; opacity:.85; transition:transform .12s ease; }
+.wdrop.open .caret { transform:rotate(180deg); }
+.wmenu {
+  position:absolute; top:calc(100% + 6px); left:0; z-index:1000; display:none;
+  background:#fff; border:1px solid var(--rule); border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,.14); padding:5px; min-width:160px;
+}
+.wdrop.open .wmenu { display:block; }
+.wopt {
+  display:flex; align-items:center; gap:9px; cursor:pointer; white-space:nowrap;
+  border-radius:7px; padding:7px 11px; font-size:12.5px; font-weight:600; color:var(--grey);
+}
+.wopt .dot { width:9px; height:9px; border-radius:50%; }
+.wopt:hover { background:var(--soft); color:var(--ink); }
+.wopt.active { background:var(--ink); color:#fff; }
 .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--grey); margin:6px 0 0; }
 .legend .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
 table.trend { width:100%; border-collapse:collapse; margin-top:10px; font-size:12.5px; }
@@ -615,11 +632,25 @@ function initSearch() {
 }
 
 function drawPills() {
-  // When a custom range is active, no pill is highlighted
+  // When a custom range is active, no preset is selected
   const active = (CUSTOM.from && CUSTOM.to) ? -1 : W;
-  $("pills").innerHTML = WINDOWS.map((lbl,i) =>
-    `<span class="wpill${i===active?' active':''}" onclick="setWin(${i})">` +
-    `<span class="dot" style="background:${WIN_COLORS[i]}"></span>${lbl}</span>`).join("");
+  const cur = active < 0
+    ? '<span class="wsel-cur">Custom range</span>'
+    : `<span class="dot" style="background:${WIN_COLORS[active]}"></span><span class="wsel-cur">${WINDOWS[active]}</span>`;
+  $("pills").innerHTML =
+    '<span class="wsel-label">Quick window</span>' +
+    '<div class="wdrop" id="wdrop">' +
+      '<div class="wsel" id="wsel" tabindex="0" title="Pick a preset window">' +
+        cur + '<span class="caret">&#9660;</span>' +
+      '</div>' +
+      '<div class="wmenu" id="wmenu">' +
+        WINDOWS.map((lbl,i) =>
+          `<div class="wopt${i===active?' active':''}" onclick="setWin(${i})"><span class="dot" style="background:${WIN_COLORS[i]}"></span>${lbl}</div>`
+        ).join("") +
+      '</div>' +
+    '</div>';
+  const wsel = $("wsel");
+  if (wsel) wsel.onclick = e => { e.stopPropagation(); $("wdrop").classList.toggle("open"); };
 }
 // Convert a preset window pointer to (fromIso, toIso) anchored on the GLOBAL
 // data as-of date (last GRID date). Matches the preset calendar-month math
@@ -759,6 +790,8 @@ function dpSet(field, iso){
   s.viewMonth = m;
   $(`dp-${field}-trigger`).textContent = _fmtDate(iso);
 }
+// Close the window dropdown when clicking outside
+document.addEventListener("click", e => { const d = document.querySelector(".wdrop.open"); if (d && !d.contains(e.target)) d.classList.remove("open"); });
 // Close any open popup when clicking outside
 document.addEventListener("click", e => {
   if (!e.target.closest(".dr-field")) {
