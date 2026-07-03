@@ -437,11 +437,9 @@ function applyStyle(patch){
   setStyle(spId, patch);
   renderChips(); render(); renderStylePop();
 }
-document.addEventListener("click", e => {
-  const pop = $("style-pop");
-  if(pop.style.display === "block" && !pop.contains(e.target) &&
-     !e.target.closest(".dot") && !e.target.closest("#chart")) closeStylePop();
-});
+// The popover stays open while the user experiments — close only via the ✕
+// button (or Esc). No outside-click auto-close: restyling is iterative.
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeStylePop(); });
 
 /* ---------- date range ---------- */
 function setPresetActive(win){
@@ -728,8 +726,9 @@ function bindCustomHover(navMode){
         d = Math.abs(rect.top + ya._offset + ya.c2p(p.y) - ev.event.clientY);
       if(d < bestD){ bestD = d; best = p; }
     }
-    // hovermode "x" reports every trace at that x — only react to clicks near a line
-    if(!best || (ya && bestD > 28)){ closeStylePop(); return; }
+    // hovermode "x" reports every trace at that x — only react to clicks near a line.
+    // A far click does nothing (popover stays open; user closes it with ✕).
+    if(!best || (ya && bestD > 28)) return;
     const id = best.data && best.data.meta != null ? best.data.meta : state.sel[best.curveNumber];
     openStylePop(id, ev.event.clientX, ev.event.clientY);
   });
