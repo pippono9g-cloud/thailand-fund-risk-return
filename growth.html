@@ -112,10 +112,20 @@
   #style-pop .sp-row{display:flex;align-items:center;gap:8px;margin-top:2px}
   #style-pop .sp-row label{color:var(--mute);font-weight:600;flex:1}
   #style-pop input[type=color]{width:34px;height:24px;border:1px solid var(--rule);border-radius:5px;padding:1px;background:#fff;cursor:pointer}
-  #style-pop .wbtn{width:24px;height:24px;border:1px solid var(--rule);border-radius:6px;background:#fff;
-    cursor:pointer;font-weight:800;font-size:14px;line-height:1;color:var(--grey)}
-  #style-pop .wbtn:hover{border-color:var(--scb);color:var(--scb)}
-  #style-pop .wval{min-width:26px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+  #style-pop .sec-lbl{font-size:10px;font-weight:800;color:var(--mute);letter-spacing:.05em;
+    margin:10px 0 4px;text-transform:uppercase}
+  #style-pop .w-opt{display:flex;align-items:center;gap:10px;padding:6px 9px;border-radius:6px;
+    cursor:pointer;border:1px solid transparent}
+  #style-pop .w-opt:hover{background:#f5edfb}
+  #style-pop .w-opt.cur{background:#f5edfb;border-color:var(--scb)}
+  #style-pop .w-opt .wl{width:40px;font-weight:700;font-size:12px;flex-shrink:0}
+  #style-pop .w-opt .wline{flex:1;border-top-style:solid;border-top-color:#555}
+  #style-pop .d-row{display:flex;gap:6px}
+  #style-pop .d-opt{flex:1;display:flex;align-items:center;justify-content:center;padding:9px 6px;
+    border:1px solid var(--rule);border-radius:6px;cursor:pointer}
+  #style-pop .d-opt:hover{border-color:var(--scb)}
+  #style-pop .d-opt.cur{border-color:var(--scb);background:#f5edfb}
+  #style-pop .d-opt .dline{width:100%;border-top-width:2px;border-top-color:#555}
   #style-pop .sp-reset{margin-top:9px;font-size:11.5px;color:var(--mute);cursor:pointer;text-decoration:underline}
   #style-pop .sp-reset:hover{color:var(--scb)}
   /* Hide Plotly's default hover cards; custom chart annotations below replace them. */
@@ -231,11 +241,23 @@ function setStyle(id, patch){
   const s = Object.assign({}, STYLES[c], patch);
   if(s.color == null) delete s.color;
   if(s.width == null || s.width === 2) delete s.width;
+  if(s.dash == null || s.dash === "solid") delete s.dash;
   if(Object.keys(s).length) STYLES[c] = s; else delete STYLES[c];
   try{ localStorage.setItem(STYLE_KEY, JSON.stringify(STYLES)); }catch(e){}
 }
 function colorFor(id){ return styleOf(id).color || PALETTE[state.sel.indexOf(id) % PALETTE.length]; }
 function widthFor(id){ return styleOf(id).width || 2; }
+function dashFor(id){  return styleOf(id).dash  || "solid"; }
+/* Line-weight presets in pt (converted to px at 96/72) — 1½ pt = 2px = default */
+const WEIGHTS = [
+  {lbl:"¼ pt",  w:0.33}, {lbl:"½ pt",  w:0.67}, {lbl:"¾ pt",  w:1},
+  {lbl:"1 pt",  w:1.33}, {lbl:"1½ pt", w:2},    {lbl:"2¼ pt", w:3},
+];
+const DASHES = [
+  {k:"solid", css:"solid",  lbl:"Solid"},
+  {k:"dash",  css:"dashed", lbl:"Dash"},
+  {k:"dot",   css:"dotted", lbl:"Dot"},
+];
 
 // First grid index on/after the window cutoff date. The cutoff is computed
 // from a per-fund reference date (the fund's own last NAV) so the resulting
@@ -387,22 +409,28 @@ function openStylePop(id, cx, cy){
 function closeStylePop(){ $("style-pop").style.display = "none"; spId = null; }
 function renderStylePop(){
   const pop = $("style-pop"); if(spId == null) return;
-  const m = byId.get(spId), cur = colorFor(spId), w = widthFor(spId);
+  const m = byId.get(spId), cur = colorFor(spId), w = widthFor(spId), dash = dashFor(spId);
   pop.innerHTML =
     `<div class="sp-title"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${cur}"></span>${m?m.c:""}<span class="x" title="Close">✕</span></div>` +
     `<div class="sw-grid">` + PALETTE.map(c =>
       `<span class="sw ${c.toLowerCase()===cur.toLowerCase()?"cur":""}" data-c="${c}" style="background:${c}"></span>`).join("") + `</div>` +
     `<div class="sp-row"><label>Custom color</label><input type="color" value="${cur}"></div>` +
-    `<div class="sp-row"><label>Line width</label><button class="wbtn" data-d="-1">−</button><span class="wval">${(+w.toFixed(1)).toString()}</span><button class="wbtn" data-d="1">+</button></div>` +
+    `<div class="sec-lbl">Line weight</div>` +
+    WEIGHTS.map(o =>
+      `<div class="w-opt ${Math.abs(o.w - w) < 0.05 ? "cur" : ""}" data-w="${o.w}">` +
+      `<span class="wl">${o.lbl}</span>` +
+      `<span class="wline" style="border-top-width:${o.w}px;border-top-style:${DASHES.find(d=>d.k===dash).css}"></span></div>`).join("") +
+    `<div class="sec-lbl">Line style</div>` +
+    `<div class="d-row">` + DASHES.map(d =>
+      `<div class="d-opt ${d.k===dash?"cur":""}" data-k="${d.k}" title="${d.lbl}">` +
+      `<span class="dline" style="border-top-style:${d.css}"></span></div>`).join("") + `</div>` +
     `<div class="sp-reset">Reset to default</div>`;
   pop.querySelector(".x").onclick = closeStylePop;
   pop.querySelectorAll(".sw").forEach(s => s.onclick = () => applyStyle({color:s.dataset.c}));
   pop.querySelector("input[type=color]").oninput = e => applyStyle({color:e.target.value});
-  pop.querySelectorAll(".wbtn").forEach(b => b.onclick = () => {
-    const nw = Math.min(6, Math.max(0.5, widthFor(spId) + (+b.dataset.d) * 0.5));
-    applyStyle({width:nw});
-  });
-  pop.querySelector(".sp-reset").onclick = () => applyStyle({color:null, width:null});
+  pop.querySelectorAll(".w-opt").forEach(o => o.onclick = () => applyStyle({width:+o.dataset.w}));
+  pop.querySelectorAll(".d-opt").forEach(o => o.onclick = () => applyStyle({dash:o.dataset.k}));
+  pop.querySelector(".sp-reset").onclick = () => applyStyle({color:null, width:null, dash:null});
 }
 function applyStyle(patch){
   if(spId == null) return;
@@ -774,7 +802,8 @@ function render(){
       xs.push(GRID[di[k]]);
       ys.push(navMode ? v : +(100*(v/base-1)).toFixed(2));
     }
-    traces.push({ x:xs, y:ys, type:"scatter", mode:"lines", name:m.c, meta:id, line:{color:col,width:widthFor(id)},
+    traces.push({ x:xs, y:ys, type:"scatter", mode:"lines", name:m.c, meta:id,
+      line:{color:col, width:widthFor(id), dash:dashFor(id)},
       hovertemplate: navMode ? `${m.c}&nbsp;&nbsp;%{y:.4f}<extra></extra>`
                              : `${m.c}&nbsp;&nbsp;%{y:+.2f}%<extra></extra>` });
     const dpts = dividendMarkerPoints(id, di, cl, baseK, base, toIdx, navMode);
