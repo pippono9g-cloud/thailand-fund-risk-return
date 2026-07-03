@@ -100,6 +100,24 @@
   .pos{color:#15803d} .neg{color:#b91c1c}
   .foot{margin-top:16px;font-size:11.5px;color:var(--mute);border-top:1px solid var(--rule);padding-top:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
   .hint{font-size:12px;color:var(--mute)}
+  /* style popover — click a line / color dot to change color & line width */
+  #style-pop{position:fixed;z-index:950;display:none;background:#fff;border:1px solid var(--rule);
+    border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:11px 13px;width:210px;font-size:12px}
+  #style-pop .sp-title{font-weight:800;font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  #style-pop .sp-title .x{margin-left:auto;cursor:pointer;color:var(--mute);font-size:14px}
+  #style-pop .sp-title .x:hover{color:var(--ink)}
+  #style-pop .sw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
+  #style-pop .sw{width:24px;height:18px;border-radius:4px;cursor:pointer;border:1.5px solid transparent}
+  #style-pop .sw.cur{border-color:var(--ink)}
+  #style-pop .sp-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+  #style-pop .sp-row label{color:var(--mute);font-weight:600;flex:1}
+  #style-pop input[type=color]{width:34px;height:24px;border:1px solid var(--rule);border-radius:5px;padding:1px;background:#fff;cursor:pointer}
+  #style-pop .wbtn{width:24px;height:24px;border:1px solid var(--rule);border-radius:6px;background:#fff;
+    cursor:pointer;font-weight:800;font-size:14px;line-height:1;color:var(--grey)}
+  #style-pop .wbtn:hover{border-color:var(--scb);color:var(--scb)}
+  #style-pop .wval{min-width:26px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+  #style-pop .sp-reset{margin-top:9px;font-size:11.5px;color:var(--mute);cursor:pointer;text-decoration:underline}
+  #style-pop .sp-reset:hover{color:var(--scb)}
   /* Hide Plotly's default hover cards; custom chart annotations below replace them. */
   .hoverlayer .hovertext{ display:none !important; }
   .hoverlayer .legendlines path,
@@ -108,7 +126,8 @@
 </head>
 <body>
   <h1><span class="tri">▶</span> Thailand Fund — Growth Comparison</h1>
-  <div class="asof">Switch between % change vs the window start and actual NAV · daily NAV under 1Y, weekly beyond · data as of 2 Jul 2026 · 3,563 share classes</div>
+  <div class="asof">Switch between % change vs the window start and actual NAV · daily NAV under 1Y, weekly beyond · <b>click a line or a color dot to change its color / thickness</b> · data as of 2 Jul 2026 · 3,563 share classes</div>
+  <div id="style-pop"></div>
 
   <div class="panel">
     <div class="row">
@@ -198,7 +217,25 @@ const byId = new Map(META.map(m=>[m.i,m]));
 const state = { sel: [], win: "1yr", from: "", to: "", view: "pct" };   // default = 1 calendar year, % view
 
 const $ = id => document.getElementById(id);
-function colorFor(id){ return PALETTE[state.sel.indexOf(id) % PALETTE.length]; }
+
+/* ---------- per-fund style overrides (color / line width) ----------
+ * Keyed by fund CODE (stable across daily rebuilds — META index is not).
+ * Persisted in localStorage so custom styles survive reloads. */
+const STYLE_KEY = "growthChart.styles.v1";
+let STYLES = {};
+try{ STYLES = JSON.parse(localStorage.getItem(STYLE_KEY) || "{}") || {}; }catch(e){ STYLES = {}; }
+const codeOf  = id => { const m = byId.get(id); return m ? m.c : String(id); };
+const styleOf = id => STYLES[codeOf(id)] || {};
+function setStyle(id, patch){
+  const c = codeOf(id);
+  const s = Object.assign({}, STYLES[c], patch);
+  if(s.color == null) delete s.color;
+  if(s.width == null || s.width === 2) delete s.width;
+  if(Object.keys(s).length) STYLES[c] = s; else delete STYLES[c];
+  try{ localStorage.setItem(STYLE_KEY, JSON.stringify(STYLES)); }catch(e){}
+}
+function colorFor(id){ return styleOf(id).color || PALETTE[state.sel.indexOf(id) % PALETTE.length]; }
+function widthFor(id){ return styleOf(id).width || 2; }
 
 // First grid index on/after the window cutoff date. The cutoff is computed
 // from a per-fund reference date (the fund's own last NAV) so the resulting
@@ -330,10 +367,53 @@ function renderChips(){
   const box=$("chips");
   if(!state.sel.length){ box.innerHTML='<span class="empty">No funds selected — search above to add some.</span>'; setViewActive(); return; }
   box.innerHTML = state.sel.map(id=>{ const m=byId.get(id);
-    return `<span class="chip"><span class="dot" style="background:${colorFor(id)}"></span>${m.c}<button title="remove" data-i="${id}">×</button></span>`; }).join("");
+    return `<span class="chip"><span class="dot" data-s="${id}" title="Click to change color / line width" style="background:${colorFor(id)};cursor:pointer"></span>${m.c}<button title="remove" data-i="${id}">×</button></span>`; }).join("");
   box.querySelectorAll("button").forEach(b=>b.onclick=()=>remove(+b.dataset.i));
+  box.querySelectorAll(".dot[data-s]").forEach(d=>d.onclick=e=>{ e.stopPropagation(); openStylePop(+d.dataset.s, e.clientX, e.clientY); });
   setViewActive();
 }
+
+/* ---------- style popover — click a line / color dot to restyle ---------- */
+let spId = null;
+function openStylePop(id, cx, cy){
+  spId = id;
+  renderStylePop();
+  const pop = $("style-pop");
+  pop.style.display = "block";
+  const r = pop.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(cx + 10, window.innerWidth  - r.width  - 12)) + "px";
+  pop.style.top  = Math.max(8, Math.min(cy + 10, window.innerHeight - r.height - 12)) + "px";
+}
+function closeStylePop(){ $("style-pop").style.display = "none"; spId = null; }
+function renderStylePop(){
+  const pop = $("style-pop"); if(spId == null) return;
+  const m = byId.get(spId), cur = colorFor(spId), w = widthFor(spId);
+  pop.innerHTML =
+    `<div class="sp-title"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${cur}"></span>${m?m.c:""}<span class="x" title="Close">✕</span></div>` +
+    `<div class="sw-grid">` + PALETTE.map(c =>
+      `<span class="sw ${c.toLowerCase()===cur.toLowerCase()?"cur":""}" data-c="${c}" style="background:${c}"></span>`).join("") + `</div>` +
+    `<div class="sp-row"><label>Custom color</label><input type="color" value="${cur}"></div>` +
+    `<div class="sp-row"><label>Line width</label><button class="wbtn" data-d="-1">−</button><span class="wval">${(+w.toFixed(1)).toString()}</span><button class="wbtn" data-d="1">+</button></div>` +
+    `<div class="sp-reset">Reset to default</div>`;
+  pop.querySelector(".x").onclick = closeStylePop;
+  pop.querySelectorAll(".sw").forEach(s => s.onclick = () => applyStyle({color:s.dataset.c}));
+  pop.querySelector("input[type=color]").oninput = e => applyStyle({color:e.target.value});
+  pop.querySelectorAll(".wbtn").forEach(b => b.onclick = () => {
+    const nw = Math.min(6, Math.max(0.5, widthFor(spId) + (+b.dataset.d) * 0.5));
+    applyStyle({width:nw});
+  });
+  pop.querySelector(".sp-reset").onclick = () => applyStyle({color:null, width:null});
+}
+function applyStyle(patch){
+  if(spId == null) return;
+  setStyle(spId, patch);
+  renderChips(); render(); renderStylePop();
+}
+document.addEventListener("click", e => {
+  const pop = $("style-pop");
+  if(pop.style.display === "block" && !pop.contains(e.target) &&
+     !e.target.closest(".dot") && !e.target.closest("#chart")) closeStylePop();
+});
 
 /* ---------- date range ---------- */
 function setPresetActive(win){
@@ -606,6 +686,25 @@ function bindCustomHover(navMode){
     Plotly.relayout(gd, {annotations, shapes:hoverShapes(x, navMode)});
   });
   gd.on("plotly_unhover", () => Plotly.relayout(gd, {annotations:[], shapes:baseShapes(navMode)}));
+  // Click a line → open the color / line-width popover for the nearest trace.
+  gd.removeAllListeners && gd.removeAllListeners("plotly_click");
+  gd.on("plotly_click", ev => {
+    if(!ev || !ev.points || !ev.points.length || !ev.event) return;
+    const rect = gd.getBoundingClientRect();
+    const ya = gd._fullLayout && gd._fullLayout.yaxis;
+    let best = null, bestD = 1e9;
+    for(const p of ev.points){
+      if(p.data && p.data.dividendMarker) continue;
+      let d = 0;
+      if(ya && typeof ya.c2p === "function")
+        d = Math.abs(rect.top + ya._offset + ya.c2p(p.y) - ev.event.clientY);
+      if(d < bestD){ bestD = d; best = p; }
+    }
+    // hovermode "x" reports every trace at that x — only react to clicks near a line
+    if(!best || (ya && bestD > 28)){ closeStylePop(); return; }
+    const id = best.data && best.data.meta != null ? best.data.meta : state.sel[best.curveNumber];
+    openStylePop(id, ev.event.clientX, ev.event.clientY);
+  });
 }
 
 function dividendMarkerPoints(id, di, cl, baseK, base, toIdx, navMode){
@@ -675,7 +774,7 @@ function render(){
       xs.push(GRID[di[k]]);
       ys.push(navMode ? v : +(100*(v/base-1)).toFixed(2));
     }
-    traces.push({ x:xs, y:ys, type:"scatter", mode:"lines", name:m.c, meta:id, line:{color:col,width:2},
+    traces.push({ x:xs, y:ys, type:"scatter", mode:"lines", name:m.c, meta:id, line:{color:col,width:widthFor(id)},
       hovertemplate: navMode ? `${m.c}&nbsp;&nbsp;%{y:.4f}<extra></extra>`
                              : `${m.c}&nbsp;&nbsp;%{y:+.2f}%<extra></extra>` });
     const dpts = dividendMarkerPoints(id, di, cl, baseK, base, toIdx, navMode);
@@ -717,11 +816,12 @@ function render(){
   $("tbl").innerHTML =
     "<colgroup><col style='width:31%'><col style='width:17%'><col style='width:25%'><col style='width:9%'><col style='width:6%'><col style='width:12%'></colgroup>" +
     "<tr><th class='name'>Fund</th><th class='cat'>Category</th><th class='amc'>AMC</th><th class='ret'>Window return</th><th class='days'>Days</th><th class='since'>Since</th></tr>" +
-    rows.map(r=>`<tr><td class='name'><span class='dot' style='background:${r.col}'></span><b>${r.m.c}</b> ${r.m.n}</td>`+
+    rows.map(r=>`<tr><td class='name'><span class='dot' data-s='${r.m.i}' title='Click to change color / line width' style='background:${r.col};cursor:pointer'></span><b>${r.m.c}</b> ${r.m.n}</td>`+
       `<td class='cat'>${r.m.g}</td><td class='amc'>${r.m.a}</td>`+
       `<td class='ret ${r.ret>=0?"pos":"neg"}'>${r.ret>=0?"+":""}${r.ret.toFixed(2)}%</td>`+
       `<td class='days'>${r.days.toLocaleString()}</td>`+
       `<td class='since'>${formatSinceDate(r.base)} → ${formatSinceDate(r.to)}</td></tr>`).join("");
+  $("tbl").querySelectorAll(".dot[data-s]").forEach(d=>d.onclick=e=>{ e.stopPropagation(); openStylePop(+d.dataset.s, e.clientX, e.clientY); });
 }
 setRangeFromPreset("1yr");
 setPresetActive("1yr");
