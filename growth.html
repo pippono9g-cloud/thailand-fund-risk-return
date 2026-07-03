@@ -250,8 +250,8 @@ function widthFor(id){ return styleOf(id).width || 2; }
 function dashFor(id){  return styleOf(id).dash  || "solid"; }
 /* Line-weight presets in pt (converted to px at 96/72) — 1½ pt = 2px = default */
 const WEIGHTS = [
-  {lbl:"¼ pt",  w:0.33}, {lbl:"½ pt",  w:0.67}, {lbl:"¾ pt",  w:1},
-  {lbl:"1 pt",  w:1.33}, {lbl:"1½ pt", w:2},    {lbl:"2¼ pt", w:3},
+  {lbl:"¾ pt",  w:1},    {lbl:"1 pt",  w:1.33}, {lbl:"1¼ pt", w:1.67},
+  {lbl:"1½ pt", w:2},    {lbl:"2 pt",  w:2.67}, {lbl:"2¼ pt", w:3},
 ];
 const DASHES = [
   {k:"solid", css:"solid",  lbl:"Solid"},
