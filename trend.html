@@ -249,6 +249,7 @@ table.drill-tbl td { padding:5px 10px; border-bottom:1px solid var(--grid); text
 table.drill-tbl td:first-child { text-align:left; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
 table.drill-tbl tr:hover td { background:var(--scb-l); }
 .drill-code { font-weight:600; font-size:11.5px; }
+.lowbase { color:var(--mute); font-size:9px; margin-left:2px; cursor:help; vertical-align:super; }
 .drill-name { font-size:10.5px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; }
 </style>
 </head>
@@ -335,7 +336,8 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
         <li><b>X</b> = median total return of all share classes in the category over the selected window (from the weekly SEC build).</li>
         <li><b>Y</b> = % change in the category's total AUM over the same window, from SEC NAV history. Only share classes with AUM at both window endpoints are counted, so the change is like-for-like.</li>
         <li>AUM change ≈ market move + net flows, so the vertical distance from the dashed 45° line ≈ net subscription (above the line) or redemption (below).</li>
-        <li><b>Implied flow</b> = AUM change − median return, in <b>percentage points (pp)</b>: <b>+5 pp</b> ≈ net inflow of about 5% of the category's assets; <b>−5 pp</b> ≈ net outflow. (It's "pp" not "%" because it's the gap between two percentages.)</li>
+        <li><b>Implied flow (pp)</b> = AUM change − median return, in <b>percentage points</b>: <b>+5 pp</b> ≈ net inflow of about 5% of the category's assets; <b>−5 pp</b> ≈ net outflow. (It's "pp" not "%" because it's the gap between two percentages.) pp measures <b>intensity relative to size</b> — a small fund can print a hot pp on little actual money.</li>
+        <li><b>Flow (M THB)</b> = start-of-window AUM × implied flow — the estimated <b>actual money</b> that moved in or out, net of performance. Use this to compare across categories/funds of different sizes; use pp to gauge demand intensity. Funds whose start AUM is below 100M THB carry an <b>ᴸ</b> marker on their pp (low base — read the M THB column instead).</li>
         <li>Categories with fewer than 3 funds are excluded.</li>
       </ul>
     </div>
@@ -357,7 +359,8 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
 <div class="foot">
   Source: SEC Thailand Open API weekly build (sec_data.sqlite + Thailand_Fund_SEC). Median category
   returns are NAV-computed; AUM from daily fund NAV reports. Implied flow = AUM change − median
-  return (approximation; ignores intra-category dispersion and timing of flows). Generated 2026-07-03.
+  return (approximation; ignores intra-category dispersion and timing of flows); Flow (M THB) =
+  start-of-window AUM × implied flow. Generated 2026-07-03.
   Not investment advice.
 </div>
 
@@ -380,6 +383,9 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
       </table>
       <div style="padding:10px 14px 14px;font-size:11px;color:var(--mute);border-top:1px solid var(--grid);line-height:1.5;">
         <b>—</b> Missing AUM data for this period; reported frequency may not cover this window.
+        (Funds missing AUM are <b>excluded</b> from the category aggregate — they don't distort the total.)<br>
+        <b>FLOW (M THB)</b> = start AUM × implied pp — actual money moved, net of performance.
+        <b>ᴸ</b> = start AUM &lt; 100M THB: pp looks hot on a small base; judge by M THB.
       </div>
     </div>
   </div>
@@ -420,6 +426,13 @@ const DATA = new Proxy({}, {
 const $ = id => document.getElementById(id);
 const fmt = (v,s) => v==null ? "–" : (v<0?"−":"+") + Math.abs(v).toFixed(2) + (s||"%");
 const cls = v => v==null ? "muted" : v>=0 ? "pos" : "neg";
+/* Implied flow in money terms: start-AUM × implied-pp.
+ * aum = CURRENT AUM in B THB, a = AUM change %, flow = implied pp.
+ * start AUM (B) = aum/(1+a/100); flow M THB = startB × flow/100 × 1000 = start × flow × 10 */
+const flowMTHB = (aum, a, flow) =>
+  (aum==null || a==null || flow==null || a<=-100) ? null : +((aum/(1+a/100))*flow*10).toFixed(1);
+const fmtM = v => v==null ? "–"
+  : (v<0?"−":"+") + Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:1,minimumFractionDigits:1});
 
 /* ---------- custom date-range engine ----------
  * When state.customRange is set, ignore the W (preset window) pointer and
@@ -491,7 +504,8 @@ function rows() {
     for (const [cat, d] of Object.entries(cust)) {
       if (CAT_FILTER && cat !== CAT_FILTER) continue;
       const e = ds[cat] || {};
-      out.push({cat, aum:e.aum, r:d.r, a:d.a, flow:+(d.a-d.r).toFixed(2), n:d.n});
+      const flow = +(d.a-d.r).toFixed(2);
+      out.push({cat, aum:e.aum, r:d.r, a:d.a, flow, flowM:flowMTHB(e.aum,d.a,flow), n:d.n});
     }
     return out;
   }
@@ -500,7 +514,8 @@ function rows() {
     if (CAT_FILTER && cat !== CAT_FILTER) continue;
     const d = e[w];
     if (!d) continue;
-    out.push({cat, aum:e.aum, r:d.r, a:d.a, flow:+(d.a-d.r).toFixed(2), n:d.n});
+    const flow = +(d.a-d.r).toFixed(2);
+    out.push({cat, aum:e.aum, r:d.r, a:d.a, flow, flowM:flowMTHB(e.aum,d.a,flow), n:d.n});
   }
   return out;
 }
@@ -508,6 +523,7 @@ function rows() {
 /* ---- drill-down ---- */
 const DR_COLS = [
   {k:"code",    lbl:"FUND"},
+  {k:"flowM",   lbl:"FLOW (M THB)"},
   {k:"flow",    lbl:"IMPLIED FLOW (pp)"},
   {k:"aum_chg", lbl:"AUM CHG"},
   {k:"ret",     lbl:"RETURN"},
@@ -527,7 +543,10 @@ function drRows(cat){
       const ret = f.rets[w]  ?? null;
       const ac  = (f.aum_chg||{})[w] ?? null;
       const flow= (ret!=null && ac!=null) ? +((ac - ret).toFixed(2)) : null;
-      return {...f, ret, aum_chg: ac, flow};
+      const flowM = flowMTHB(f.aum, ac, flow);
+      // start-AUM below 100M THB: pp reads hot on a tiny base — flag it
+      const lowBase = (f.aum!=null && ac!=null && ac>-100) ? (f.aum/(1+ac/100)) < 0.1 : false;
+      return {...f, ret, aum_chg: ac, flow, flowM, lowBase};
     });
 }
 
@@ -549,7 +568,8 @@ function renderDrill(){
   $("drill-tbody").innerHTML = sorted.map(f =>
     `<tr>
       <td><div class="drill-code">${f.code}</div><div class="drill-name" title="${(f.name||"").replace(/"/g,"&quot;")}">${f.name||""}</div></td>
-      <td class="${retCls(f.flow)}">${fmtRet(f.flow," pp")}</td>
+      <td class="${retCls(f.flowM)}">${fmtM(f.flowM)}</td>
+      <td class="${retCls(f.flow)}">${fmtRet(f.flow," pp")}${f.lowBase?'<span class="lowbase" title="Start AUM < 100M THB — pp looks hot on a small base; check FLOW (M THB) for actual money">ᴸ</span>':""}</td>
       <td class="${retCls(f.aum_chg)}">${fmtRet(f.aum_chg)}</td>
       <td class="${retCls(f.ret)}">${fmtRet(f.ret)}</td>
     </tr>`
@@ -557,9 +577,10 @@ function renderDrill(){
   $("drill-count").textContent = sorted.length+" funds";
   // summary stats
   const entry = DATA[drCat]||{}, wd = entry[w]||{};
-  const flow = wd.a!=null&&wd.r!=null ? (wd.a-wd.r).toFixed(2) : null;
+  const flow  = wd.a!=null&&wd.r!=null ? (wd.a-wd.r).toFixed(2) : null;
+  const flowM = flow!=null ? flowMTHB(entry.aum, wd.a, +flow) : null;
   $("drill-stats").innerHTML =
-    (flow!=null?`<span>Implied flow <b class="${retCls(+flow)}">${flow>=0?"+":""}${flow} pp</b></span>`:"") +
+    (flow!=null?`<span>Implied flow <b class="${retCls(+flow)}">${fmtM(flowM)} M THB</b> <b class="${retCls(+flow)}" style="font-weight:600">(${flow>=0?"+":""}${flow} pp)</b></span>`:"") +
     `<span>AUM change <b class="${retCls(wd.a??null)}">${fmtRet(wd.a??null)}</b></span>` +
     `<span>${currentWindowLabel()} return <b class="${retCls(wd.r??null)}">${fmtRet(wd.r??null)}</b></span>` +
     `<span>AUM <b>${(entry.aum||0).toFixed(1)} B THB</b></span>`;
@@ -889,14 +910,15 @@ function drawBubble() {
     { x:[lo,hi], y:[lo,hi], mode:"lines", hoverinfo:"skip",
       line:{color:"#2563eb", width:2.6, dash:"dash"} },
     { x:xs, y:ys,
-      customdata:R.map(d=>[d.cat, d.aum, d.n, sgn(d.flow," pp"), sgn(d.a,"%"), sgn(d.r,"%")]),
+      customdata:R.map(d=>[d.cat, d.aum, d.n, sgn(d.flow," pp"), sgn(d.a,"%"), sgn(d.r,"%"),
+                           d.flowM==null?"–":fmtM(d.flowM)+" M THB"]),
       mode:"markers",
       marker:{ size:R.map(d=>d.aum), sizemode:"area",
                sizeref: 2*maxAum/(46*46), sizemin:5,
                color:R.map(d=>d.flow>=0?"#047857":"#b91c1c"), opacity:0.72,
                line:{width:1,color:"#ffffff"} },
       hovertemplate:"<b>%{customdata[0]}</b><br>" +
-        "Implied flow: %{customdata[3]}<br>" +
+        "Implied flow: %{customdata[6]} (%{customdata[3]})<br>" +
         "AUM change: %{customdata[4]}<br>" +
         "Return ("+currentWindowLabel()+"): %{customdata[5]}<br>" +
         "AUM now: %{customdata[1]:,.1f}B THB · %{customdata[2]} classes<extra></extra>" }
@@ -988,12 +1010,13 @@ function attachPinchZoom(gd){
 }
 
 const COLS = [
-  {k:"cat", lbl:"AIMC sub-category"},
-  {k:"flow",lbl:"IMPLIED FLOW (pp)"},
-  {k:"a",   lbl:"AUM CHANGE"},
-  {k:"r",   lbl:"RETURN"},
-  {k:"aum", lbl:"AUM (B THB)"},
-  {k:"n",   lbl:"CLASSES"}
+  {k:"cat",  lbl:"AIMC sub-category"},
+  {k:"flowM",lbl:"FLOW (M THB)"},
+  {k:"flow", lbl:"IMPLIED FLOW (pp)"},
+  {k:"a",    lbl:"AUM CHANGE"},
+  {k:"r",    lbl:"RETURN"},
+  {k:"aum",  lbl:"AUM (B THB)"},
+  {k:"n",    lbl:"CLASSES"}
 ];
 function setSort(i){ SORT = SORT.col===i ? {col:i,dir:-SORT.dir} : {col:i,dir:i===0?1:-1}; drawTable(); }
 // Active window label — preset name in normal mode, "From → To" in custom mode.
@@ -1015,11 +1038,12 @@ function drawTable() {
     return (typeof a==="string" ? a.localeCompare(b) : a-b) * SORT.dir;
   });
   const cell = (d, k) =>
-    k==="cat"  ? `<td>${d.cat}<span class="drill-btn" title="View composition" onclick="openDrill('${d.cat.replace(/'/g,"\\'")}')">⊕</span></td>` :
-    k==="aum"  ? `<td>${d.aum.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})}</td>` :
-    k==="n"    ? `<td class="muted">${d.n}</td>` :
-    k==="flow" ? `<td class="${cls(d.flow)}">${fmt(d.flow," pp")}</td>` :
-                 `<td class="${cls(d[k])}">${fmt(d[k])}</td>`;          // r or a
+    k==="cat"   ? `<td>${d.cat}<span class="drill-btn" title="View composition" onclick="openDrill('${d.cat.replace(/'/g,"\\'")}')">⊕</span></td>` :
+    k==="aum"   ? `<td>${d.aum.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})}</td>` :
+    k==="n"     ? `<td class="muted">${d.n}</td>` :
+    k==="flowM" ? `<td class="${cls(d.flowM)}">${fmtM(d.flowM)}</td>` :
+    k==="flow"  ? `<td class="${cls(d.flow)}">${fmt(d.flow," pp")}</td>` :
+                  `<td class="${cls(d[k])}">${fmt(d[k])}</td>`;          // r or a
   $("tbody").innerHTML = R.map(d => "<tr>" + COLS.map(c => cell(d, c.k)).join("") + "</tr>").join("");
 }
 
