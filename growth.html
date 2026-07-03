@@ -103,7 +103,10 @@
   /* style popover — click a line / color dot to change color & line width */
   #style-pop{position:fixed;z-index:950;display:none;background:#fff;border:1px solid var(--rule);
     border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:11px 13px;width:210px;font-size:12px}
-  #style-pop .sp-title{font-weight:800;font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  #style-pop .sp-title{font-weight:800;font-size:12.5px;margin:-11px -13px 8px;padding:10px 13px 8px;
+    display:flex;align-items:center;gap:6px;cursor:move;user-select:none;touch-action:none;
+    border-bottom:1px solid var(--soft);border-radius:10px 10px 0 0;background:#faf8fc}
+  #style-pop .sp-title .grip{color:var(--mute);font-size:11px;letter-spacing:1px}
   #style-pop .sp-title .x{margin-left:auto;cursor:pointer;color:var(--mute);font-size:14px}
   #style-pop .sp-title .x:hover{color:var(--ink)}
   #style-pop .sw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:8px;justify-items:center}
@@ -401,20 +404,25 @@ function renderChips(){
 /* ---------- style popover — click a line / color dot to restyle ---------- */
 let spId = null;
 function openStylePop(id, cx, cy){
+  const pop = $("style-pop");
+  const wasOpen = pop.style.display === "block";
   spId = id;
   renderStylePop();
-  const pop = $("style-pop");
   pop.style.display = "block";
-  const r = pop.getBoundingClientRect();
-  pop.style.left = Math.max(8, Math.min(cx + 10, window.innerWidth  - r.width  - 12)) + "px";
-  pop.style.top  = Math.max(8, Math.min(cy + 10, window.innerHeight - r.height - 12)) + "px";
+  // Position at the cursor only on first open — if the user already dragged
+  // the popover aside, switching funds must not snap it back over the chart.
+  if(!wasOpen){
+    const r = pop.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(cx + 10, window.innerWidth  - r.width  - 12)) + "px";
+    pop.style.top  = Math.max(8, Math.min(cy + 10, window.innerHeight - r.height - 12)) + "px";
+  }
 }
 function closeStylePop(){ $("style-pop").style.display = "none"; spId = null; }
 function renderStylePop(){
   const pop = $("style-pop"); if(spId == null) return;
   const m = byId.get(spId), cur = colorFor(spId), w = widthFor(spId), dash = dashFor(spId);
   pop.innerHTML =
-    `<div class="sp-title"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${cur}"></span>${m?m.c:""}<span class="x" title="Close">✕</span></div>` +
+    `<div class="sp-title" title="Drag to move"><span class="grip">⠿</span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${cur}"></span>${m?m.c:""}<span class="x" title="Close">✕</span></div>` +
     `<div class="sw-grid">` + PALETTE.map(c =>
       `<span class="sw ${c.toLowerCase()===cur.toLowerCase()?"cur":""}" data-c="${c}" style="background:${c}"></span>`).join("") + `</div>` +
     `<div class="sp-row"><label>Custom color</label><input type="color" value="${cur}"></div>` +
@@ -428,6 +436,21 @@ function renderStylePop(){
       `<span class="dline" style="border-top-style:${d.css}"></span></div>`).join("") + `</div>` +
     `<div class="sp-reset">Reset to default</div>`;
   pop.querySelector(".x").onclick = closeStylePop;
+  // drag by the title bar
+  const ttl = pop.querySelector(".sp-title");
+  ttl.onpointerdown = e => {
+    if(e.target.closest(".x")) return;
+    const r = pop.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = ev => {
+      pop.style.left = Math.max(4, Math.min(ev.clientX - dx, window.innerWidth  - r.width  - 4)) + "px";
+      pop.style.top  = Math.max(4, Math.min(ev.clientY - dy, window.innerHeight - r.height - 4)) + "px";
+    };
+    const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+    e.preventDefault();
+  };
   pop.querySelectorAll(".sw").forEach(s => s.onclick = () => applyStyle({color:s.dataset.c}));
   pop.querySelector("input[type=color]").oninput = e => applyStyle({color:e.target.value});
   pop.querySelector(".w-sel").onchange = e => applyStyle({width:+e.target.value});
