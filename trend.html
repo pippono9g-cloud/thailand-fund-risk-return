@@ -205,7 +205,7 @@ table.trend tr:hover td { background:var(--scb-l); }
 }
 #drill-overlay.open { display:block; }
 #drill-panel {
-  position:fixed; top:0; right:0; bottom:0; width:520px; max-width:96vw;
+  position:fixed; top:0; right:0; bottom:0; width:680px; max-width:96vw;
   background:#fff; box-shadow:-4px 0 28px rgba(0,0,0,0.13);
   display:flex; flex-direction:column; z-index:901;
   transform:translateX(100%); transition:transform .22s ease;
@@ -235,22 +235,22 @@ table.trend tr:hover td { background:var(--scb-l); }
   padding:5px 10px; font-size:12px; outline:none;
 }
 .drill-search:focus { border-color:var(--cyan); }
-.drill-body { flex:1; overflow-y:auto; }
-table.drill-tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.drill-body { flex:1; overflow-y:auto; overflow-x:auto; }
+table.drill-tbl { width:100%; border-collapse:collapse; font-size:11.5px; }
 table.drill-tbl th {
-  position:sticky; top:0; background:#fff; padding:6px 10px;
-  text-align:right; font-size:11px; letter-spacing:0.03em;
+  position:sticky; top:0; background:#fff; padding:6px 7px;
+  text-align:right; font-size:10.5px; letter-spacing:0.02em;
   border-bottom:2px solid var(--ink); cursor:pointer; user-select:none;
   white-space:nowrap; z-index:2;
 }
 table.drill-tbl th:first-child { text-align:left; }
 table.drill-tbl th.ds { color:var(--scb); }
-table.drill-tbl td { padding:5px 10px; border-bottom:1px solid var(--grid); text-align:right; white-space:nowrap; }
-table.drill-tbl td:first-child { text-align:left; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+table.drill-tbl td { padding:4px 7px; border-bottom:1px solid var(--grid); text-align:right; white-space:nowrap; }
+table.drill-tbl td:first-child { text-align:left; max-width:165px; overflow:hidden; text-overflow:ellipsis; }
 table.drill-tbl tr:hover td { background:var(--scb-l); }
-.drill-code { font-weight:600; font-size:11.5px; }
+.drill-code { font-weight:600; font-size:11px; }
 .lowbase { color:var(--mute); font-size:9px; margin-left:2px; cursor:help; vertical-align:super; }
-.drill-name { font-size:10.5px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; }
+.drill-name { font-size:10px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:155px; }
 </style>
 </head>
 <body>
@@ -524,7 +524,7 @@ function rows() {
 const DR_COLS = [
   {k:"code",    lbl:"FUND"},
   {k:"flowM",   lbl:"FLOW (M THB)"},
-  {k:"flow",    lbl:"IMPLIED FLOW (pp)"},
+  {k:"flow",    lbl:"FLOW (pp)"},
   {k:"aum_chg", lbl:"AUM CHG"},
   {k:"ret",     lbl:"RETURN"},
 ];
