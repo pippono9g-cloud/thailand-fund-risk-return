@@ -214,7 +214,7 @@
 
   <div class="foot">
     <span>Source: SEC Thailand Open API · cumulative growth of NAV, dividends not reinvested · D marker = dividend event · daily NAV for the recent ~year, weekly (last of each week) for older data.</span>
-    <span>Generated 20 Aug 2026</span>
+    <span>Generated 21 Aug 2026</span>
   </div>
 
 <script>
@@ -784,7 +784,12 @@ function render(){
   const traces=[], rows=[];
   const navMode = state.view === "nav";
   const dailyMode = rangeDays(state.from, state.to) <= 366;
-  const fromIdx = gridIndexAtOrAfter(state.from);
+  // Backward-snap (not forward): a trailing window like "1W"/"1M" must cover
+  // AT LEAST the nominal period. Snapping forward past a holiday/gap shrinks
+  // the window (e.g. 5 days shown as "1W") and can flip the sign of the
+  // return vs the Risk-Return / Trend cards, which anchor the same way
+  // (sec_fetch.metrics.ret_since — latest NAV at or before the target date).
+  const fromIdx = gridIndexAtOrBefore(state.from);
   const toIdx = gridIndexAtOrBefore(state.to);
   for(const id of state.sel){
     const m=byId.get(id), col=colorFor(id), s=SERIES[id];

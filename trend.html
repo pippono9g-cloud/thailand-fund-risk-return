@@ -322,7 +322,7 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
   <div class="legend">
     <span><span class="sw" style="background:var(--green)"></span>Net inflow (above dashed line)</span>
     <span><span class="sw" style="background:var(--red)"></span>Net outflow (below dashed line)</span>
-    <span>Bubble size = current AUM (B THB) &nbsp;·&nbsp; dashed line = AUM change explained by return alone (above it ≈ net inflow)</span>
+    <span>Bubble size = |implied flow| (M THB) &nbsp;·&nbsp; dashed line = AUM change explained by return alone (above it ≈ net inflow)</span>
   </div>
   <div style="margin:8px 0 2px;padding:9px 12px;background:var(--soft);border-left:3px solid var(--scb);border-radius:6px;font-size:12.5px;line-height:1.5;">
     <b>Implication —</b> a category <b>above</b> the dashed line is drawing <b>net inflows</b> (new money chasing the theme — momentum / investor conviction); <b>below</b> it is seeing <b>net outflows</b> (redemptions or rotation out) even when returns are positive; sitting <b>on</b> the line means AUM simply tracked performance with flat flows. The farther a bubble sits from the line, the stronger the flow signal — and a category that is both high-return <i>and</i> well above the line is where performance and demand reinforce each other.
@@ -360,7 +360,7 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
   Source: SEC Thailand Open API weekly build (sec_data.sqlite + Thailand_Fund_SEC). Median category
   returns are NAV-computed; AUM from daily fund NAV reports. Implied flow = AUM change − median
   return (approximation; ignores intra-category dispersion and timing of flows); Flow (M THB) =
-  start-of-window AUM × implied flow. Generated 2026-08-20.
+  start-of-window AUM × implied flow. Generated 2026-08-21.
   Not investment advice.
 </div>
 
@@ -903,7 +903,11 @@ function placeLabels(){
 
 function drawBubble() {
   const R = rows(); _curR = R;
-  const maxAum = Math.max(...R.map(d=>d.aum), 1);
+  // Bubble size = |implied flow| in money terms (M THB) — how much cash actually
+  // moved, not how big the category already is. A small category with a hot
+  // inflow should read as a big bubble; a giant category sitting flat should not.
+  const flowAbs = R.map(d=>Math.abs(d.flowM||0));
+  const maxFlow = Math.max(...flowAbs, 1);
   const xs = R.map(d=>d.r), ys = R.map(d=>d.a);
   const lo = Math.min(...xs, ...ys), hi = Math.max(...xs, ...ys);
   Plotly.react("bubble", [
@@ -913,15 +917,15 @@ function drawBubble() {
       customdata:R.map(d=>[d.cat, d.aum, d.n, sgn(d.flow," pp"), sgn(d.a,"%"), sgn(d.r,"%"),
                            d.flowM==null?"–":fmtM(d.flowM)+" M THB"]),
       mode:"markers",
-      marker:{ size:R.map(d=>d.aum), sizemode:"area",
-               sizeref: 2*maxAum/(46*46), sizemin:5,
+      marker:{ size:flowAbs, sizemode:"area",
+               sizeref: 2*maxFlow/(46*46), sizemin:5,
                color:R.map(d=>d.flow>=0?"#047857":"#b91c1c"), opacity:0.72,
                line:{width:1,color:"#ffffff"} },
       hovertemplate:"<b>%{customdata[0]}</b><br>" +
-        "Implied flow: %{customdata[6]} (%{customdata[3]})<br>" +
+        "AUM now: %{customdata[1]:,.1f}B THB · %{customdata[2]} classes<br>" +
         "AUM change: %{customdata[4]}<br>" +
         "Return ("+currentWindowLabel()+"): %{customdata[5]}<br>" +
-        "AUM now: %{customdata[1]:,.1f}B THB · %{customdata[2]} classes<extra></extra>" }
+        "Implied flow: %{customdata[6]} (%{customdata[3]})<extra></extra>" }
   ], {
     paper_bgcolor:"#ffffff", plot_bgcolor:"#ffffff",
     font:{family:"Arial, Helvetica, sans-serif", size:12, color:"#1a1a1a"},
