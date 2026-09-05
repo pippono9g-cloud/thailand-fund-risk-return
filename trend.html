@@ -258,13 +258,19 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
 
 <div class="card">
   <div class="panel-row">
-    <p class="panel-title">Fund Flow Tracking by <span id="grouping-label">AIMC Sub-Category</span></p>
+    <p class="panel-title">Fund Flow Tracking by <span id="grouping-label">AIMC Sub-Category</span><span id="amc-note"></span></p>
     <div class="spacer"></div>
     <div class="group-toggle">
       <label for="group-select">Group by</label>
       <select id="group-select">
         <option value="sub" selected>Sub-category (AIMC)</option>
         <option value="main">Main category (asset class)</option>
+      </select>
+    </div>
+    <div class="group-toggle">
+      <label for="amc-filter">AMC</label>
+      <select id="amc-filter">
+        <option value="">All AMCs</option>
       </select>
     </div>
     <div class="search-wrap">
@@ -368,6 +374,9 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
     <div class="drill-stats" id="drill-stats"></div>
     <div class="drill-search-row">
       <input id="drill-search" class="drill-search" placeholder="Search fund code or name…" autocomplete="off">
+      <select id="drill-amc" class="drill-search" style="max-width:220px;flex:none">
+        <option value="">All AMCs</option>
+      </select>
       <span id="drill-count" style="font-size:11.5px;color:var(--mute);white-space:nowrap"></span>
     </div>
     <div class="drill-body">
@@ -399,13 +408,53 @@ const WIN_COLORS = ["#007FFF","#8b5cf6","#10b981","#d97706","#ea580c","#9333ea",
 let W = 0;
 let SORT = {col:1, dir:-1};
 let CAT_FILTER = null;
+// Active AMC filter — "" (default, all houses) or an exact AMC name. When
+// set, every category/main-category entry is recomputed (median return,
+// AUM change, implied flow) using ONLY that AMC's funds within it, so the
+// bubbles/table show that single house's momentum per category instead of
+// the whole market's.
+let AMC_FILTER = "";
 // Active grouping — "sub" (default, AIMC sub-categories) or "main" (asset class roll-up)
 let GROUPING = "sub";
-const dataset = () => GROUPING === "main" ? MAIN_DATA : SUB_DATA;
+const rawDataset = () => GROUPING === "main" ? MAIN_DATA : SUB_DATA;
+// Recompute a category-keyed dataset restricted to funds from AMC_FILTER.
+// Median return / AUM-change / implied-flow are derived client-side from the
+// per-fund `rets`/`aum_chg`/`aum` already embedded in each entry's `funds`
+// list — no server round-trip needed to see a single house's numbers.
+function filteredDataset(base) {
+  if (!AMC_FILTER) return base;
+  const out = {};
+  for (const [cat, e] of Object.entries(base)) {
+    const funds = (e.funds || []).filter(f => f.amc === AMC_FILTER);
+    if (!funds.length) continue;
+    const entry = { aum: +funds.reduce((s,f) => s + (f.aum||0), 0).toFixed(3), funds };
+    for (const w of WIN_SHORT) {
+      const rets = [];
+      let curSum = 0, baseSum = 0, n = 0;
+      for (const f of funds) {
+        const ret = f.rets ? f.rets[w] : null;
+        const ac  = f.aum_chg ? f.aum_chg[w] : null;
+        if (ret == null || ac == null || ac <= -100) continue;
+        rets.push(ret);
+        const curAum = f.aum || 0;
+        curSum += curAum; baseSum += curAum / (1 + ac/100); n++;
+      }
+      if (!rets.length || baseSum <= 0) continue;
+      rets.sort((a,b) => a-b);
+      const mid = rets.length >> 1;
+      const median = rets.length % 2 ? rets[mid] : (rets[mid-1]+rets[mid])/2;
+      entry[w] = { r: +median.toFixed(2), a: +(100*(curSum-baseSum)/baseSum).toFixed(2), n };
+    }
+    out[cat] = entry;
+  }
+  return out;
+}
+const dataset = () => filteredDataset(rawDataset());
 // Backwards-compat alias so the rest of the script can read DATA as a getter-style binding
 const Object_proto_data_label = { sub: "AIMC Sub-Category", main: "Main Category (Asset Class)" };
 const Object_proto_data_tag   = { sub: "AIMC CATEGORIES",   main: "MAIN CATEGORIES" };
 let ALL_CATS = Object.keys(SUB_DATA).sort((a,b) => a.localeCompare(b));
+const ALL_AMCS = [...new Set(Object.values(SUB_DATA).flatMap(e => (e.funds||[]).map(f => f.amc)).filter(Boolean))].sort();
 
 // DATA is a Proxy so that all the legacy `DATA[k]` / `Object.keys(DATA)` accesses
 // in the rest of the script automatically resolve to whichever dataset is active.
@@ -522,7 +571,7 @@ const DR_COLS = [
   {k:"aum_chg", lbl:"AUM CHG"},
   {k:"ret",     lbl:"RETURN"},
 ];
-let drSort = {col:1, dir:-1}, drCat = null, drQuery = "";
+let drSort = {col:1, dir:-1}, drCat = null, drQuery = "", drAmc = "";
 
 const fmtRet  = (v,s) => v==null?"–":(v>=0?"+":"")+v.toFixed(2)+(s||"%");
 const retCls  = v => v==null?"muted":v>=0?"pos":"neg";
@@ -533,6 +582,7 @@ function drRows(cat){
   const q  = drQuery.toLowerCase();
   return fs
     .filter(f => !q || f.code.toLowerCase().includes(q) || (f.name||"").toLowerCase().includes(q))
+    .filter(f => !drAmc || f.amc === drAmc)
     .map(f => {
       const ret = f.rets[w]  ?? null;
       const ac  = (f.aum_chg||{})[w] ?? null;
@@ -561,7 +611,7 @@ function renderDrill(){
   // rows
   $("drill-tbody").innerHTML = sorted.map(f =>
     `<tr>
-      <td><div class="drill-code">${f.code}</div><div class="drill-name" title="${(f.name||"").replace(/"/g,"&quot;")}">${f.name||""}</div></td>
+      <td><div class="drill-code">${f.code}</div><div class="drill-name" title="${(f.name||"").replace(/"/g,"&quot;")}">${f.name||""}</div>${f.amc?`<div class="drill-name" style="opacity:.7">${f.amc}</div>`:""}</td>
       <td class="${retCls(f.flowM)}">${fmtM(f.flowM)}</td>
       <td class="${retCls(f.flow)}">${fmtRet(f.flow," pp")}${f.lowBase?'<span class="lowbase" title="Start AUM < 100M THB — pp looks hot on a small base; check FLOW (M THB) for actual money">ᴸ</span>':""}</td>
       <td class="${retCls(f.aum_chg)}">${fmtRet(f.aum_chg)}</td>
@@ -583,8 +633,12 @@ function renderDrill(){
 function drSetSort(i){ drSort = drSort.col===i?{col:i,dir:-drSort.dir}:{col:i,dir:i===0?1:-1}; renderDrill(); }
 
 function openDrill(cat){
-  drCat = cat; drQuery = ""; $("drill-search").value = "";
+  drCat = cat; drQuery = ""; drAmc = ""; $("drill-search").value = "";
   $("drill-cat-name").textContent = cat;
+  const amcs = [...new Set(((DATA[cat]||{}).funds||[]).map(f => f.amc).filter(Boolean))].sort();
+  $("drill-amc").innerHTML = `<option value="">All AMCs</option>` +
+    amcs.map(a => `<option value="${a.replace(/"/g,"&quot;")}">${a}</option>`).join("");
+  $("drill-amc").value = "";
   renderDrill();
   $("drill-overlay").classList.add("open");
 }
@@ -597,6 +651,7 @@ function closeDrill(){
 $("drill-close").onclick = closeDrill;
 $("drill-overlay").addEventListener("click", e => { if(e.target===$("drill-overlay")) closeDrill(); });
 $("drill-search").addEventListener("input", e => { drQuery = e.target.value; renderDrill(); });
+$("drill-amc").addEventListener("change", e => { drAmc = e.target.value; renderDrill(); });
 
 function initSearch() {
   const inp = $("cat-search"), dd = $("cat-dd"), clr = $("cat-clear");
@@ -1050,7 +1105,8 @@ function applyGrouping(g) {
   GROUPING = (g === "main") ? "main" : "sub";
   // refresh the dependent labels
   $("grouping-label").textContent = Object_proto_data_label[GROUPING];
-  $("cat-count-tag").textContent  = Object.keys(dataset()).length + " " + Object_proto_data_tag[GROUPING];
+  const catCountTag = $("cat-count-tag");
+  if (catCountTag) catCountTag.textContent = Object.keys(dataset()).length + " " + Object_proto_data_tag[GROUPING];
   // sort key list for the search dropdown changes too
   ALL_CATS = Object.keys(dataset()).sort((a,b) => a.localeCompare(b));
   // any active filter on the old grouping no longer makes sense
@@ -1065,6 +1121,25 @@ function applyGrouping(g) {
   else if (drCat) renderDrill();
 }
 $("group-select").addEventListener("change", e => applyGrouping(e.target.value));
+
+/* ------- AMC filter — restrict every bubble/table entry to one fund house ------- */
+function applyAmcFilter(amc) {
+  AMC_FILTER = amc || "";
+  $("amc-note").textContent = AMC_FILTER ? ` — ${AMC_FILTER}` : "";
+  ALL_CATS = Object.keys(dataset()).sort((a,b) => a.localeCompare(b));
+  if (CAT_FILTER && !(CAT_FILTER in dataset())) {
+    CAT_FILTER = null;
+    const inp = $("cat-search"); inp.value = "";
+    inp.classList.remove("has-val");
+    $("cat-clear").classList.remove("show");
+  }
+  drawBubble(); drawTable();
+  if (drCat && !(drCat in dataset())) closeDrill();
+  else if (drCat) renderDrill();
+}
+$("amc-filter").innerHTML = `<option value="">All AMCs</option>` +
+  ALL_AMCS.map(a => `<option value="${a.replace(/"/g,"&quot;")}">${a}</option>`).join("");
+$("amc-filter").addEventListener("change", e => applyAmcFilter(e.target.value));
 
 // Bound the picker to the embedded daily grid range
 if (DAILY_GRID.length) {
