@@ -839,7 +839,7 @@ function positionHoverCard(card, cx, cy){
   // unpinned (preview) card jumped to the opposite viewport corner (too far,
   // split focus); a too-small gap then covered the very point being
   // inspected (too close, hides its name/position). 36px clears both.
-  const gap = 36;
+  const gap = 80;
   let x = cx + gap, y = cy + gap;
   if (x + cw > vw - edge) x = cx - cw - gap;
   if (y + ch > vh - edge) y = cy - ch - gap;
