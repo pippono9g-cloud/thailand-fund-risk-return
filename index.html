@@ -247,6 +247,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   border-right:2px solid #9b8ab6; border-bottom:2px solid #9b8ab6;
 }
 #hover-card.pinned .resize-edge, #hover-card.pinned .resize-edge * { cursor:inherit; }
+#hover-card.pinned .resize-edge.corner { cursor:nwse-resize; }
 #hover-card.pinned .resize-edge:hover { background:rgba(79,45,127,.10); }
 /* On a touch screen the card is centred under the chart area so the user
    can read it without their finger covering the data. */
@@ -1140,8 +1141,21 @@ function enablePinnedCardInteractions(hc){
     const startRect = hc.getBoundingClientRect();
     const startScale = parseFloat(hc.dataset.scale || "1");
     const startX = ev.clientX, startY = ev.clientY;
+    const finishResize = () => {
+      edge.onpointermove = null;
+      edge.onpointerup = null;
+      edge.onpointercancel = null;
+      edge.onlostpointercapture = null;
+    };
     edge.setPointerCapture(ev.pointerId);
     edge.onpointermove = (mv) => {
+      if (mv.pointerId !== ev.pointerId) return;
+      // A pointerup can be lost when the mouse is released outside the browser
+      // or the card is re-rendered. Never resize from a later hover-only move.
+      if (mv.pointerType === "mouse" && (mv.buttons & 1) === 0) {
+        finishResize();
+        return;
+      }
       let ratio = 1;
       if (side === "corner") {
         const byWidth = (startRect.width + mv.clientX - startX) / startRect.width;
@@ -1151,9 +1165,8 @@ function enablePinnedCardInteractions(hc){
       const scale = Math.max(.7, Math.min(1, startScale * ratio));
       hc.dataset.scale = scale.toFixed(3);
       syncCardGeometry(hc);
-      const next = hc.getBoundingClientRect();
     };
-    edge.onpointerup = edge.onpointercancel = () => { edge.onpointermove = null; };
+    edge.onpointerup = edge.onpointercancel = edge.onlostpointercapture = finishResize;
   });
 }
 
