@@ -148,7 +148,9 @@
   signalSelect.addEventListener("change",function(){if(signalSelect.value)show(signalSelect.value,true);});
   document.querySelectorAll("iframe").forEach(function(frame){frame.addEventListener("load",function(){var loader=frame.parentNode.querySelector(".loading");if(loader)loader.remove();});});
   window.addEventListener("hashchange",function(){show(location.hash.slice(1),false);});
-  show(location.hash.slice(1)||"risk",false);
+  // Always open the Hub on Risk vs Return. A stale hash from the previous
+  // visit must not make Long-term Markets appear to be the default page.
+  show("risk",true);
 })();
 </script>
 </body>
