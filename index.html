@@ -984,8 +984,11 @@ function drawChart(list){
       x: pinnedPts.map(f => sdOf(f)),
       y: pinnedPts.map(f => f.rets[w]),
       customdata: pinnedPts.map(f => f.id),
+      text: pinnedPts.map(f => f.code),
+      textposition: "top center",
+      textfont: { color:"#4F2D7F", size:11, family:"Arial, sans-serif" },
       hovertemplate: " <extra></extra>",
-      mode: "markers", type: "scatter", name: "locked card selection",
+      mode: "markers+text", type: "scatter", name: "locked card selection",
       marker: {
         symbol: "circle",
         size: pinnedPts.map(f => Math.max(6, Math.min(14, f.size || 8))),
