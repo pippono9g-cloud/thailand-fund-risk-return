@@ -832,17 +832,15 @@ function positionHoverCard(card, cx, cy){
     ? Math.min(700, vw - edge * 2) : 0;
   const cw = Math.min(Math.max(card.offsetWidth || 600, reserveDetailsWidth), vw - edge * 2);
   const ch = Math.min(card.offsetHeight || 420, vh - edge * 2);
-  // A temporary hover card belongs away from the point being inspected.
-  // Anchor it in the opposite viewport corner instead of following the mouse,
-  // leaving the local plot area and nearby funds unobstructed.
-  if (!card.classList.contains("pinned")) {
-    card.style.left = (cx < vw / 2 ? vw - cw - edge : edge) + "px";
-    card.style.top = (cy < vh / 2 ? vh - ch - edge : edge) + "px";
-    return;
-  }
-  let x = cx + 16, y = cy + 12;
-  if (x + cw > vw - edge) x = cx - cw - 16;
-  if (y + ch > vh - edge) y = cy - ch - 12;
+  // Anchor the card a short, fixed distance from the point/cursor — close
+  // enough that the point and the card read as one glance, far enough that
+  // the card doesn't sit on top of (and hide) the point itself. Previously
+  // an unpinned (preview) card jumped to the opposite viewport corner, which
+  // forced the eye to split attention between the point and a far-away card.
+  const gap = 20;
+  let x = cx + gap, y = cy + gap;
+  if (x + cw > vw - edge) x = cx - cw - gap;
+  if (y + ch > vh - edge) y = cy - ch - gap;
   x = Math.max(edge, Math.min(vw - cw - edge, x));
   y = Math.max(edge, Math.min(vh - ch - edge, y));
   card.style.left = x + "px";
