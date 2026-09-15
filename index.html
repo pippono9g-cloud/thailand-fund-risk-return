@@ -228,7 +228,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .drag-handle:active { cursor:grabbing; }
 #hover-card.pinned .drag-handle { display:block; }
 #hover-card .details-toggle {
-  position:absolute; z-index:11; top:30%; left:min(358px, calc(100% - 28px)); right:auto;
+  position:absolute; z-index:11; top:50%; left:min(358px, calc(100% - 28px)); right:auto;
   width:24px; height:34px; transform:translateY(-50%);
   display:none; align-items:center; justify-content:center; padding:0;
   border:0; border-radius:0; background:transparent; color:var(--scb);
@@ -1174,7 +1174,7 @@ function syncCardGeometry(hc){
     const collapsedHeight = parseFloat(hc.dataset.collapsedHeight || naturalHeight);
     const mainColumnWidth = parseFloat(hc.dataset.mainColumnWidth || "358");
     toggle.style.left = Math.min(width - 26, mainColumnWidth * scale) + "px";
-    toggle.style.top = Math.max(28, collapsedHeight * .30 * scale) + "px";
+    toggle.style.top = Math.max(28, collapsedHeight * .50 * scale) + "px";
   }
 }
 
