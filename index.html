@@ -1074,7 +1074,10 @@ function drawChart(list){
       x: pinnedPts.map(f => sdOf(f)),
       y: pinnedPts.map(f => f.rets[w]),
       customdata: pinnedPts.map(f => f.id),
-      text: pinnedPts.map(f => f.code),
+      // Label with the fund's name (not just the code) so it's obvious at a
+      // glance which pinned Card this point's data belongs to — truncate
+      // very long names so the tag doesn't swallow the chart.
+      text: pinnedPts.map(f => f.code + " — " + ((f.name||"").length > 30 ? f.name.slice(0,29) + "…" : (f.name||""))),
       textposition: "top center",
       textfont: { color:"#4F2D7F", size:11, family:"Arial, sans-serif" },
       hovertemplate: " <extra></extra>",
