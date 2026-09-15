@@ -971,6 +971,30 @@ function drawChart(list){
     mkTrace(proxy, "proxy", { color: col, opacity:focusOpacity, size: markerSize(proxy, proxyLine.width, 1.8), line:proxyLine })
   );
 
+  // Keep a clear ring around every fund whose information card is locked.
+  // This is deliberately derived from the pinned-card IDs instead of `pts`,
+  // so a selected background watermark fund receives the same treatment as a
+  // foreground fund and remains identifiable while the two cards are compared.
+  const pinnedPts = [..._pinnedCards.keys()]
+    .map(id => byId.get(id) || byId.get(+id))
+    .filter(f => f && sdOf(f) != null && f.rets[w] != null);
+  if (pinnedPts.length) {
+    traces.push({
+      x: pinnedPts.map(f => sdOf(f)),
+      y: pinnedPts.map(f => f.rets[w]),
+      customdata: pinnedPts.map(f => f.id),
+      hovertemplate: " <extra></extra>",
+      mode: "markers", type: "scatter", name: "locked card selection",
+      marker: {
+        symbol: "circle-open",
+        size: pinnedPts.map(f => Math.max(18, Math.min(25, (f.size || 8) + 11))),
+        color: "#4F2D7F",
+        line: { color:"#4F2D7F", width:3 }
+      },
+      showlegend: false
+    });
+  }
+
   // medians + annotations for top-5
   const axisSds = axisPts.map(f=>sdOf(f));
   const sds = medianPts.map(f=>sdOf(f)), medSd = median(sds);
@@ -1072,6 +1096,7 @@ function drawChart(list){
 let _cardPinned = false;
 const _pinnedCards = new Map();
 let _hoverPreviewCard = null;
+let _suppressPlotClickUntil = 0;
 
 function enablePinnedCardInteractions(hc){
   const resizeEdges = hc.querySelectorAll(".resize-edge");
@@ -1201,11 +1226,27 @@ function renderHoverCard(f, pinned){
   if (!pinned) _hoverPreviewCard = hc;
   // Wire the close button (re-rendered each time, so re-bind)
   const btn = hc.querySelector(".close-btn");
-  if (btn) btn.onclick = (ev) => { ev.stopPropagation(); hideHoverCard(hc); };
+  if (btn) {
+    // Prevent the pointer release from falling through to a Plotly point that
+    // happens to sit directly behind the card after it is removed.
+    btn.onpointerdown = (ev) => {
+      ev.stopPropagation();
+      _suppressPlotClickUntil = Date.now() + 350;
+    };
+    btn.onpointerup = (ev) => ev.stopPropagation();
+    btn.onclick = (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      _suppressPlotClickUntil = Date.now() + 350;
+      hideHoverCard(hc);
+    };
+  }
   if (pinned) {
     _pinnedCards.set(fundKey, hc);
     _cardPinned = true;
     enablePinnedCardInteractions(hc);
+    // Redraw only after the card is registered so its chart point immediately
+    // receives the locked-selection ring.
+    drawChart(filtered());
   }
   return hc;
 }
@@ -1228,8 +1269,10 @@ function separatePinnedCard(hc){
 }
 function hideHoverCard(card){
   const hc = card || $("hover-card");
+  let removedPinned = false;
   if (hc.dataset.fundId && _pinnedCards.get(hc.dataset.fundId) === hc) {
     _pinnedCards.delete(hc.dataset.fundId);
+    removedPinned = true;
   }
   hc.style.display = "none";
   hc.classList.remove("pinned");
@@ -1246,6 +1289,9 @@ function hideHoverCard(card){
   _cardPinned = _pinnedCards.size > 0;
   if (hc === _hoverPreviewCard) _hoverPreviewCard = null;
   if (hc !== $("hover-card")) hc.remove();
+  // Closing a locked card also removes its point ring. Preview cards never
+  // trigger this redraw because they are not entries in `_pinnedCards`.
+  if (removedPinned) drawChart(filtered());
 }
 
 function hideHoverPreview(){
@@ -1348,6 +1394,7 @@ function attachChartEvents(){
     if (_pinnedCards.size >= 2) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
+    if (_pinnedCards.has(String(p.customdata))) return;
     const f = byId.get(p.customdata);
     if (!f) return;
     const hoverCard = renderHoverCard(f, false);
@@ -1361,6 +1408,7 @@ function attachChartEvents(){
   // Tap (iPad / phone / mouse click): pin the card so it stays open until the
   // user closes it. plotly_click fires on touch where plotly_hover does not.
   gd.on("plotly_click", ev => {
+    if (Date.now() < _suppressPlotClickUntil) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
     const f = byId.get(p.customdata);
