@@ -834,10 +834,12 @@ function positionHoverCard(card, cx, cy){
   const ch = Math.min(card.offsetHeight || 420, vh - edge * 2);
   // Anchor the card a short, fixed distance from the point/cursor — close
   // enough that the point and the card read as one glance, far enough that
-  // the card doesn't sit on top of (and hide) the point itself. Previously
-  // an unpinned (preview) card jumped to the opposite viewport corner, which
-  // forced the eye to split attention between the point and a far-away card.
-  const gap = 20;
+  // the card doesn't sit on top of (and hide) the point itself, its marker,
+  // or its name label (which sits just above the point). Previously an
+  // unpinned (preview) card jumped to the opposite viewport corner (too far,
+  // split focus); a too-small gap then covered the very point being
+  // inspected (too close, hides its name/position). 36px clears both.
+  const gap = 36;
   let x = cx + gap, y = cy + gap;
   if (x + cw > vw - edge) x = cx - cw - gap;
   if (y + ch > vh - edge) y = cy - ch - gap;
