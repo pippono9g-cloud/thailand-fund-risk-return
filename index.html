@@ -832,18 +832,18 @@ function positionHoverCard(card, cx, cy){
     ? Math.min(700, vw - edge * 2) : 0;
   const cw = Math.min(Math.max(card.offsetWidth || 600, reserveDetailsWidth), vw - edge * 2);
   const ch = Math.min(card.offsetHeight || 420, vh - edge * 2);
-  // Anchor the card a short, fixed distance from the point/cursor — close
+  // Anchor the card a fixed distance to the RIGHT of the point/cursor — close
   // enough that the point and the card read as one glance, far enough that
   // the card doesn't sit on top of (and hide) the point itself, its marker,
-  // or its name label (which sits just above the point). Previously an
-  // unpinned (preview) card jumped to the opposite viewport corner (too far,
-  // split focus); a too-small gap then covered the very point being
-  // inspected (too close, hides its name/position). 36px clears both.
-  const gap = 80;
-  let x = cx + gap, y = cy + gap;
-  if (x + cw > vw - edge) x = cx - cw - gap;
-  if (y + ch > vh - edge) y = cy - ch - gap;
-  x = Math.max(edge, Math.min(vw - cw - edge, x));
+  // or its name label (which sits just above the point). Vertically it's
+  // centred on the cursor and only clamped to the viewport, never flipped to
+  // open above the cursor — the card should always read as "beside", not
+  // "above", the point.
+  const gap = 100;
+  let x = cx + gap;
+  if (x + cw > vw - edge) x = vw - cw - edge;
+  let y = cy - ch / 2;
+  x = Math.max(edge, x);
   y = Math.max(edge, Math.min(vh - ch - edge, y));
   card.style.left = x + "px";
   card.style.top = y + "px";
