@@ -971,7 +971,7 @@ function drawChart(list){
     mkTrace(proxy, "proxy", { color: col, opacity:focusOpacity, size: markerSize(proxy, proxyLine.width, 1.8), line:proxyLine })
   );
 
-  // Keep a clear ring around every fund whose information card is locked.
+  // Give every fund whose information card is locked a clear marker edge.
   // This is deliberately derived from the pinned-card IDs instead of `pts`,
   // so a selected background watermark fund receives the same treatment as a
   // foreground fund and remains identifiable while the two cards are compared.
@@ -986,10 +986,11 @@ function drawChart(list){
       hovertemplate: " <extra></extra>",
       mode: "markers", type: "scatter", name: "locked card selection",
       marker: {
-        symbol: "circle-open",
-        size: pinnedPts.map(f => Math.max(18, Math.min(25, (f.size || 8) + 11))),
-        color: "#4F2D7F",
-        line: { color:"#4F2D7F", width:3 }
+        symbol: "circle",
+        size: pinnedPts.map(f => Math.max(6, Math.min(14, f.size || 8))),
+        color: col,
+        opacity: 1,
+        line: { color:"#4F2D7F", width:2.5 }
       },
       showlegend: false
     });
@@ -1245,7 +1246,7 @@ function renderHoverCard(f, pinned){
     _cardPinned = true;
     enablePinnedCardInteractions(hc);
     // Redraw only after the card is registered so its chart point immediately
-    // receives the locked-selection ring.
+    // receives the locked-selection edge.
     drawChart(filtered());
   }
   return hc;
@@ -1289,7 +1290,7 @@ function hideHoverCard(card){
   _cardPinned = _pinnedCards.size > 0;
   if (hc === _hoverPreviewCard) _hoverPreviewCard = null;
   if (hc !== $("hover-card")) hc.remove();
-  // Closing a locked card also removes its point ring. Preview cards never
+  // Closing a locked card also removes its point edge. Preview cards never
   // trigger this redraw because they are not entries in `_pinnedCards`.
   if (removedPinned) drawChart(filtered());
 }
