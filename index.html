@@ -187,6 +187,12 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
      try to zoom the whole page. */
   touch-action:none; -webkit-user-select:none; user-select:none;
 }
+/* Plotly's pan dragmode defaults the whole plot area to a 4-way "move"
+   cursor — including over individual fund points, which don't move and
+   whose name label the oversized cursor icon can cover. Points aren't
+   draggable (only the pinned Card is, via its own .drag-handle), so force a
+   plain arrow across the chart; the Card keeps its own cursor:move. */
+#chart .nsewdrag { cursor: default !important; }
 
 /* Tighter spacing + larger tap targets when the viewport is touch-friendly. */
 @media (hover:none) and (pointer:coarse) {
