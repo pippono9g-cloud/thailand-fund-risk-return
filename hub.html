@@ -28,7 +28,8 @@
     display:flex;align-items:center;transition:.15s ease}
   .nav button:hover,.friend-link:hover{color:#fff;background:rgba(255,255,255,.06)}
   .nav button.active{color:#fff;border-bottom-color:var(--cyan);background:rgba(255,255,255,.04)}
-  .friend-link{margin-left:auto;color:#bdefff}.friend-link span{font-size:11px;margin-left:5px}
+  .signal-select{align-self:center;margin-left:auto;padding:8px 32px 8px 11px;border:1px solid #80699f;
+    border-radius:8px;background:#3a225c;color:#dff6ff;font:700 12px inherit;cursor:pointer}
   .mobile-select{display:none;width:100%;margin:10px 0;padding:11px 38px 11px 12px;border:1px solid #8d78aa;
     border-radius:9px;background:#fff;color:var(--scb-deep);font:700 14px inherit}
   .workspace{position:relative;flex:1;min-height:0;background:#fff}
@@ -39,6 +40,18 @@
     border-radius:50%;animation:spin .8s linear infinite;margin-right:10px}
   @keyframes spin{to{transform:rotate(360deg)}}
   .noscript{margin:30px auto;padding:20px;max-width:700px;background:#fff;border:1px solid var(--line);border-radius:12px}
+  .signals-panel{height:100%;overflow:auto;padding:28px 24px 60px;background:#fff}
+  .signals-wrap{max-width:1240px;margin:auto}.signals-head{display:flex;justify-content:space-between;gap:20px;
+    align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:16px}
+  .signals-head h1{font-size:25px;margin:0 0 6px}.signals-head p{font-size:12px;color:var(--muted);margin:2px 0;line-height:1.55}
+  .source-credit{white-space:nowrap;color:var(--scb);font-size:12px;text-decoration:none;font-weight:700}
+  .signal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:18px}
+  .signal-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#faf9fc}
+  .signal-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.signal-ticker{font-weight:800;color:var(--scb-deep)}
+  .signal-price{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700}.signal-label{font-size:11px;color:#888;margin:3px 0 8px}
+  .signal-status{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:7px}
+  .signal-status.up{background:#e4f5ed;color:#087447}.signal-status.down{background:#fdeaea;color:#c62828}.signal-status.mixed{background:#fff3df;color:#a95b00}
+  .signal-row{font-size:11.5px;color:#4f4b55;line-height:1.75}.signal-error{padding:28px 0;color:#a95b00;font-size:13px}
   @media(max-width:860px){
     .topbar-inner{display:block;padding:0 14px 10px}.brand{padding-bottom:4px}.nav{display:none}.mobile-select{display:block}
     .workspace{min-height:calc(100vh - 102px)}
@@ -57,14 +70,19 @@
       <button type="button" data-panel="trend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
       <button type="button" data-panel="longterm">Long-term Markets</button>
-      <a class="friend-link" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Market Signals by Arnupap <span>↗</span></a>
+      <select class="signal-select" aria-label="เลือก Market Signals">
+        <option value="">Market Signals ▾</option>
+        <option value="signals">Market Signals</option>
+        <option value="set100">SET100 Signals</option>
+      </select>
     </nav>
     <select class="mobile-select" aria-label="เลือก Dashboard">
       <option value="risk">Risk vs Return</option>
       <option value="trend">Trend</option>
       <option value="growth">Growth Comparison</option>
       <option value="longterm">Long-term Markets</option>
-      <option value="friend">Market Signals by Arnupap ↗</option>
+      <option value="signals">Market Signals</option>
+      <option value="set100">SET100 Signals</option>
     </select>
   </div>
 </header>
@@ -86,30 +104,47 @@
     <div class="loading">กำลังโหลด Long-term Markets…</div>
     <iframe data-src="https://pippono9g-cloud.github.io/longterm-markets-chart/" title="Long-term Markets"></iframe>
   </section>
+  <section id="panel-signals" class="panel signals-panel" aria-label="Market Signals">
+    <div class="signals-wrap"><div class="signals-head"><div><h1>Market Signals</h1><p id="signals-method">กำลังโหลดข้อมูล…</p><p id="signals-updated"></p></div><a class="source-credit" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Data by Arnupap ↗</a></div><div id="signals-body"><div class="signal-error">กำลังโหลดข้อมูล…</div></div></div>
+  </section>
+  <section id="panel-set100" class="panel signals-panel" aria-label="SET100 Signals">
+    <div class="signals-wrap"><div class="signals-head"><div><h1>SET100 Signals</h1><p id="set100-method">กำลังโหลดข้อมูล…</p><p id="set100-updated"></p></div><a class="source-credit" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Data by Arnupap ↗</a></div><div id="set100-body"><div class="signal-error">กำลังโหลดข้อมูล…</div></div></div>
+  </section>
   <noscript><div class="noscript">กรุณาเปิด JavaScript เพื่อใช้ Dashboard Hub หรือเปิด <a href="index.html">Risk vs Return</a> โดยตรง</div></noscript>
 </main>
 
 <script>
 (function(){
   "use strict";
-  var valid={risk:1,trend:1,growth:1,longterm:1};
+  var valid={risk:1,trend:1,growth:1,longterm:1,signals:1,set100:1};
   var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
   var select=document.querySelector(".mobile-select");
+  var signalSelect=document.querySelector(".signal-select"),loaded={};
+  var feeds={signals:{url:"https://arnupapchomsri-cloud.github.io/market-signal/data/signals.json",method:"signals-method",updated:"signals-updated",body:"signals-body"},set100:{url:"https://arnupapchomsri-cloud.github.io/market-signal/data/set100_signals.json",method:"set100-method",updated:"set100-updated",body:"set100-body"}};
+  function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function statusClass(status){return status==="UPTREND"?"up":status==="DOWNTREND"?"down":"mixed";}
+  function renderSignals(data,config){
+    document.getElementById(config.method).textContent=data.methodology||"";
+    document.getElementById(config.updated).textContent=data.generated_at_utc?("อัปเดตล่าสุด (UTC): "+data.generated_at_utc):"";
+    var keys=Object.keys(data.signals||{}),body=document.getElementById(config.body);
+    if(!keys.length){body.innerHTML='<div class="signal-error">ไม่มีข้อมูลในชุดนี้</div>';return;}
+    body.innerHTML='<div class="signal-grid">'+keys.map(function(key){var s=data.signals[key];if(s.error)return '<article class="signal-card"><strong class="signal-ticker">'+esc(key)+'</strong><div class="signal-error">'+esc(s.error)+'</div></article>';var chg=Number(s.chg1d_pct||0);return '<article class="signal-card"><div class="signal-card-head"><span class="signal-ticker">'+esc(key)+'</span><span class="signal-price">'+esc(s.price)+' <span style="color:'+(chg>=0?'#087447':'#c62828')+'">'+(chg>=0?'+':'')+esc(s.chg1d_pct)+'%</span></span></div><div class="signal-label">'+esc(s.label)+'</div><span class="signal-status '+statusClass(s.status)+'">'+esc(s.status)+'</span><div class="signal-row">EMA20: '+(Number(s.ema20_pct)>=0?'+':'')+esc(s.ema20_pct)+'% · EMA50: '+(Number(s.ema50_pct)>=0?'+':'')+esc(s.ema50_pct)+'%</div><div class="signal-row">52w High: '+esc(s.high_52w)+' (เหลือ +'+esc(s.up_pct_to_high)+'%)</div><div class="signal-row">52w Low: '+esc(s.low_52w)+' (เหลือ −'+esc(s.down_pct_to_low)+'%)</div><div class="signal-row">R:R: '+esc(s.rr==null?'—':s.rr)+'</div></article>';}).join('')+'</div>';
+  }
+  function loadSignals(name){if(loaded[name])return;loaded[name]=true;var config=feeds[name];fetch(config.url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(function(data){renderSignals(data,config);}).catch(function(err){loaded[name]=false;document.getElementById(config.body).innerHTML='<div class="signal-error">โหลดข้อมูลไม่สำเร็จ: '+esc(err.message)+'</div>';});}
   function show(name,writeHash){
-    if(name==="friend"){
-      window.open("https://arnupapchomsri-cloud.github.io/market-signal/hub.html","_blank","noopener");
-      select.value=(location.hash||"#risk").slice(1);return;
-    }
     if(!valid[name])name="risk";
     document.querySelectorAll(".panel").forEach(function(panel){panel.classList.toggle("active",panel.id==="panel-"+name);});
     buttons.forEach(function(button){var on=button.getAttribute("data-panel")===name;button.classList.toggle("active",on);button.setAttribute("aria-current",on?"page":"false");});
     var panel=document.getElementById("panel-"+name),frame=panel.querySelector("iframe");
-    if(!frame.getAttribute("src"))frame.setAttribute("src",frame.getAttribute("data-src"));
+    if(frame&&!frame.getAttribute("src"))frame.setAttribute("src",frame.getAttribute("data-src"));
+    if(feeds[name])loadSignals(name);
     select.value=name;
+    signalSelect.value=feeds[name]?name:"";
     if(writeHash&&location.hash!=="#"+name)history.replaceState(null,"","#"+name);
   }
   buttons.forEach(function(button){button.addEventListener("click",function(){show(button.getAttribute("data-panel"),true);});});
   select.addEventListener("change",function(){show(select.value,true);});
+  signalSelect.addEventListener("change",function(){if(signalSelect.value)show(signalSelect.value,true);});
   document.querySelectorAll("iframe").forEach(function(frame){frame.addEventListener("load",function(){var loader=frame.parentNode.querySelector(".loading");if(loader)loader.remove();});});
   window.addEventListener("hashchange",function(){show(location.hash.slice(1),false);});
   show(location.hash.slice(1)||"risk",false);
