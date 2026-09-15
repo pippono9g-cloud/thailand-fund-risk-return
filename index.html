@@ -900,8 +900,8 @@ function drawChart(list){
   if (watermarkPts.length) {
     traces.push({
       x: watermarkPts.map(f=>sdOf(f)), y: watermarkPts.map(f=>f.rets[w]),
-      text: watermarkPts.map(f=>f.code + (f.name ? "<br>" + f.name : "")),
-      hovertemplate: "%{text}<extra></extra>",
+      customdata: watermarkPts.map(f=>f.id),
+      hovertemplate: " <extra></extra>",   // use the same full details card as foreground funds
       mode: "markers", type: "scattergl", name: "background watermark",
       marker: {
         color: col,
@@ -909,7 +909,7 @@ function drawChart(list){
         size: watermarkPts.map(f=>Math.max(4, Math.min(9, f.size || 6))),
         line: { width:0, color:"rgba(0,0,0,0)" }
       },
-      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#cbd5e1", font:{size:11, color:"#334155"} }
+      hoverlabel: { bgcolor:"rgba(255,255,255,0)", bordercolor:"rgba(0,0,0,0)", font:{size:1, color:"rgba(0,0,0,0)"} }
     });
   }
   const markerSize = (arr, activeLineWidth, baseLineWidth) => arr.map(f => {
