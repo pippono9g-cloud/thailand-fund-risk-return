@@ -6,10 +6,13 @@ Bangkok time.
 
 | Dashboard | Purpose |
 |---|---|
+| **[Dashboard Hub](./hub.html)** | Unified navigation for the three fund dashboards and Long-term Markets, with a clearly labelled external link to Arnupap's Market Signals hub. |
 | **[Risk Return](./index.html)** | Risk-return scatter with sub-category and SCB shelf filters, OR-style search, master-fund SD proxies, 1-Year spider benchmark, Top-20 / Worst-20 tables. |
 | **[Growth Comparison](./growth.html)** | Cumulative growth overlay — pick funds to compare price performance over 1W → Max. Raw NAV per class (ex-dividend dips visible). |
 | **[Trend](./trend.html)** | Sub-category return vs AUM-change bubble chart with drill-down per category. |
-| **[Portfolio Construction](./portfolio.html)** | Build a model portfolio of up to 15 funds with 0-100% weight sliders. Weighted 1Y expected return (manual override per fund), naive-weighted SD / Sharpe / Max Drawdown. |
+| **[Long-term Markets](https://pippono9g-cloud.github.io/longterm-markets-chart/)** | Stocks, bonds and cash with historical event context and post-event market performance. |
+
+External reference: [Market Signals by Arnupap](https://arnupapchomsri-cloud.github.io/market-signal/hub.html).
 
 ## Dividend treatment
 

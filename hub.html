@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ศูนย์รวมแดชบอร์ดกองทุนและตลาดระยะยาว">
+<title>Investment Dashboard Hub</title>
+<style>
+  :root{
+    --scb:#4f2d7f;--scb-deep:#2d1a4a;--scb-soft:#f5f1fa;--cyan:#00a3d9;
+    --ink:#1b1b1f;--muted:#67636d;--line:#ded9e7;--white:#fff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--scb-soft);color:var(--ink);
+    font-family:Arial,Helvetica,"Segoe UI","Noto Sans Thai",sans-serif}
+  body{display:flex;flex-direction:column;min-height:100vh}
+  .topbar{background:linear-gradient(105deg,var(--scb-deep),#3d2263);color:#fff;
+    box-shadow:0 2px 12px rgba(26,12,45,.18);position:relative;z-index:2}
+  .topbar-inner{max-width:1500px;margin:auto;padding:0 24px;display:flex;align-items:stretch;gap:22px}
+  .brand{display:flex;align-items:center;gap:10px;padding:11px 0;min-width:max-content}
+  .brand-mark{width:28px;height:28px;border-radius:9px;background:linear-gradient(145deg,var(--cyan),#78d9f1);
+    display:grid;place-items:center;color:var(--scb-deep);font-weight:900;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+  .brand-text strong{display:block;font-size:14px;letter-spacing:.01em}.brand-text span{font-size:10px;color:#d8cbea}
+  .nav{display:flex;align-items:stretch;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1}
+  .nav::-webkit-scrollbar{display:none}
+  .nav button,.friend-link{border:0;border-bottom:3px solid transparent;background:transparent;color:#d8cbea;
+    padding:15px 16px 12px;font:700 13px/1.2 inherit;white-space:nowrap;cursor:pointer;text-decoration:none;
+    display:flex;align-items:center;transition:.15s ease}
+  .nav button:hover,.friend-link:hover{color:#fff;background:rgba(255,255,255,.06)}
+  .nav button.active{color:#fff;border-bottom-color:var(--cyan);background:rgba(255,255,255,.04)}
+  .friend-link{margin-left:auto;color:#bdefff}.friend-link span{font-size:11px;margin-left:5px}
+  .mobile-select{display:none;width:100%;margin:10px 0;padding:11px 38px 11px 12px;border:1px solid #8d78aa;
+    border-radius:9px;background:#fff;color:var(--scb-deep);font:700 14px inherit}
+  .workspace{position:relative;flex:1;min-height:0;background:#fff}
+  .panel{position:absolute;inset:0;display:none}.panel.active{display:block}
+  iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+  .loading{position:absolute;inset:0;display:grid;place-items:center;background:#fff;color:var(--muted);font-size:13px}
+  .loading::before{content:"";width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--scb);
+    border-radius:50%;animation:spin .8s linear infinite;margin-right:10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .noscript{margin:30px auto;padding:20px;max-width:700px;background:#fff;border:1px solid var(--line);border-radius:12px}
+  @media(max-width:860px){
+    .topbar-inner{display:block;padding:0 14px 10px}.brand{padding-bottom:4px}.nav{display:none}.mobile-select{display:block}
+    .workspace{min-height:calc(100vh - 102px)}
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand" aria-label="Investment Dashboard Hub">
+      <div class="brand-mark" aria-hidden="true">◆</div>
+      <div class="brand-text"><strong>Investment Dashboard Hub</strong><span>Funds · Markets · Long-term context</span></div>
+    </div>
+    <nav class="nav" aria-label="Dashboard menu">
+      <button type="button" data-panel="risk" class="active">Risk vs Return</button>
+      <button type="button" data-panel="trend">Trend</button>
+      <button type="button" data-panel="growth">Growth Comparison</button>
+      <button type="button" data-panel="longterm">Long-term Markets</button>
+      <a class="friend-link" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Market Signals by Arnupap <span>↗</span></a>
+    </nav>
+    <select class="mobile-select" aria-label="เลือก Dashboard">
+      <option value="risk">Risk vs Return</option>
+      <option value="trend">Trend</option>
+      <option value="growth">Growth Comparison</option>
+      <option value="longterm">Long-term Markets</option>
+      <option value="friend">Market Signals by Arnupap ↗</option>
+    </select>
+  </div>
+</header>
+
+<main class="workspace">
+  <section id="panel-risk" class="panel active" aria-label="Risk vs Return dashboard">
+    <div class="loading">กำลังโหลด Risk vs Return…</div>
+    <iframe src="index.html" title="Thailand Fund Risk vs Return"></iframe>
+  </section>
+  <section id="panel-trend" class="panel" aria-label="Trend dashboard">
+    <div class="loading">กำลังโหลด Trend…</div>
+    <iframe data-src="trend.html" title="Thailand Fund Trend"></iframe>
+  </section>
+  <section id="panel-growth" class="panel" aria-label="Growth Comparison dashboard">
+    <div class="loading">กำลังโหลด Growth Comparison…</div>
+    <iframe data-src="growth.html" title="Thailand Fund Growth Comparison"></iframe>
+  </section>
+  <section id="panel-longterm" class="panel" aria-label="Long-term Markets dashboard">
+    <div class="loading">กำลังโหลด Long-term Markets…</div>
+    <iframe data-src="https://pippono9g-cloud.github.io/longterm-markets-chart/" title="Long-term Markets"></iframe>
+  </section>
+  <noscript><div class="noscript">กรุณาเปิด JavaScript เพื่อใช้ Dashboard Hub หรือเปิด <a href="index.html">Risk vs Return</a> โดยตรง</div></noscript>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var valid={risk:1,trend:1,growth:1,longterm:1};
+  var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
+  var select=document.querySelector(".mobile-select");
+  function show(name,writeHash){
+    if(name==="friend"){
+      window.open("https://arnupapchomsri-cloud.github.io/market-signal/hub.html","_blank","noopener");
+      select.value=(location.hash||"#risk").slice(1);return;
+    }
+    if(!valid[name])name="risk";
+    document.querySelectorAll(".panel").forEach(function(panel){panel.classList.toggle("active",panel.id==="panel-"+name);});
+    buttons.forEach(function(button){var on=button.getAttribute("data-panel")===name;button.classList.toggle("active",on);button.setAttribute("aria-current",on?"page":"false");});
+    var panel=document.getElementById("panel-"+name),frame=panel.querySelector("iframe");
+    if(!frame.getAttribute("src"))frame.setAttribute("src",frame.getAttribute("data-src"));
+    select.value=name;
+    if(writeHash&&location.hash!=="#"+name)history.replaceState(null,"","#"+name);
+  }
+  buttons.forEach(function(button){button.addEventListener("click",function(){show(button.getAttribute("data-panel"),true);});});
+  select.addEventListener("change",function(){show(select.value,true);});
+  document.querySelectorAll("iframe").forEach(function(frame){frame.addEventListener("load",function(){var loader=frame.parentNode.querySelector(".loading");if(loader)loader.remove();});});
+  window.addEventListener("hashchange",function(){show(location.hash.slice(1),false);});
+  show(location.hash.slice(1)||"risk",false);
+})();
+</script>
+</body>
+</html>
