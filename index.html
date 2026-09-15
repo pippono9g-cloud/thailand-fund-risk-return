@@ -934,10 +934,14 @@ function placeLabelsRR(){
   const y0 = ya._offset, y1 = ya._offset + ya._length;
   const w  = _rrW;
 
-  // Collect visible points (within current pan/zoom viewport)
+  // Collect visible points (within current pan/zoom viewport). Funds with a
+  // locked (pinned) Card already get their own name label from the "locked
+  // card selection" trace in drawChart() — skip them here so the two label
+  // systems don't draw overlapping/duplicate text on the same point.
   const visible = [];
   for (const f of _rrPts) {
     if (f.sd == null || f.rets[w] == null) continue;
+    if (_pinnedCards.has(String(f.id))) continue;
     const px = xa.d2p(sdOf(f))  + xa._offset;
     const py = ya.d2p(f.rets[w])+ ya._offset;
     if (px < x0-2 || px > x1+2 || py < y0-2 || py > y1+2) continue;
@@ -1023,11 +1027,17 @@ function drawChart(list){
     : pts;
   const medianPts = state.picks.length && hasPeerFilter() && peerPts.length ? peerPts : pts;
   const direct = pts.filter(f => !f.proxy), proxy = pts.filter(f => f.proxy);
+  // Funds with a locked (pinned) Card already carry a permanent name label
+  // from the "locked card selection" trace below — blank out their code
+  // tooltip on the other traces so hovering the same spot doesn't pop a
+  // second, overlapping "code" tooltip on top of that label.
+  const pinnedIdSet = new Set([..._pinnedCards.keys()]);
+  const codeOrBlank = f => pinnedIdSet.has(String(f.id)) ? "" : f.code;
 
   const mkTrace = (arr, name, marker) => ({
     x: arr.map(f=>sdOf(f)), y: arr.map(f=>f.rets[w]),
     customdata: arr.map(f=>f.id),
-    text: arr.map(f=>f.code),
+    text: arr.map(codeOrBlank),
     hovertemplate: "<b>%{text}</b><extra></extra>",
     mode: "markers", type: "scattergl", name, marker,
     hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
@@ -1038,7 +1048,7 @@ function drawChart(list){
     traces.push({
       x: watermarkPts.map(f=>sdOf(f)), y: watermarkPts.map(f=>f.rets[w]),
       customdata: watermarkPts.map(f=>f.id),
-      text: watermarkPts.map(f=>f.code),
+      text: watermarkPts.map(codeOrBlank),
       hovertemplate: "<b>%{text}</b><extra></extra>",
       mode: "markers", type: "scattergl", name: "background watermark",
       marker: {
