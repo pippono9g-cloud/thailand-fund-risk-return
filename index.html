@@ -939,9 +939,10 @@ function drawChart(list){
   const mkTrace = (arr, name, marker) => ({
     x: arr.map(f=>sdOf(f)), y: arr.map(f=>f.rets[w]),
     customdata: arr.map(f=>f.id),
-    hovertemplate: " <extra></extra>",   // suppress native tooltip; custom card rendered on plotly_hover
+    text: arr.map(f=>f.code),
+    hovertemplate: "<b>%{text}</b><extra></extra>",
     mode: "markers", type: "scattergl", name, marker,
-    hoverlabel: { bgcolor:"rgba(255,255,255,0)", bordercolor:"rgba(0,0,0,0)", font:{size:1, color:"rgba(0,0,0,0)"} }
+    hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
   });
 
   const traces = [];
@@ -949,7 +950,8 @@ function drawChart(list){
     traces.push({
       x: watermarkPts.map(f=>sdOf(f)), y: watermarkPts.map(f=>f.rets[w]),
       customdata: watermarkPts.map(f=>f.id),
-      hovertemplate: " <extra></extra>",   // use the same full details card as foreground funds
+      text: watermarkPts.map(f=>f.code),
+      hovertemplate: "<b>%{text}</b><extra></extra>",
       mode: "markers", type: "scattergl", name: "background watermark",
       marker: {
         color: col,
@@ -957,7 +959,7 @@ function drawChart(list){
         size: watermarkPts.map(f=>Math.max(4, Math.min(9, f.size || 6))),
         line: { width:0, color:"rgba(0,0,0,0)" }
       },
-      hoverlabel: { bgcolor:"rgba(255,255,255,0)", bordercolor:"rgba(0,0,0,0)", font:{size:1, color:"rgba(0,0,0,0)"} }
+      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
     });
   }
   const markerSize = (arr, activeLineWidth, baseLineWidth) => arr.map(f => {
