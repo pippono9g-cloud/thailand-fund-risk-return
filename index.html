@@ -145,6 +145,11 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .zoom-presets button.active { background:var(--scb); color:#fff; border-color:var(--scb); }
 .zoom-row button:hover { border-color:var(--scb); color:var(--scb); }
 .zoom-row input[type=range] { width:170px; accent-color:var(--scb); touch-action:auto; }
+.sd-inputs{display:inline-flex;align-items:center;gap:6px;padding:3px 6px;border:1px solid #d8dce2;border-radius:8px;background:#fff}
+.sd-inputs label{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--grey);font-weight:600}
+.sd-inputs input[type=number]{width:60px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;color:var(--ink)}
+.sd-inputs button{padding:5px 10px;background:var(--scb);border-color:var(--scb);color:#fff;font-weight:700}
+.zoom-row .sd-inputs button:hover{background:var(--scb-deep);border-color:var(--scb-deep);color:#fff}
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-row .step-btn  { font-weight:700; min-width:34px; padding:5px 8px; font-size:14px; line-height:1; }
 .zoom-row .watermark-btn { border-color:#94a3b8; color:var(--grey); font-weight:700; width:166px; text-align:center; justify-content:center; }
@@ -296,7 +301,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
     <div class="panel-row">
       <div>
         <p class="panel-title">Risk vs return by time window</p>
-        <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · everything below recomputes with every filter</span>
+        <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
       </div>
       <div class="spacer"></div>
       <div class="help-wrap">
@@ -357,6 +362,12 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
         <button data-max="15">SD ≤ 15%</button>
         <button data-max="8">SD ≤ 8%</button>
       </span>
+      <span class="sd-inputs" aria-label="Acceptable volatility range">
+        <label for="sd-min-input">SD min <input id="sd-min-input" type="number" min="0" max="200" step="0.5" value="0"></label>
+        <span>–</span>
+        <label for="sd-max-input">max <input id="sd-max-input" type="number" min="0.5" max="200" step="0.5" placeholder="All"></label>
+        <button id="sd-apply-btn" type="button">Apply</button>
+      </span>
       <input id="zoom-slider" type="range" min="2" max="80" step="1" value="80" title="Max SD shown">
       <button class="step-btn" id="zoom-out-btn" title="Zoom out">−</button>
       <button class="step-btn" id="zoom-in-btn"  title="Zoom in">+</button>
@@ -378,11 +389,11 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
 
   <div class="tables">
     <div class="table-wrap">
-      <header><span id="top-title">Top 20 funds</span><span class="hint">Data: 14 Sep 2026</span></header>
+      <header><span id="top-title">Top 20 funds</span><span class="hint" id="top-scope">Visible chart area</span></header>
       <div class="table-scroll"><table id="top-table"></table></div>
     </div>
     <div class="table-wrap">
-      <header><span id="bot-title">Worst 20 funds</span><span class="hint">Data: 14 Sep 2026</span></header>
+      <header><span id="bot-title">Worst 20 funds</span><span class="hint" id="bot-scope">Visible chart area</span></header>
       <div class="table-scroll"><table id="bot-table"></table></div>
     </div>
   </div>
@@ -404,7 +415,7 @@ const WIN_COLORS = ["#007FFF","#8b5cf6","#10b981","#d97706","#ea580c","#9333ea",
 // dropdown). We use an array, not a space-separated string, because some Thai
 // codes literally contain spaces (e.g., "FP USBANK-A") or parens ("K-STAR-A(A)")
 // — a string model would split them into junk tokens.
-const state = { win: 0, main: "__ALL__", cat: "__ALL__", shelf: "__ALL__", amc: "__ALL__", picks: [], xmax: 0, watermark: false, rev: 0 };
+const state = { win: 0, main: "__ALL__", cat: "__ALL__", shelf: "__ALL__", amc: "__ALL__", picks: [], xmin: 0, xmax: 0, watermark: false, rev: 0 };
 const byId = new Map(FUNDS.map(f => [f.id, f]));
 FUNDS.forEach(f => { f.search = (f.name + " " + f.code + " " + (f.amc||"")).toLowerCase(); });
 
@@ -848,7 +859,7 @@ function placeLabelsRR(){
     .then(() => { _placingRR = false; });
 }
 function revKey(){
-  return [state.win, state.main, state.cat, state.shelf, state.amc, state.picks.join("·"), state.xmax, state.rev].join("|");
+  return [state.win, state.main, state.cat, state.shelf, state.amc, state.picks.join("·"), state.xmin, state.xmax, state.rev].join("|");
 }
 function drawChart(list){
   const w = state.win, col = WIN_COLORS[w];
@@ -915,7 +926,7 @@ function drawChart(list){
   //
   // The SD preset (xmax > 0) still wins for the X axis — that's the user's
   // explicit choice, not an automatic narrowing.
-  const yPts = xHi ? axisPts.filter(f=>sdOf(f) <= xHi) : axisPts;
+  const yPts = axisPts.filter(f => sdOf(f) >= state.xmin && (xHi == null || sdOf(f) <= xHi));
   const ys = yPts.map(f=>f.rets[w]);
   let yRange;
   if (ys.length) {
@@ -928,9 +939,11 @@ function drawChart(list){
   }
 
   let xRange;
-  if (xHi != null) {
-    // User pinned an SD cap — respect it.
-    xRange = [-0.3, xHi];
+  if (xHi != null || state.xmin > 0) {
+    // User supplied an acceptable SD range — respect both bounds. When the
+    // upper bound is open, retain the natural maximum of the filtered data.
+    const naturalHi = axisSds.length ? Math.max(...axisSds) : state.xmin + 1;
+    xRange = [Math.max(0, state.xmin) - 0.3, xHi != null ? xHi : naturalHi + Math.max(naturalHi * 0.05, 1.5)];
   } else if (axisSds.length) {
     const xLo = Math.min(...axisSds), xMax = Math.max(...axisSds);
     const span = xMax - xLo;
@@ -1101,7 +1114,10 @@ function attachChartEvents(){
   const hc = $("hover-card");
   // Re-place labels after pan / zoom (same pattern as Trend dashboard)
   if (!_rrBound) {
-    gd.on("plotly_relayout", () => { if (!_placingRR) placeLabelsRR(); });
+    gd.on("plotly_relayout", () => {
+      if (!_placingRR) placeLabelsRR();
+      drawTablesForViewport();
+    });
     attachPinchZoom(gd);
     _rrBound = true;
   }
@@ -1171,25 +1187,54 @@ function tableHTML(rows){
       '<td>'+(f.sd!=null?f.sd.toFixed(1)+"%":"—")+'</td>' +
       '<td>'+(f.sp&&f.sp.sharpe!=null?f.sp.sharpe.toFixed(2):"—")+'</td></tr>';
   });
+  if (!rows.length) h += '<tr><td colspan="13" class="hint">No funds in the visible chart area</td></tr>';
   return h + "</tbody>";
 }
-function drawTables(list){
+function drawTables(list, visibleScope){
   const w = state.win;
   const ranked = list.filter(f => f.rets[w] != null).sort((a,b)=>b.rets[w]-a.rets[w]);
   const topRanked = ranked.filter(f => !SCB_TERM_RE.test(f.code));
-  $("top-title").textContent = "Top 20 funds — best " + WINDOWS[w] + " return · excl. SCB 3M/6M fix-term series";
-  $("bot-title").textContent = "Worst 20 funds — weakest " + WINDOWS[w] + " return";
+  const scope = visibleScope ? ranked.length.toLocaleString() + " funds visible" : ranked.length.toLocaleString() + " filtered funds";
+  $("top-title").textContent = "Top 20 visible funds — best " + WINDOWS[w] + " return · excl. SCB 3M/6M fix-term series";
+  $("bot-title").textContent = "Worst 20 visible funds — weakest " + WINDOWS[w] + " return";
+  $("top-scope").textContent = scope;
+  $("bot-scope").textContent = scope;
   $("top-table").innerHTML = tableHTML(topRanked.slice(0,20));
   $("bot-table").innerHTML = tableHTML(ranked.slice(-20).reverse());
 }
 
+// Keep both rankings aligned with the points the user can actually see.
+// This responds to Plotly wheel zoom, drag-pan, pinch zoom and reset, while
+// the selected return window continues to determine the ranking metric.
+function drawTablesForViewport(){
+  const gd = $("chart"), fl = gd && gd._fullLayout;
+  if (!fl || !fl.xaxis || !fl.yaxis) return;
+  const xa = fl.xaxis, ya = fl.yaxis;
+  const x0 = xa._offset, x1 = xa._offset + xa._length;
+  const y0 = ya._offset, y1 = ya._offset + ya._length;
+  const visible = _rrPts.filter(f => {
+    if (sdOf(f) == null || f.rets[state.win] == null) return false;
+    const px = xa.d2p(sdOf(f)) + xa._offset;
+    const py = ya.d2p(f.rets[state.win]) + ya._offset;
+    return px >= x0-2 && px <= x1+2 && py >= y0-2 && py <= y1+2;
+  });
+  drawTables(visible, true);
+}
+
 /* ---------- zoom ---------- */
-function setZoom(xmax, fromSlider){
-  state.xmax = xmax;
+function setZoom(xmax, fromSlider, xmin){
+  const lo = Math.max(0, Number.isFinite(+xmin) ? +xmin : 0);
+  const hi = Math.max(0, Number.isFinite(+xmax) ? +xmax : 0);
+  state.xmin = hi > 0 ? Math.min(lo, hi) : lo;
+  state.xmax = hi;
   state.rev++;   // new uirevision so presets/Reset always override any wheel-zoom/pan
-  $("zoom-presets").querySelectorAll("button").forEach(b => b.classList.toggle("active", +b.dataset.max === xmax && !fromSlider));
-  if (!fromSlider) $("zoom-slider").value = xmax === 0 ? 80 : xmax;
-  $("zoom-readout").textContent = xmax === 0 ? "showing all" : "showing SD ≤ " + xmax + "%";
+  $("zoom-presets").querySelectorAll("button").forEach(b => b.classList.toggle("active", state.xmin === 0 && +b.dataset.max === hi && !fromSlider));
+  if (!fromSlider) $("zoom-slider").value = hi === 0 ? 80 : Math.min(80, hi);
+  $("sd-min-input").value = state.xmin;
+  $("sd-max-input").value = hi === 0 ? "" : hi;
+  $("zoom-readout").textContent = hi === 0
+    ? (state.xmin > 0 ? "showing SD ≥ " + state.xmin + "%" : "showing all")
+    : "showing SD " + state.xmin + "%–" + hi + "%";
   refresh(true);
 }
 
@@ -1302,9 +1347,18 @@ $("find-input").onblur = () => {
 $("find-input").onfocus = e => {
   if (e.target.value && _findDd.items.length) $("find-dd").classList.add("open");
 };
-$("zoom-presets").querySelectorAll("button").forEach(b => b.onclick = () => setZoom(+b.dataset.max, false));
-$("zoom-slider").oninput = e => setZoom(+e.target.value === 80 ? 0 : +e.target.value, true);
-$("reset-btn").onclick = () => setZoom(0, false);
+$("zoom-presets").querySelectorAll("button").forEach(b => b.onclick = () => setZoom(+b.dataset.max, false, 0));
+$("zoom-slider").oninput = e => setZoom(+e.target.value === 80 ? 0 : +e.target.value, true, 0);
+$("sd-apply-btn").onclick = () => {
+  const lo = parseFloat($("sd-min-input").value) || 0;
+  const rawHi = $("sd-max-input").value.trim();
+  const hi = rawHi === "" ? 0 : parseFloat(rawHi);
+  setZoom(Number.isFinite(hi) ? hi : 0, false, lo);
+};
+[$("sd-min-input"), $("sd-max-input")].forEach(el => el.onkeydown = e => {
+  if (e.key === "Enter") $("sd-apply-btn").click();
+});
+$("reset-btn").onclick = () => setZoom(0, false, 0);
 // Tap-friendly zoom step buttons (work on iPad / touch where pinch may be
 // captured by Safari instead of Plotly).
 function bumpZoom(direction){
@@ -1315,7 +1369,7 @@ function bumpZoom(direction){
   // direction = +1 zoom IN (smaller xmax), -1 zoom OUT (larger xmax)
   const next = direction > 0 ? Math.max(lo, Math.round(current * 0.65))
                              : Math.min(hi, Math.round(current * 1.45));
-  setZoom(next === hi ? 0 : next, false);
+  setZoom(next === hi ? 0 : next, false, 0);
 }
 $("zoom-in-btn").onclick  = () => bumpZoom(+1);
 $("zoom-out-btn").onclick = () => bumpZoom(-1);
