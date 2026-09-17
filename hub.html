@@ -91,7 +91,7 @@
 <main class="workspace">
   <section id="panel-risk" class="panel active" aria-label="Risk vs Return dashboard">
     <div class="loading">กำลังโหลด Risk vs Return…</div>
-    <iframe src="index.html" title="Thailand Fund Risk vs Return"></iframe>
+    <iframe data-src="index.html" title="Thailand Fund Risk vs Return"></iframe>
   </section>
   <section id="panel-trend" class="panel" aria-label="Trend dashboard">
     <div class="loading">กำลังโหลด Trend…</div>
@@ -137,7 +137,14 @@
     document.querySelectorAll(".panel").forEach(function(panel){panel.classList.toggle("active",panel.id==="panel-"+name);});
     buttons.forEach(function(button){var on=button.getAttribute("data-panel")===name;button.classList.toggle("active",on);button.setAttribute("aria-current",on?"page":"false");});
     var panel=document.getElementById("panel-"+name),frame=panel.querySelector("iframe");
-    if(frame&&!frame.getAttribute("src"))frame.setAttribute("src",frame.getAttribute("data-src"));
+    if(frame&&!frame.getAttribute("src")){
+      var target=frame.getAttribute("data-src");
+      // Cache-bust: force a fresh fetch of the local dashboard on every Hub
+      // load, so a rebuilt index/trend/growth.html doesn't sit stale behind
+      // the iframe's own HTTP cache after the daily 11:00 auto-publish.
+      if(target&&!/^https?:\/\//.test(target))target+=(target.indexOf("?")===-1?"?":"&")+"v="+Date.now();
+      frame.setAttribute("src",target);
+    }
     if(feeds[name])loadSignals(name);
     select.value=name;
     signalSelect.value=feeds[name]?name:"";
