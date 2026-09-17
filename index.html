@@ -172,6 +172,11 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .zoom-presets button.active { background:var(--scb); color:#fff; border-color:var(--scb); }
 .zoom-row button:hover { border-color:var(--scb); color:var(--scb); }
 .zoom-row input[type=range] { width:170px; accent-color:var(--scb); touch-action:auto; }
+.sd-inputs{display:inline-flex;align-items:center;gap:6px;padding:3px 6px;border:1px solid #d8dce2;border-radius:8px;background:#fff}
+.sd-inputs label{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--grey);font-weight:600}
+.sd-inputs input[type=number]{width:60px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;color:var(--ink)}
+.sd-inputs button{padding:5px 10px;background:var(--scb);border-color:var(--scb);color:#fff;font-weight:700}
+.zoom-row .sd-inputs button:hover{background:var(--scb-deep);border-color:var(--scb-deep);color:#fff}
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-row .step-btn  { font-weight:700; min-width:34px; padding:5px 8px; font-size:14px; line-height:1; }
 .zoom-row .watermark-btn { border-color:#94a3b8; color:var(--grey); font-weight:700; width:166px; text-align:center; justify-content:center; }
@@ -182,6 +187,12 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
      try to zoom the whole page. */
   touch-action:none; -webkit-user-select:none; user-select:none;
 }
+/* Plotly's pan dragmode defaults the whole plot area to a 4-way "move"
+   cursor — including over individual fund points, which don't move and
+   whose name label the oversized cursor icon can cover. Points aren't
+   draggable (only the pinned Card is, via its own .drag-handle), so force a
+   plain arrow across the chart; the Card keeps its own cursor:move. */
+#chart .nsewdrag { cursor: default !important; }
 
 /* Tighter spacing + larger tap targets when the viewport is touch-friendly. */
 @media (hover:none) and (pointer:coarse) {
@@ -191,9 +202,10 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 
 #hover-card {
-  position:fixed; z-index:100; display:none; width:640px; max-width:calc(100vw - 32px); pointer-events:none;
+  position:fixed; z-index:100; display:none; width:700px; max-width:calc(100vw - 32px); pointer-events:none;
   background:#fff; border:1px solid #cbd5e1; border-radius:14px;
-  box-shadow:0 12px 40px rgba(79,45,127,0.18); padding:0; font-size:12px; overflow:hidden;
+  box-shadow:0 12px 40px rgba(79,45,127,0.18); padding:0; font-size:12px;
+  max-height:calc(100vh - 32px); box-sizing:border-box; overflow:hidden;
 }
 #hover-card .card-head {
   display:flex; align-items:flex-start; gap:14px; padding:12px 14px 10px;
@@ -201,7 +213,8 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   border-bottom:1px solid var(--grid);
 }
 #hover-card .card-head .head-main { flex:1; min-width:0; }
-#hover-card .card-body { padding:14px 16px 16px; }
+#hover-card .card-scale-content { transform-origin:top left; will-change:transform; }
+#hover-card .card-body { padding:14px 16px 16px; box-sizing:border-box; }
 .score-ring {
   flex:0 0 auto; width:72px; height:72px; border-radius:50%;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -230,27 +243,62 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .fi-score.g-c { color:var(--score-c); } .fi-score.g-d { color:var(--score-d); }
 /* When the card is pinned by a tap (touch), enable pointer events so the close
    button works, raise the z-index above the chart, and add a visible × button. */
-#hover-card.pinned { pointer-events:auto; }
+#hover-card.pinned { pointer-events:auto; cursor:move; }
+#hover-card.pinned * { cursor:move; }
 #hover-card .close-btn {
-  position:absolute; top:6px; right:8px;
+  position:absolute; z-index:12; top:6px; right:8px;
   width:28px; height:28px; border-radius:50%; border:1px solid var(--rule);
   background:#fff; color:var(--grey); font-size:18px; font-weight:700; line-height:1;
   cursor:pointer; display:none;
 }
 #hover-card.pinned .close-btn { display:flex; align-items:center; justify-content:center; }
 #hover-card .close-btn:hover { border-color:var(--red); color:var(--red); }
+#hover-card.pinned .close-btn, #hover-card.pinned .details-toggle { cursor:pointer; }
+#hover-card .drag-handle {
+  position:absolute; z-index:3; top:0; left:0; right:78px; height:34px;
+  display:none; cursor:grab; touch-action:none;
+}
+#hover-card .drag-handle:active { cursor:grabbing; }
+#hover-card.pinned .drag-handle { display:block; }
+#hover-card .details-toggle {
+  position:absolute; z-index:11; top:50%; left:min(358px, calc(100% - 28px)); right:auto;
+  width:24px; height:34px; transform:translateY(-50%);
+  display:none; align-items:center; justify-content:center; padding:0;
+  border:0; border-radius:0; background:transparent; color:var(--scb);
+  font-size:22px; font-weight:700; line-height:1; cursor:pointer;
+}
+#hover-card.pinned.has-details .details-toggle { display:flex; }
+#hover-card .details-toggle:hover { color:#2f1763; background:transparent; }
+#hover-card .resize-edge { position:absolute; z-index:10; display:none; touch-action:none; }
+#hover-card.pinned .resize-edge { display:block; }
+#hover-card .resize-edge.corner {
+  right:0; bottom:0; width:28px; height:28px; cursor:nwse-resize;
+  border-radius:0 0 13px 0;
+}
+#hover-card .resize-edge.corner::after {
+  content:""; position:absolute; right:5px; bottom:5px; width:10px; height:10px;
+  border-right:2px solid #9b8ab6; border-bottom:2px solid #9b8ab6;
+}
+#hover-card.pinned .resize-edge, #hover-card.pinned .resize-edge * { cursor:inherit; }
+#hover-card.pinned .resize-edge.corner { cursor:nwse-resize; }
+#hover-card.pinned .resize-edge:hover { background:rgba(79,45,127,.10); }
 /* On a touch screen the card is centred under the chart area so the user
    can read it without their finger covering the data. */
 @media (hover:none) and (pointer:coarse) {
   #hover-card { width:calc(100vw - 32px); max-width:560px; }
   #hover-card .close-btn { width:34px; height:34px; font-size:20px; }
 }
-#hover-card .card-cols { display:flex; gap:16px; }
-#hover-card .col-l { flex:0 0 282px; min-width:0; padding-left:2px; box-sizing:border-box; }
-#hover-card .col-r { flex:1; min-width:0; border-left:1px solid var(--grid); padding-left:18px; padding-right:2px; box-sizing:border-box; }
+#hover-card .card-cols { display:flex; align-items:flex-start; gap:14px; }
+#hover-card .col-l {
+  flex:0 0 var(--main-column-width, 358px); width:var(--main-column-width, 358px);
+  min-width:0; padding-left:2px; box-sizing:border-box;
+}
+#hover-card .col-r { flex:1; min-width:0; border-left:1px solid var(--grid); padding-left:14px; padding-right:2px; box-sizing:border-box; }
+#hover-card:not(.details-open) .col-r { display:none; }
 #hover-card .sec-title { font-size:11px; font-weight:700; color:var(--scb); margin:0 0 3px; text-transform:uppercase; letter-spacing:0.03em; }
 #hover-card .strat { font-size:10.5px; color:var(--grey); line-height:1.45; margin-bottom:8px; }
 #hover-card .holds { width:100%; border-collapse:collapse; font-size:10.5px; }
+#hover-card .col-l > svg { display:block; margin:0 auto; }
 #hover-card .holds td { padding:2px 0; border-bottom:1px solid var(--soft); white-space:normal; text-align:left; letter-spacing:0; }
 #hover-card .holds td:last-child { text-align:right; font-weight:700; white-space:nowrap; padding-left:8px; }
 #hover-card .holds tr.tot td { border-top:1.5px solid var(--rule); border-bottom:none; font-weight:700; color:var(--scb); }
@@ -258,21 +306,36 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .sub { font-size:11px; color:var(--mute); margin-bottom:2px; }
 #hover-card .ids { font-size:11px; color:var(--mute); font-weight:700; margin-bottom:4px; line-height:1.5; }
 #hover-card .meta { font-size:11px; color:var(--grey); margin-bottom:6px; line-height:1.5; }
-#hover-card .rets-grid { margin:6px 0 2px; }
+#hover-card .rets-wrap { margin:6px 0 4px; }
 
 .legend-note { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--mute); margin-top:6px; align-items:center; }
 .legend-note .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
 .legend-note .proxy-ring { display:inline-block; width:9px; height:9px; border-radius:50%; border:2px solid var(--amber); background:#fff; margin-right:5px; vertical-align:-1px; }
 
-.rets-grid { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); column-gap:4px; row-gap:1px; text-align:center; margin-bottom:8px; }
-.rets-grid .h { font-size:6.5px; color:var(--mute); font-weight:600; }
-.rets-grid .v { font-size:6.5px; font-weight:700; letter-spacing:-0.02em; white-space:nowrap; }
-.vs-cat { font-size:11px; background:var(--soft); border-radius:8px; padding:7px 9px; line-height:1.55; }
-.vs-cat b.t { display:block; font-size:11px; margin-bottom:2px; color:var(--ink); }
-.vc-grid { display:grid; grid-template-columns:auto auto auto auto auto auto; column-gap:6px; row-gap:3px; align-items:baseline; margin-top:3px; font-variant-numeric:tabular-nums; }
+.rets-grid { display:grid; column-gap:4px; text-align:center; font-variant-numeric:tabular-nums; }
+.rets-grid.short { grid-template-columns:repeat(6,minmax(42px,1fr)); }
+.rets-grid.long { grid-template-columns:repeat(3,minmax(78px,1fr)); border-top:1px solid var(--rule); margin-top:3px; padding-top:3px; }
+.rets-grid > div { min-height:44px; padding:6px 2px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:3px; }
+.rets-grid .h { font-size:9.5px; line-height:1; color:var(--mute); font-weight:600; }
+.rets-grid .v { font-size:12.5px; line-height:1.1; font-weight:800; letter-spacing:-0.015em; white-space:nowrap; }
+@media (max-width:700px) {
+  #hover-card .card-cols { flex-direction:column; }
+  #hover-card .col-r {
+    flex:none; width:var(--main-column-width, 358px); border-left:0;
+    border-top:1px solid var(--grid); margin-top:12px; padding:12px 2px 0;
+  }
+  .rets-grid.short { grid-template-columns:repeat(6,minmax(58px,1fr)); overflow-x:auto; scroll-snap-type:x proximity; }
+  .rets-grid.long { grid-template-columns:repeat(3,minmax(78px,1fr)); }
+  .rets-grid > div { scroll-snap-align:start; }
+}
+.vs-cat { font-size:11.5px; background:var(--soft); border-radius:8px; padding:8px 10px; line-height:1.55; }
+.vs-cat b.t { display:block; font-size:11.5px; margin-bottom:3px; color:var(--ink); }
+.vc-grid { display:grid; grid-template-columns:max-content max-content max-content; justify-content:space-between; row-gap:4px; margin-top:3px; font-variant-numeric:tabular-nums; }
+.vc-row { display:contents; }
+.vc-pair { display:inline-flex; align-items:baseline; gap:4px; white-space:nowrap; }
 .vc-grid .vc-num { text-align:right; }
-.vc-grid .vc-w, .vc-grid .vc-cat { color:#9aa0ab; font-size:9.5px; }
-.vc-grid .vc-sep { margin-left:16px; }
+.vc-grid .vc-w { color:#707986; font-size:11px; font-weight:650; }
+.vc-grid .vc-cat { color:#707986; font-size:11px; font-weight:650; }
 .vc-ph { visibility:hidden; }
 .vc-note { font-size:10px; margin-top:3px; line-height:1.4; }
 .badge { display:inline-block; font-size:10px; font-weight:700; border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:1px; }
@@ -323,7 +386,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
     <div class="panel-row">
       <div>
         <p class="panel-title">Risk vs return by time window</p>
-        <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · everything below recomputes with every filter</span>
+        <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
       </div>
       <div class="spacer"></div>
       <div class="help-wrap">
@@ -393,6 +456,12 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
         <button data-max="15">SD ≤ 15%</button>
         <button data-max="8">SD ≤ 8%</button>
       </span>
+      <span class="sd-inputs" aria-label="Acceptable volatility range">
+        <label for="sd-min-input">SD min <input id="sd-min-input" type="number" min="0" max="200" step="0.5" value="0"></label>
+        <span>–</span>
+        <label for="sd-max-input">max <input id="sd-max-input" type="number" min="0.5" max="200" step="0.5" placeholder="All"></label>
+        <button id="sd-apply-btn" type="button">Apply</button>
+      </span>
       <input id="zoom-slider" type="range" min="2" max="80" step="1" value="80" title="Max SD shown">
       <button class="step-btn" id="zoom-out-btn" title="Zoom out">−</button>
       <button class="step-btn" id="zoom-in-btn"  title="Zoom in">+</button>
@@ -424,7 +493,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
   </div>
 
   <div class="footer">
-    <span>Source: <a href="https://api.sec.or.th" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">SEC.or.th</a> · Data as of 15 Sep 2026 · Generated 16 Sep 2026 (v3 · Fund Score)</span>
+    <span>Source: <a href="https://api.sec.or.th" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">SEC.or.th</a> · Data as of 15 Sep 2026 · Generated 17 Sep 2026 (v3 · Fund Score)</span>
     <span>All share classes are shown separately to allow comparison across fund agents.</span>
   </div>
 </div>
@@ -440,10 +509,7 @@ const WIN_COLORS = ["#007FFF","#8b5cf6","#10b981","#d97706","#ea580c","#9333ea",
 // dropdown). We use an array, not a space-separated string, because some Thai
 // codes literally contain spaces (e.g., "FP USBANK-A") or parens ("K-STAR-A(A)")
 // — a string model would split them into junk tokens.
-const state = { win: 0, main: "__ALL__", cats: [], shelf: "__ALL__", amc: "__ALL__", picks: [], xmax: 0, watermark: false, rev: 0 };
-// Draft selection inside the open sub-category checkbox panel — only
-// committed to state.cats (and the chart re-filtered) when "Check Selection"
-// is clicked, so ticking boxes doesn't refresh the chart on every click.
+const state = { win: 0, main: "__ALL__", cats: [], shelf: "__ALL__", amc: "__ALL__", picks: [], xmin: 0, xmax: 0, watermark: false, rev: 0 };
 let catDraft = [];
 const byId = new Map(FUNDS.map(f => [f.id, f]));
 FUNDS.forEach(f => { f.search = (f.name + " " + f.code + " " + (f.amc||"")).toLowerCase(); });
@@ -451,6 +517,7 @@ FUNDS.forEach(f => { f.search = (f.name + " " + f.code + " " + (f.amc||"")).toLo
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
 const fmtPct = v => v==null ? "—" : (v>=0?"+":"") + v.toFixed(2) + "%";
+const fmtPerf = v => v==null ? "—" : (v>=0?"+":"") + v.toFixed(2);
 const pctClass = v => v==null ? "" : (v>=0 ? "pos" : "neg");
 // Displayed percentile in Morningstar convention: 1 = best, 100 = worst (internal pct is 100=best)
 const msPct = p => (p==null ? "—" : Math.max(1, 100 - p));
@@ -601,8 +668,6 @@ $("cat-ms-clear").onclick = () => {
   $("cat-ms-list").querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
 };
 $("cat-ms-apply").onclick = () => {
-  // Build the combined universe from every checked sub-category (OR'd
-  // together) and apply it as the active peer filter in one go.
   state.cats = catDraft.slice();
   updateCatBtnLabel();
   closeCatPanel();
@@ -622,7 +687,7 @@ function renderChips(){
   // identifiable at a glance, not just by its raw code.
   state.picks.forEach(code => {
     const pf = FUNDS.find(x => (x.code||"").toLowerCase() === code.toLowerCase());
-    const esc = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+    const esc = t => (t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
     const lbl = pf ? esc(code) + " — " + esc(pf.name) : esc(code);
     chips.push({k:"pick", code, label:"“"+lbl+"”"});
   });
@@ -684,8 +749,12 @@ function buildPills(){
 /* ---------- custom hover card (spider + details, like v1) ---------- */
 function retsGridHTML(f){
   const w = state.win;
-  return '<div class="rets-grid">' + WINDOWS.map((lbl,i) =>
-    '<div'+(i===w?' style="background:#f0fafe;border-radius:4px;"':'')+'><div class="h">'+WIN_SHORT[i]+'</div><div class="v '+pctClass(f.rets[i])+'">'+fmtPct(f.rets[i])+'</div></div>').join("") + '</div>';
+  const cells = (from, to) => WINDOWS.slice(from, to).map((lbl,j) => {
+    const i = from + j;
+    return '<div'+(i===w?' style="background:#f0fafe;border-radius:4px;"':'')+'><div class="h">'+WIN_SHORT[i]+'</div><div class="v '+pctClass(f.rets[i])+'">'+fmtPerf(f.rets[i])+'</div></div>';
+  }).join("");
+  return '<div class="rets-wrap"><div class="rets-grid short">'+cells(0,6)+'</div>' +
+    '<div class="rets-grid long">'+cells(6,9)+'</div></div>';
 }
 function vsCatHTML(sp, f, winLabel){
   winLabel = winLabel || "1-Year";
@@ -698,18 +767,15 @@ function vsCatHTML(sp, f, winLabel){
     // points line up in each column; Sharpe (no %) gets a hidden "%" spacer so
     // its decimal aligns with the percentage rows.
     '<div class="vc-grid">' +
-      '<span>Return:</span>' +
-      '<b class="vc-num '+pctClass(sp.perf)+'">'+fmtPct(sp.perf)+(sp.perf_implied?'<span style="color:#B45309"> †</span>':'')+'</b>' +
-      '<span class="vc-w vc-sep">cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_perf)+'</span>' +
-      '<span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.perf_pct)+'</span>' +
-      '<span>Sharpe:</span>' +
-      '<b class="vc-num">'+(sp.sharpe!=null?sp.sharpe.toFixed(2):"—")+'<span class="vc-ph">%</span></b>' +
-      '<span class="vc-w vc-sep">cat</span><span class="vc-num vc-cat">'+(sp.cat_sharpe!=null?sp.cat_sharpe.toFixed(2):"—")+'<span class="vc-ph">%</span></span>' +
-      '<span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.sharpe_pct)+'</span>' +
-      '<span>Max drawdown:</span>' +
-      '<b class="vc-num '+pctClass(sp.dd)+'">'+fmtPct(sp.dd)+'</b>' +
-      '<span class="vc-w vc-sep">cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_dd)+'</span>' +
-      '<span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.dd_pct)+'</span>' +
+      '<div class="vc-row"><span class="vc-pair"><span>Return:</span><b class="vc-num '+pctClass(sp.perf)+'">'+fmtPct(sp.perf)+(sp.perf_implied?'<span style="color:#B45309"> †</span>':'')+'</b></span>' +
+      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_perf)+'</span></span>' +
+      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.perf_pct)+'</span></span></div>' +
+      '<div class="vc-row"><span class="vc-pair"><span>Sharpe:</span><b class="vc-num">'+(sp.sharpe!=null?sp.sharpe.toFixed(2):"—")+'</b></span>' +
+      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+(sp.cat_sharpe!=null?sp.cat_sharpe.toFixed(2):"—")+'</span></span>' +
+      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.sharpe_pct)+'</span></span></div>' +
+      '<div class="vc-row"><span class="vc-pair"><span>Max drawdown:</span><b class="vc-num '+pctClass(sp.dd)+'">'+fmtPct(sp.dd)+'</b></span>' +
+      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_dd)+'</span></span>' +
+      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.dd_pct)+'</span></span></div>' +
     '</div>';
   return '<div class="vs-cat"><b class="t">'+winLabel+' vs '+(f&&f.cat?f.cat:"sub-category")+' (n='+(sp.n_cat||"—")+') · %ile 1=best</b>' +
     grid +
@@ -765,13 +831,26 @@ function hoverCardHTML(f){
   return '<div class="card-cols"><div class="col-l">' + left + '</div><div class="col-r">' + right + '</div></div>';
 }
 function positionHoverCard(card, cx, cy){
-  const cw = card.offsetWidth || 600, ch = card.offsetHeight || 420;
   const edge = 16;
-  let x = cx + 16, y = cy + 12;
-  if (x + cw > window.innerWidth - edge) x = cx - cw - 16;
-  if (y + ch > window.innerHeight - edge) y = window.innerHeight - ch - edge;
-  if (y < edge) y = edge;
-  if (x < edge) x = edge;
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const vh = document.documentElement.clientHeight || window.innerHeight;
+  const reserveDetailsWidth = card.classList.contains("pinned") && card.classList.contains("has-details")
+    ? Math.min(700, vw - edge * 2) : 0;
+  const cw = Math.min(Math.max(card.offsetWidth || 600, reserveDetailsWidth), vw - edge * 2);
+  const ch = Math.min(card.offsetHeight || 420, vh - edge * 2);
+  // Anchor the card a fixed distance to the RIGHT of the point/cursor — close
+  // enough that the point and the card read as one glance, far enough that
+  // the card doesn't sit on top of (and hide) the point itself, its marker,
+  // or its name label (which sits just above the point). Vertically it's
+  // centred on the cursor and only clamped to the viewport, never flipped to
+  // open above the cursor — the card should always read as "beside", not
+  // "above", the point.
+  const gap = 100;
+  let x = cx + gap;
+  if (x + cw > vw - edge) x = vw - cw - edge;
+  let y = cy - ch / 2;
+  x = Math.max(edge, x);
+  y = Math.max(edge, Math.min(vh - ch - edge, y));
   card.style.left = x + "px";
   card.style.top = y + "px";
 }
@@ -842,7 +921,7 @@ function buildSpiderSVG(sp, winCap){
 /* ---------- chart ---------- */
 let plotInit = false;
 // Trend-style leader-line label state
-let _rrPts = [], _rrW = 0, _rrMedianAnns = [], _placingRR = false, _rrBound = false;
+let _rrPts = [], _rrW = 0, _rrMedianAnns = [], _placingRR = false, _rrBound = false, _rrWatermarkPts = [];
 
 // Labels:
 //   • Visible funds ≤ LABEL_SHOW_THRESHOLD → show up to LABEL_CAP labels (top by return).
@@ -861,10 +940,14 @@ function placeLabelsRR(){
   const y0 = ya._offset, y1 = ya._offset + ya._length;
   const w  = _rrW;
 
-  // Collect visible points (within current pan/zoom viewport)
+  // Collect visible points (within current pan/zoom viewport). Funds with a
+  // locked (pinned) Card already get their own name label from the "locked
+  // card selection" trace in drawChart() — skip them here so the two label
+  // systems don't draw overlapping/duplicate text on the same point.
   const visible = [];
   for (const f of _rrPts) {
     if (f.sd == null || f.rets[w] == null) continue;
+    if (_pinnedCards.has(String(f.id))) continue;
     const px = xa.d2p(sdOf(f))  + xa._offset;
     const py = ya.d2p(f.rets[w])+ ya._offset;
     if (px < x0-2 || px > x1+2 || py < y0-2 || py > y1+2) continue;
@@ -933,7 +1016,7 @@ function placeLabelsRR(){
     .then(() => { _placingRR = false; });
 }
 function revKey(){
-  return [state.win, state.main, state.cats.join("·"), state.shelf, state.amc, state.picks.join("·"), state.xmax, state.rev].join("|");
+  return [state.win, state.main, state.cats.join("·"), state.shelf, state.amc, state.picks.join("·"), state.xmin, state.xmax, state.rev].join("|");
 }
 function drawChart(list){
   const w = state.win, col = WIN_COLORS[w];
@@ -950,21 +1033,29 @@ function drawChart(list){
     : pts;
   const medianPts = state.picks.length && hasPeerFilter() && peerPts.length ? peerPts : pts;
   const direct = pts.filter(f => !f.proxy), proxy = pts.filter(f => f.proxy);
+  // Funds with a locked (pinned) Card already carry a permanent name label
+  // from the "locked card selection" trace below — blank out their code
+  // tooltip on the other traces so hovering the same spot doesn't pop a
+  // second, overlapping "code" tooltip on top of that label.
+  const pinnedIdSet = new Set([..._pinnedCards.keys()]);
+  const codeOrBlank = f => pinnedIdSet.has(String(f.id)) ? "" : f.code;
 
   const mkTrace = (arr, name, marker) => ({
     x: arr.map(f=>sdOf(f)), y: arr.map(f=>f.rets[w]),
     customdata: arr.map(f=>f.id),
-    hovertemplate: " <extra></extra>",   // suppress native tooltip; custom card rendered on plotly_hover
+    text: arr.map(codeOrBlank),
+    hovertemplate: "<b>%{text}</b><extra></extra>",
     mode: "markers", type: "scattergl", name, marker,
-    hoverlabel: { bgcolor:"rgba(255,255,255,0)", bordercolor:"rgba(0,0,0,0)", font:{size:1, color:"rgba(0,0,0,0)"} }
+    hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
   });
 
   const traces = [];
   if (watermarkPts.length) {
     traces.push({
       x: watermarkPts.map(f=>sdOf(f)), y: watermarkPts.map(f=>f.rets[w]),
-      text: watermarkPts.map(f=>f.code + (f.name ? "<br>" + f.name : "")),
-      hovertemplate: "%{text}<extra></extra>",
+      customdata: watermarkPts.map(f=>f.id),
+      text: watermarkPts.map(codeOrBlank),
+      hovertemplate: "<b>%{text}</b><extra></extra>",
       mode: "markers", type: "scattergl", name: "background watermark",
       marker: {
         color: col,
@@ -972,7 +1063,7 @@ function drawChart(list){
         size: watermarkPts.map(f=>Math.max(4, Math.min(9, f.size || 6))),
         line: { width:0, color:"rgba(0,0,0,0)" }
       },
-      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#cbd5e1", font:{size:11, color:"#334155"} }
+      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
     });
   }
   const markerSize = (arr, activeLineWidth, baseLineWidth) => arr.map(f => {
@@ -987,6 +1078,37 @@ function drawChart(list){
     mkTrace(proxy, "proxy", { color: col, opacity:focusOpacity, size: markerSize(proxy, proxyLine.width, 1.8), line:proxyLine })
   );
 
+  // Give every fund whose information card is locked a clear marker edge.
+  // This is deliberately derived from the pinned-card IDs instead of `pts`,
+  // so a selected background watermark fund receives the same treatment as a
+  // foreground fund and remains identifiable while the two cards are compared.
+  const pinnedPts = [..._pinnedCards.keys()]
+    .map(id => byId.get(id) || byId.get(+id))
+    .filter(f => f && sdOf(f) != null && f.rets[w] != null);
+  if (pinnedPts.length) {
+    traces.push({
+      x: pinnedPts.map(f => sdOf(f)),
+      y: pinnedPts.map(f => f.rets[w]),
+      customdata: pinnedPts.map(f => f.id),
+      // Label with the fund's name (not just the code) so it's obvious at a
+      // glance which pinned Card this point's data belongs to — truncate
+      // very long names so the tag doesn't swallow the chart.
+      text: pinnedPts.map(f => f.code + " — " + ((f.name||"").length > 30 ? f.name.slice(0,29) + "…" : (f.name||""))),
+      textposition: "top center",
+      textfont: { color:"#4F2D7F", size:11, family:"Arial, sans-serif" },
+      hovertemplate: " <extra></extra>",
+      mode: "markers+text", type: "scatter", name: "locked card selection",
+      marker: {
+        symbol: "circle",
+        size: pinnedPts.map(f => Math.max(6, Math.min(14, f.size || 8))),
+        color: col,
+        opacity: 1,
+        line: { color:"#4F2D7F", width:2.5 }
+      },
+      showlegend: false
+    });
+  }
+
   // medians + annotations for top-5
   const axisSds = axisPts.map(f=>sdOf(f));
   const sds = medianPts.map(f=>sdOf(f)), medSd = median(sds);
@@ -1000,7 +1122,7 @@ function drawChart(list){
   //
   // The SD preset (xmax > 0) still wins for the X axis — that's the user's
   // explicit choice, not an automatic narrowing.
-  const yPts = xHi ? axisPts.filter(f=>sdOf(f) <= xHi) : axisPts;
+  const yPts = axisPts.filter(f => sdOf(f) >= state.xmin && (xHi == null || sdOf(f) <= xHi));
   const ys = yPts.map(f=>f.rets[w]);
   let yRange;
   if (ys.length) {
@@ -1013,9 +1135,11 @@ function drawChart(list){
   }
 
   let xRange;
-  if (xHi != null) {
-    // User pinned an SD cap — respect it.
-    xRange = [-0.3, xHi];
+  if (xHi != null || state.xmin > 0) {
+    // User supplied an acceptable SD range — respect both bounds. When the
+    // upper bound is open, retain the natural maximum of the filtered data.
+    const naturalHi = axisSds.length ? Math.max(...axisSds) : state.xmin + 1;
+    xRange = [Math.max(0, state.xmin) - 0.3, xHi != null ? xHi : naturalHi + Math.max(naturalHi * 0.05, 1.5)];
   } else if (axisSds.length) {
     const xLo = Math.min(...axisSds), xMax = Math.max(...axisSds);
     const span = xMax - xLo;
@@ -1043,6 +1167,11 @@ function drawChart(list){
   });
   // Store state for placeLabelsRR
   _rrPts = pts; _rrW = w; _rrMedianAnns = medianAnns;
+  // Separate from _rrPts (which drives the top-N chart labels and should stay
+  // focused on the foreground set) so drawTablesForViewport can still rank
+  // the watermark's whole peer group after a pan/zoom without cluttering the
+  // chart with background-fund labels.
+  _rrWatermarkPts = watermarkPts;
 
   const layout = {
     uirevision: revKey(),
@@ -1084,23 +1213,223 @@ function drawChart(list){
 // Card is "pinned" when a tap (touch) opened it. Hover events don't dismiss
 // a pinned card — only the close button or tapping outside can.
 let _cardPinned = false;
+const _pinnedCards = new Map();
+let _hoverPreviewCard = null;
+let _suppressPlotClickUntil = 0;
+
+function enablePinnedCardInteractions(hc){
+  const resizeEdges = hc.querySelectorAll(".resize-edge");
+  const toggle = hc.querySelector(".details-toggle");
+
+  if (toggle) toggle.onclick = (ev) => {
+    ev.stopPropagation();
+    const opening = !hc.classList.contains("details-open");
+    hc.classList.toggle("details-open", opening);
+    toggle.textContent = opening ? "<" : ">";
+    toggle.setAttribute("aria-label", opening ? "Hide investment details" : "Show investment details");
+    const collapsedWidth = parseFloat(hc.dataset.collapsedWidth || "390");
+    const expandedWidth = window.innerWidth > 700 ? Math.min(700, window.innerWidth - 32) : collapsedWidth;
+    hc.dataset.baseWidth = String(opening ? expandedWidth : collapsedWidth);
+    syncCardGeometry(hc);
+  };
+
+  hc.onpointerdown = (ev) => {
+    if (ev.target.closest("button, .resize-edge")) return;
+    if (ev.button != null && ev.button !== 0) return;
+    const r = hc.getBoundingClientRect();
+    const sx = ev.clientX, sy = ev.clientY;
+    let dragging = false;
+    hc.setPointerCapture(ev.pointerId);
+    hc.onpointermove = (mv) => {
+      if (!dragging && Math.hypot(mv.clientX - sx, mv.clientY - sy) < 6) return;
+      dragging = true;
+      mv.preventDefault(); mv.stopPropagation();
+      const left = Math.max(16, Math.min(r.left + mv.clientX - sx, window.innerWidth - r.width - 16));
+      const top = Math.max(16, Math.min(r.top + mv.clientY - sy, window.innerHeight - r.height - 16));
+      hc.style.left = left + "px"; hc.style.top = top + "px";
+    };
+    hc.onpointerup = hc.onpointercancel = () => { hc.onpointermove = null; };
+  };
+
+  resizeEdges.forEach(edge => edge.onpointerdown = (ev) => {
+    if (ev.button != null && ev.button !== 0) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const side = [...edge.classList].find(c => c !== "resize-edge");
+    const startRect = hc.getBoundingClientRect();
+    const startScale = parseFloat(hc.dataset.scale || "1");
+    const startX = ev.clientX, startY = ev.clientY;
+    const finishResize = () => {
+      edge.onpointermove = null;
+      edge.onpointerup = null;
+      edge.onpointercancel = null;
+      edge.onlostpointercapture = null;
+    };
+    edge.setPointerCapture(ev.pointerId);
+    edge.onpointermove = (mv) => {
+      if (mv.pointerId !== ev.pointerId) return;
+      // A pointerup can be lost when the mouse is released outside the browser
+      // or the card is re-rendered. Never resize from a later hover-only move.
+      if (mv.pointerType === "mouse" && (mv.buttons & 1) === 0) {
+        finishResize();
+        return;
+      }
+      let ratio = 1;
+      if (side === "corner") {
+        const byWidth = (startRect.width + mv.clientX - startX) / startRect.width;
+        const byHeight = (startRect.height + mv.clientY - startY) / startRect.height;
+        ratio = Math.abs(mv.clientX - startX) >= Math.abs(mv.clientY - startY) ? byWidth : byHeight;
+      }
+      const scale = Math.max(.7, Math.min(1, startScale * ratio));
+      hc.dataset.scale = scale.toFixed(3);
+      syncCardGeometry(hc);
+    };
+    edge.onpointerup = edge.onpointercancel = edge.onlostpointercapture = finishResize;
+  });
+}
+
+function syncCardGeometry(hc){
+  const content = hc.querySelector(".card-scale-content");
+  if (!content) return;
+  const scale = parseFloat(hc.dataset.scale || "1");
+  const baseWidth = parseFloat(hc.dataset.baseWidth || "390");
+  content.style.width = baseWidth + "px";
+  content.style.transform = "scale(" + scale + ")";
+  const naturalHeight = content.scrollHeight;
+  const width = baseWidth * scale;
+  const height = Math.min(naturalHeight * scale, window.innerHeight - 32);
+  hc.style.width = width + "px";
+  hc.style.height = height + "px";
+  const toggle = hc.querySelector(".details-toggle");
+  if (toggle) {
+    const collapsedHeight = parseFloat(hc.dataset.collapsedHeight || naturalHeight);
+    const mainColumnWidth = parseFloat(hc.dataset.mainColumnWidth || "358");
+    toggle.style.left = Math.min(width - 26, mainColumnWidth * scale) + "px";
+    toggle.style.top = Math.max(28, collapsedHeight * .50 * scale) + "px";
+  }
+}
 
 function renderHoverCard(f, pinned){
-  const hc = $("hover-card");
-  hc.innerHTML = '<div class="card-body">' + hoverCardHTML(f) + '</div>' +
+  const fundKey = String(f.id);
+  if (pinned && _pinnedCards.has(fundKey)) return null;
+  if (pinned && _pinnedCards.size >= 2) return null;
+  let hc = $("hover-card");
+  if (!pinned && _pinnedCards.size) {
+    const originalIsPinned = [..._pinnedCards.values()].includes(hc);
+    if (originalIsPinned) {
+      if (!_hoverPreviewCard || !_hoverPreviewCard.isConnected) {
+        _hoverPreviewCard = document.createElement("div");
+        _hoverPreviewCard.id = "hover-card";
+        _hoverPreviewCard.dataset.preview = "true";
+        document.body.appendChild(_hoverPreviewCard);
+      }
+      hc = _hoverPreviewCard;
+    }
+  }
+  if (pinned && hc.dataset.fundId && _pinnedCards.has(hc.dataset.fundId)) {
+    hc = document.createElement("div");
+    // Keep the same selector-driven card styling; all control lookup is scoped
+    // to this element, so the two cards remain independent.
+    hc.id = "hover-card";
+    document.body.appendChild(hc);
+  }
+  const hasDetails = !!(f.strat || holdingsHTML(f));
+  hc.innerHTML = '<div class="card-scale-content"><div class="card-body">' + hoverCardHTML(f) + '</div></div>' +
+    '<div class="drag-handle" id="hover-drag" title="Drag to move"></div>' +
+    '<div class="resize-edge corner" title="Drag to resize"></div>' +
+    (hasDetails ? '<button class="details-toggle" id="hover-details-toggle" aria-label="Show investment details" title="Show/hide investment details">&gt;</button>' : '') +
     '<button class="close-btn" id="hover-close" aria-label="Close">×</button>';
-  hc.classList.toggle("pinned", !!pinned);
+  hc.className = (pinned ? "pinned " : "") + (hasDetails ? "has-details" : "");
+  hc.dataset.fundId = fundKey;
+  const collapsedWidth = Math.min(390, window.innerWidth - 32);
+  const mainColumnWidth = collapsedWidth - 32;
+  hc.dataset.scale = "1";
+  hc.dataset.baseWidth = String(collapsedWidth);
+  hc.dataset.collapsedWidth = String(collapsedWidth);
+  hc.dataset.mainColumnWidth = String(mainColumnWidth);
+  hc.style.setProperty("--main-column-width", mainColumnWidth + "px");
   hc.style.display = "block";
-  _cardPinned = !!pinned;
+  syncCardGeometry(hc);
+  hc.dataset.collapsedHeight = String(hc.querySelector(".card-scale-content").scrollHeight);
+  syncCardGeometry(hc);
+  // Establish a safe viewport-contained position even when Plotly's event
+  // carries no pointer coordinates (common inside the Hub iframe).
+  positionHoverCard(hc, window.innerWidth / 2, window.innerHeight / 2);
+  if (!pinned) _hoverPreviewCard = hc;
   // Wire the close button (re-rendered each time, so re-bind)
-  const btn = document.getElementById("hover-close");
-  if (btn) btn.onclick = (ev) => { ev.stopPropagation(); hideHoverCard(); };
+  const btn = hc.querySelector(".close-btn");
+  if (btn) {
+    // Prevent the pointer release from falling through to a Plotly point that
+    // happens to sit directly behind the card after it is removed.
+    btn.onpointerdown = (ev) => {
+      ev.stopPropagation();
+      _suppressPlotClickUntil = Date.now() + 350;
+    };
+    btn.onpointerup = (ev) => ev.stopPropagation();
+    btn.onclick = (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      _suppressPlotClickUntil = Date.now() + 350;
+      hideHoverCard(hc);
+    };
+  }
+  if (pinned) {
+    _pinnedCards.set(fundKey, hc);
+    _cardPinned = true;
+    enablePinnedCardInteractions(hc);
+    // Redraw only after the card is registered so its chart point immediately
+    // receives the locked-selection edge.
+    drawChart(filtered());
+  }
+  return hc;
 }
-function hideHoverCard(){
-  const hc = $("hover-card");
+
+function separatePinnedCard(hc){
+  const r = hc.getBoundingClientRect();
+  const other = [..._pinnedCards.values()].find(card => card !== hc && card.style.display === "block");
+  if (!other) return;
+  const o = other.getBoundingClientRect();
+  const overlaps = r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top;
+  if (!overlaps) return;
+  const edge = 16;
+  let left = o.right + 12;
+  if (left + r.width > window.innerWidth - edge) left = o.left - r.width - 12;
+  if (left < edge) left = Math.max(edge, Math.min(window.innerWidth - r.width - edge, o.left + 32));
+  let top = o.top;
+  if (Math.abs(left - o.left) < r.width * .6) top = Math.max(edge, Math.min(window.innerHeight - r.height - edge, o.top + 32));
+  hc.style.left = left + "px";
+  hc.style.top = top + "px";
+}
+function hideHoverCard(card){
+  const hc = card || $("hover-card");
+  let removedPinned = false;
+  if (hc.dataset.fundId && _pinnedCards.get(hc.dataset.fundId) === hc) {
+    _pinnedCards.delete(hc.dataset.fundId);
+    removedPinned = true;
+  }
   hc.style.display = "none";
   hc.classList.remove("pinned");
-  _cardPinned = false;
+  hc.classList.remove("details-open", "has-details");
+  hc.style.width = "";
+  hc.style.height = "";
+  delete hc.dataset.scale;
+  delete hc.dataset.baseWidth;
+  delete hc.dataset.collapsedWidth;
+  delete hc.dataset.mainColumnWidth;
+  delete hc.dataset.collapsedHeight;
+  hc.style.removeProperty("--main-column-width");
+  delete hc.dataset.fundId;
+  _cardPinned = _pinnedCards.size > 0;
+  if (hc === _hoverPreviewCard) _hoverPreviewCard = null;
+  if (hc !== $("hover-card")) hc.remove();
+  // Closing a locked card also removes its point edge. Preview cards never
+  // trigger this redraw because they are not entries in `_pinnedCards`.
+  if (removedPinned) drawChart(filtered());
+}
+
+function hideHoverPreview(){
+  if (!_hoverPreviewCard) return;
+  const preview = _hoverPreviewCard;
+  _hoverPreviewCard = null;
+  hideHoverCard(preview);
 }
 
 // ---------------------------------------------------------------------------
@@ -1183,61 +1512,63 @@ function attachPinchZoom(gd){
 
 function attachChartEvents(){
   const gd = $("chart");
-  const hc = $("hover-card");
   // Re-place labels after pan / zoom (same pattern as Trend dashboard)
   if (!_rrBound) {
-    gd.on("plotly_relayout", () => { if (!_placingRR) placeLabelsRR(); });
+    gd.on("plotly_relayout", () => {
+      if (!_placingRR) placeLabelsRR();
+      drawTablesForViewport();
+    });
     attachPinchZoom(gd);
     _rrBound = true;
   }
   gd.on("plotly_hover", ev => {
-    if (_cardPinned) return;                  // touch tap is winning — don't override
+    if (_pinnedCards.size >= 2) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
+    if (_pinnedCards.has(String(p.customdata))) return;
     const f = byId.get(p.customdata);
     if (!f) return;
-    renderHoverCard(f, false);
+    const hoverCard = renderHoverCard(f, false);
     const e = ev.event || window.event;
-    if (e) positionHoverCard(hc, e.clientX, e.clientY);
+    if (e && hoverCard) positionHoverCard(hoverCard, e.clientX, e.clientY);
   });
-  gd.on("plotly_unhover", () => { if (!_cardPinned) hideHoverCard(); });
+  gd.on("plotly_unhover", () => {
+    if (_pinnedCards.size) hideHoverPreview();
+    else hideHoverCard();
+  });
   // Tap (iPad / phone / mouse click): pin the card so it stays open until the
   // user closes it. plotly_click fires on touch where plotly_hover does not.
   gd.on("plotly_click", ev => {
+    if (Date.now() < _suppressPlotClickUntil) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
     const f = byId.get(p.customdata);
     if (!f) return;
-    renderHoverCard(f, true);
+    hideHoverPreview();
+    const pinnedCard = renderHoverCard(f, true);
+    if (!pinnedCard) return;
     const e = ev.event || window.event;
     if (e && typeof e.clientX === "number") {
-      positionHoverCard(hc, e.clientX, e.clientY);
+      positionHoverCard(pinnedCard, e.clientX, e.clientY);
     } else {
       // No coords (some touch events) — anchor near top of chart
       const r = gd.getBoundingClientRect();
-      positionHoverCard(hc, r.left + r.width/2, r.top + 60);
+      positionHoverCard(pinnedCard, r.left + r.width/2, r.top + 60);
     }
+    separatePinnedCard(pinnedCard);
   });
   gd.addEventListener("mousemove", ev => {
-    if (_cardPinned) return;
-    if (hc.style.display !== "block") return;
-    positionHoverCard(hc, ev.clientX, ev.clientY);
+    if (_pinnedCards.size >= 2) return;
+    const hoverCard = _hoverPreviewCard || (_pinnedCards.size ? null : $("hover-card"));
+    if (!hoverCard || hoverCard.style.display !== "block") return;
+    positionHoverCard(hoverCard, ev.clientX, ev.clientY);
   });
-  gd.addEventListener("mouseleave", () => { if (!_cardPinned) hideHoverCard(); });
+  gd.addEventListener("mouseleave", () => {
+    if (_pinnedCards.size) hideHoverPreview();
+    else hideHoverCard();
+  });
 
-  // Tap outside the card / chart → dismiss a pinned card.
-  // Use 'pointerdown' so it works for both mouse and touch.
-  if (!_cardOutsideBound){
-    document.addEventListener("pointerdown", (ev) => {
-      if (!_cardPinned) return;
-      if (hc.contains(ev.target)) return;       // tapped inside the card
-      if (gd.contains(ev.target)) return;       // chart taps are handled by Plotly above
-      hideHoverCard();
-    }, true);
-    _cardOutsideBound = true;
-  }
 }
-let _cardOutsideBound = false;
 
 /* ---------- tables ---------- */
 const SCB_TERM_RE = /^SCB\w*\d*[36]M\d+$/i;   // SCB fix-term roll series (3M / 6M / 16M …) — excluded from Top 20
@@ -1256,16 +1587,19 @@ function tableHTML(rows){
       '<td>'+(f.sd!=null?f.sd.toFixed(1)+"%":"—")+'</td>' +
       '<td>'+(f.sp&&f.sp.sharpe!=null?f.sp.sharpe.toFixed(2):"—")+'</td></tr>';
   });
+  if (!rows.length) h += '<tr><td colspan="13" class="hint">No funds in the visible chart area</td></tr>';
   return h + "</tbody>";
 }
-function drawTables(list){
+function drawTables(list, visibleScope){
   const w = state.win;
   // With the watermark on, the faint background points represent the whole
-  // sub-category/main/shelf/AMC group the user is browsing — so the Top/
-  // Worst tables should rank that whole group too, not just the funds
-  // currently drawn "in focus".
+  // sub-category/main/shelf/AMC group being browsed — so the Top/Worst
+  // tables should rank that whole group too, not just the funds currently
+  // drawn "in focus" (the viewport-based ranking below already covers the
+  // watermark for pan/zoom since it operates on rendered chart points, but
+  // the initial/filtered ranking here did not).
   let tableList = list, watermarked = false;
-  if (state.watermark && hasPeerFilter()) {
+  if (!visibleScope && state.watermark && hasPeerFilter()) {
     const peers = filtered(false);
     if (peers.length) {
       const visibleIds = new Set(list.map(f => f.id));
@@ -1275,20 +1609,52 @@ function drawTables(list){
   }
   const ranked = tableList.filter(f => f.rets[w] != null).sort((a,b)=>b.rets[w]-a.rets[w]);
   const topRanked = ranked.filter(f => !SCB_TERM_RE.test(f.code));
-  const suffix = watermarked ? " · incl. watermark group" : "";
-  $("top-title").textContent = "Top 20 funds — best " + WINDOWS[w] + " return · excl. SCB 3M/6M fix-term series" + suffix;
-  $("bot-title").textContent = "Worst 20 funds — weakest " + WINDOWS[w] + " return" + suffix;
+  const scope = (visibleScope ? ranked.length.toLocaleString() + " funds visible" : ranked.length.toLocaleString() + " filtered funds") +
+    ((watermarked || (visibleScope && state.watermark && hasPeerFilter())) ? " · incl. watermark group" : "");
+  $("top-title").textContent = "Top 20 visible funds — best " + WINDOWS[w] + " return · excl. SCB 3M/6M fix-term series";
+  $("bot-title").textContent = "Worst 20 visible funds — weakest " + WINDOWS[w] + " return";
+  $("top-scope").textContent = scope;
+  $("bot-scope").textContent = scope;
   $("top-table").innerHTML = tableHTML(topRanked.slice(0,20));
   $("bot-table").innerHTML = tableHTML(ranked.slice(-20).reverse());
 }
 
+// Keep both rankings aligned with the points the user can actually see.
+// This responds to Plotly wheel zoom, drag-pan, pinch zoom and reset, while
+// the selected return window continues to determine the ranking metric.
+function drawTablesForViewport(){
+  const gd = $("chart"), fl = gd && gd._fullLayout;
+  if (!fl || !fl.xaxis || !fl.yaxis) return;
+  const xa = fl.xaxis, ya = fl.yaxis;
+  const x0 = xa._offset, x1 = xa._offset + xa._length;
+  const y0 = ya._offset, y1 = ya._offset + ya._length;
+  const inView = f => {
+    if (sdOf(f) == null || f.rets[state.win] == null) return false;
+    const px = xa.d2p(sdOf(f)) + xa._offset;
+    const py = ya.d2p(f.rets[state.win]) + ya._offset;
+    return px >= x0-2 && px <= x1+2 && py >= y0-2 && py <= y1+2;
+  };
+  const visible = _rrPts.filter(inView);
+  // Watermark points are real chart markers too — include whichever of them
+  // are currently in the viewport so the ranking matches what's on screen.
+  const watermarkVisible = state.watermark ? _rrWatermarkPts.filter(inView) : [];
+  drawTables(visible.concat(watermarkVisible), true);
+}
+
 /* ---------- zoom ---------- */
-function setZoom(xmax, fromSlider){
-  state.xmax = xmax;
+function setZoom(xmax, fromSlider, xmin){
+  const lo = Math.max(0, Number.isFinite(+xmin) ? +xmin : 0);
+  const hi = Math.max(0, Number.isFinite(+xmax) ? +xmax : 0);
+  state.xmin = hi > 0 ? Math.min(lo, hi) : lo;
+  state.xmax = hi;
   state.rev++;   // new uirevision so presets/Reset always override any wheel-zoom/pan
-  $("zoom-presets").querySelectorAll("button").forEach(b => b.classList.toggle("active", +b.dataset.max === xmax && !fromSlider));
-  if (!fromSlider) $("zoom-slider").value = xmax === 0 ? 80 : xmax;
-  $("zoom-readout").textContent = xmax === 0 ? "showing all" : "showing SD ≤ " + xmax + "%";
+  $("zoom-presets").querySelectorAll("button").forEach(b => b.classList.toggle("active", state.xmin === 0 && +b.dataset.max === hi && !fromSlider));
+  if (!fromSlider) $("zoom-slider").value = hi === 0 ? 80 : Math.min(80, hi);
+  $("sd-min-input").value = state.xmin;
+  $("sd-max-input").value = hi === 0 ? "" : hi;
+  $("zoom-readout").textContent = hi === 0
+    ? (state.xmin > 0 ? "showing SD ≥ " + state.xmin + "%" : "showing all")
+    : "showing SD " + state.xmin + "%–" + hi + "%";
   refresh(true);
 }
 
@@ -1376,8 +1742,8 @@ function pickSuggestion(i){
   $("find-dd").classList.remove("open");
   // A newly-added fund can fall outside the current SD zoom range and be
   // invisible until the user manually resets — so reset the view whenever a
-  // new pick is added (setZoom(0,...) also calls refresh() internally).
-  setZoom(0, false);
+  // new pick is added (setZoom(...) also calls refresh() internally).
+  setZoom(0, false, 0);
   $inp.focus();
 }
 
@@ -1403,9 +1769,18 @@ $("find-input").onblur = () => {
 $("find-input").onfocus = e => {
   if (e.target.value && _findDd.items.length) $("find-dd").classList.add("open");
 };
-$("zoom-presets").querySelectorAll("button").forEach(b => b.onclick = () => setZoom(+b.dataset.max, false));
-$("zoom-slider").oninput = e => setZoom(+e.target.value === 80 ? 0 : +e.target.value, true);
-$("reset-btn").onclick = () => setZoom(0, false);
+$("zoom-presets").querySelectorAll("button").forEach(b => b.onclick = () => setZoom(+b.dataset.max, false, 0));
+$("zoom-slider").oninput = e => setZoom(+e.target.value === 80 ? 0 : +e.target.value, true, 0);
+$("sd-apply-btn").onclick = () => {
+  const lo = parseFloat($("sd-min-input").value) || 0;
+  const rawHi = $("sd-max-input").value.trim();
+  const hi = rawHi === "" ? 0 : parseFloat(rawHi);
+  setZoom(Number.isFinite(hi) ? hi : 0, false, lo);
+};
+[$("sd-min-input"), $("sd-max-input")].forEach(el => el.onkeydown = e => {
+  if (e.key === "Enter") $("sd-apply-btn").click();
+});
+$("reset-btn").onclick = () => setZoom(0, false, 0);
 // Tap-friendly zoom step buttons (work on iPad / touch where pinch may be
 // captured by Safari instead of Plotly).
 function bumpZoom(direction){
@@ -1416,7 +1791,7 @@ function bumpZoom(direction){
   // direction = +1 zoom IN (smaller xmax), -1 zoom OUT (larger xmax)
   const next = direction > 0 ? Math.max(lo, Math.round(current * 0.65))
                              : Math.min(hi, Math.round(current * 1.45));
-  setZoom(next === hi ? 0 : next, false);
+  setZoom(next === hi ? 0 : next, false, 0);
 }
 $("zoom-in-btn").onclick  = () => bumpZoom(+1);
 $("zoom-out-btn").onclick = () => bumpZoom(-1);
