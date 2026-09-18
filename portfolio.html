@@ -19,7 +19,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .sub a { color:var(--cyan); text-decoration:none; }
 .card { border:1px solid var(--rule); border-radius:10px; padding:14px 16px; background:#fff; margin-bottom:14px; }
 .card h2 { font-size:13px; font-weight:700; margin:0 0 10px; color:var(--scb); letter-spacing:0.03em; text-transform:uppercase; }
-.layout { display:grid; grid-template-columns: minmax(0,1.45fr) minmax(0,1fr); gap:14px; }
+.layout { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.25fr); gap:14px; }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
 /* ---------- search + suggestions ---------- */
@@ -41,7 +41,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 
 /* ---------- holdings list ---------- */
 .holdings { margin-top:12px; }
-.h-head, .h-row { display:grid; grid-template-columns: minmax(0,1fr) 180px 56px 78px 70px 22px; gap:10px;
+.h-head, .h-row { display:grid; grid-template-columns: minmax(0,1fr) 34px 88px 42px 58px 16px; gap:6px;
          align-items:center; padding:8px 4px; }
 .h-head { padding:4px 4px 6px; border-bottom:1px solid var(--rule); font-size:10px; font-weight:700;
           text-transform:uppercase; letter-spacing:0.05em; color:var(--grey); }
@@ -49,6 +49,8 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .h-head > div:nth-child(3),
 .h-head > div:nth-child(4),
 .h-head > div:nth-child(5) { text-align:center; }
+.h-row .iw-val { text-align:center; font-size:10px; color:var(--grey); font-variant-numeric:tabular-nums; }
+.h-row .iw-val.naive { color:var(--mute); font-style:italic; }
 .h-row { border-bottom:1px solid var(--soft); }
 .h-row:last-child { border-bottom:none; }
 .h-name { font-weight:600; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -76,15 +78,16 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);
 }
 .h-row .pct-num { display:flex; align-items:center; gap:2px; justify-content:flex-end; font-weight:700; }
-.h-row .pct-num input { width:46px; padding:3px 4px; border:1px solid var(--rule); border-radius:5px;
+.h-row .pct-num input { width:40px; padding:3px 4px; border:1px solid var(--rule); border-radius:5px;
   font-size:12px; text-align:right; }
 .h-row .pct-num span { color:var(--grey); font-weight:500; }
-.h-row .exp-ret { text-align:right; font-weight:700; font-variant-numeric:tabular-nums; }
+.h-row .stat-cell { display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; min-width:0; }
+.h-row .exp-ret { text-align:right; font-weight:700; font-variant-numeric:tabular-nums; font-size:11.5px; }
 .h-row .exp-ret.pos { color:var(--green); }
 .h-row .exp-ret.neg { color:var(--red); }
 .h-row .exp-ret.zero { color:var(--mute); font-weight:500; }
-.h-row .sd-val { text-align:right; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink); }
-.h-row .sd-val.naive { color:var(--mute); font-style:italic; font-weight:500; }
+.h-row .sd-val { text-align:right; font-variant-numeric:tabular-nums; color:var(--grey); font-size:9.5px; }
+.h-row .sd-val.naive { font-style:italic; }
 .h-row .rm { background:none; border:none; color:var(--mute); font-size:18px; cursor:pointer; padding:0; line-height:1; }
 .h-row .rm:hover { color:var(--red); }
 .h-empty { padding:18px 6px; text-align:center; color:var(--mute); font-size:13px; font-style:italic; }
@@ -134,12 +137,22 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut text { font-size:11px; fill:var(--grey); }
 .donut .center-v { font-size:18px; font-weight:700; fill:var(--ink); }
 .cat-legend { flex:1; min-width:0; font-size:11.5px; line-height:1.4; }
+.cat-legend .leg-title-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px; }
 .cat-legend .leg-title { font-size:10px; font-weight:700; color:var(--grey); text-transform:uppercase;
-                         letter-spacing:0.04em; margin-bottom:5px; }
+                         letter-spacing:0.04em; }
+.cat-legend .cat-toggle { display:flex; border:1px solid var(--rule); border-radius:5px; overflow:hidden; flex:0 0 auto; }
+.cat-legend .cat-toggle button { border:none; background:#fff; color:var(--grey); font-size:10px; font-weight:700;
+  padding:2px 7px; cursor:pointer; text-transform:uppercase; letter-spacing:0.03em; }
+.cat-legend .cat-toggle button + button { border-left:1px solid var(--rule); }
+.cat-legend .cat-toggle button.active { background:var(--cyan); color:#fff; }
 .cat-legend .leg-row { display:flex; align-items:center; gap:6px; padding:2.5px 0; min-width:0; }
 .cat-legend .leg-dot { flex:0 0 9px; width:9px; height:9px; border-radius:2px; }
 .cat-legend .leg-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
-.cat-legend .leg-pct { font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+.cat-legend .leg-ret { font-weight:600; font-variant-numeric:tabular-nums; font-size:10.5px; }
+.cat-legend .leg-ret.pos { color:var(--green); }
+.cat-legend .leg-ret.neg { color:var(--red); }
+.cat-legend .leg-ret.zero { color:var(--mute); }
+.cat-legend .leg-pct { font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; min-width:32px; text-align:right; }
 .cat-legend .leg-cash { color:var(--grey); font-style:italic; }
 .cat-legend .leg-empty { color:var(--mute); font-style:italic; font-size:12px; padding:4px 0; }
 
@@ -161,6 +174,9 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .chart-legend .cl-item.port .cl-dot { border-radius:50%; opacity:1; }
 .chart-empty { padding:24px 6px; text-align:center; color:var(--mute); font-size:13px; font-style:italic; }
 .chart-empty.mini { padding:14px 6px; font-size:11.5px; }
+.rr-tip { position:absolute; display:none; pointer-events:none; background:var(--ink); color:#fff;
+  font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:4px; white-space:nowrap; z-index:5;
+  transform:translate(-50%, -130%); }
 .mini-chart { margin-top:12px; padding-top:10px; border-top:1px dashed var(--rule); }
 .mini-chart-hdr { font-size:11px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; }
 .mini-chart-hdr span { font-weight:500; text-transform:none; letter-spacing:0; }
@@ -198,10 +214,10 @@ footer a { color:inherit; text-decoration:underline; }
         </h2>
         <div class="h-head" id="h-head" style="display:none;">
           <div>Fund</div>
+          <div id="h-head-iw" title="Implied starting weight for the selected period — back-solved so that, left untouched (no rebalancing), it drifts into today's Current Weight.">IW</div>
           <div title="The weight you hold today — past weight for the selected period is back-solved from this.">Current Weight</div>
           <div></div>
-          <div id="h-head-ret">Return (%)</div>
-          <div id="h-head-sd">SD (%)</div>
+          <div id="h-head-ret">Return / SD (%)</div>
           <div></div>
         </div>
         <div id="holdings" class="holdings">
@@ -245,6 +261,12 @@ footer a { color:inherit; text-decoration:underline; }
           <div class="chart-wrap mini" id="chart-wrap"></div>
           <div class="chart-legend mini" id="chart-legend"></div>
         </div>
+
+        <div class="mini-chart" id="rr-chart-card" style="position:relative;">
+          <div class="mini-chart-hdr">Risk vs Return <span>· each dot is a holding, sized by weight</span></div>
+          <div class="chart-wrap mini" id="rr-chart-wrap"></div>
+          <div class="rr-tip" id="rr-tooltip"></div>
+        </div>
       </div>
     </div>
 
@@ -285,6 +307,7 @@ const state = {
   active: -1,            // active suggestion index for keyboard nav
   suggestions: [],
   win: 6,                 // selected window index into WINDOWS/rets — default "1 Year"
+  catView: "main",        // "main" | "sub" — allocation donut/legend grouping
 };
 
 const byCode = Object.fromEntries(FUNDS.map(f => [f.code, f]));
@@ -576,6 +599,11 @@ function rearrangeByRisk(){
   render();
 }
 
+function setCatView(v){
+  state.catView = v;
+  renderStats();
+}
+
 /* ----------------------- weighted stats ----------------------- */
 // Return actually used in the weighting, for the currently-selected window —
 // always the fund's own actual historical return (no manual override; return
@@ -648,9 +676,9 @@ function renderHoldingsList(){
   const $h = document.getElementById("holdings");
   const $head = document.getElementById("h-head");
   const $headRet = document.getElementById("h-head-ret");
-  const $headSd = document.getElementById("h-head-sd");
-  if ($headRet) $headRet.textContent = `Return, ${WIN_SHORT[state.win]} (%)`;
-  if ($headSd) $headSd.textContent = `SD, ${WIN_SHORT[state.win]} (%)`;
+  const $headIw = document.getElementById("h-head-iw");
+  if ($headRet) $headRet.textContent = `Return / SD, ${WIN_SHORT[state.win]} (%)`;
+  if ($headIw) $headIw.textContent = `IW, ${WIN_SHORT[state.win]}`;
   if (!state.holdings.length) {
     $h.innerHTML = '<div class="h-empty">No funds yet — search above to add one.</div>';
     if ($head) $head.style.display = "none";
@@ -675,24 +703,56 @@ function renderHoldingsList(){
         : (sdFallback != null
             ? `No daily NAV history for this fund over the selected period — showing its naive 1Y/3Y/5Y SD instead.`
             : `SD not available.`);
+      const iwVal = leg ? leg.startW * 100 : null;
+      const iwLabel = iwVal != null ? iwVal.toFixed(1) : "—";
+      const iwTitle = leg
+        ? `Implied starting weight on ${curves.dates[0]} — back-solved so that, left untouched (no rebalancing), it drifts into today's ${h.w}% Current Weight.`
+        : `Not available — this holding has no daily NAV history back to the start of the selected period (treated as cash for this window).`;
       return `<div class="h-row" data-code="${h.code}">
         <div>
           <div class="h-name" title="${f.name}">${f.code}${tr}</div>
           <div class="h-meta">${f.name.length>54 ? f.name.slice(0,52)+"…" : f.name}</div>
           <div class="h-cat">${f.cat}</div>
         </div>
+        <div class="iw-val ${leg ? '' : 'naive'}" title="${iwTitle}">${iwLabel}</div>
         <input type="range" min="0" max="100" step="1" value="${h.w}" oninput="setWeight('${h.code}', this.value, 'range')">
         <div class="pct-num">
           <input type="number" min="0" max="100" step="1" value="${h.w}" oninput="setWeight('${h.code}', this.value, 'number')">
           <span>%</span>
         </div>
-        <div class="exp-ret ${pctClass(f.rets ? f.rets[state.win] : null)}" title="Actual ${WINDOWS[state.win]} return — read-only.">${hist}</div>
-        <div class="sd-val ${sdReal == null ? 'naive' : ''}" title="${sdTitle}">${sdLabel}</div>
+        <div class="stat-cell">
+          <div class="exp-ret ${pctClass(f.rets ? f.rets[state.win] : null)}" title="Actual ${WINDOWS[state.win]} return — read-only.">${hist}</div>
+          <div class="sd-val ${sdReal == null ? 'naive' : ''}" title="${sdTitle}">SD ${sdLabel}</div>
+        </div>
         <button class="rm" title="Remove" onclick="removeFund('${h.code}')">×</button>
       </div>`;
     }).join("");
   }
   document.getElementById("hcount").textContent = `${state.holdings.length} / ${MAX_FUNDS}`;
+}
+
+// The IW (implied starting weight) of EVERY holding depends on ALL current
+// weights at once — it's back-solved from a shared normalisation (see
+// buildCurves) — so dragging one slider changes every row's IW, not just the
+// one being dragged. Weight-slider drag only calls renderStats() (to avoid
+// rebuilding the holdings list mid-drag), so this updates just the IW text
+// in place rather than re-rendering the whole row.
+function refreshIWColumn(curves){
+  if (!state.holdings.length) return;
+  const legByCode = {};
+  if (curves) for (const l of curves.legs) legByCode[l.code] = l;
+  for (const h of state.holdings) {
+    const row = document.querySelector('.h-row[data-code="' + h.code + '"]');
+    const $iw = row && row.querySelector(".iw-val");
+    if (!$iw) continue;
+    const leg = legByCode[h.code];
+    const iwVal = leg ? leg.startW * 100 : null;
+    $iw.textContent = iwVal != null ? iwVal.toFixed(1) : "—";
+    $iw.classList.toggle("naive", !leg);
+    $iw.title = leg
+      ? `Implied starting weight on ${curves.dates[0]} — back-solved so that, left untouched (no rebalancing), it drifts into today's ${h.w}% Current Weight.`
+      : `Not available — this holding has no daily NAV history back to the start of the selected period (treated as cash for this window).`;
+  }
 }
 
 function renderStats(){
@@ -708,6 +768,8 @@ function renderStats(){
   const curves = state.holdings.length ? buildCurves() : null;
   const s = portfolioStats(curves);
   drawPerfChart(curves);
+  drawRiskReturnDots(curves);
+  refreshIWColumn(curves);
   const winLbl = WINDOWS[state.win];
   const riskWinLbl = (state.win === 7 || state.win === 8) ? winLbl : "1 Year";
 
@@ -741,7 +803,7 @@ function renderStats(){
   `;
 
   // donut chart of allocation
-  drawDonut(s.sumw);
+  drawDonut(s.sumw, curves);
 }
 
 function render(){ renderHoldingsList(); renderStats(); }
@@ -766,22 +828,72 @@ const CAT_COLOR = {
 };
 const CAT_ORDER = Object.keys(CAT_COLOR);
 
+// Colour for a category key, following the current Main/Sub toggle (shared
+// by the allocation donut/legend AND the Risk-vs-Return dot plot, so both
+// use the same colour language). Main-category colours are the fixed
+// risk-family palette above; sub-category colours are picked from a
+// distinct categorical palette via a stable hash of the sub-category name,
+// so the same sub-category always gets the same colour on every chart/
+// render (not dependent on sort order), and two different sub-categories
+// under the same main category don't end up identical.
+// Sub-category colours are assigned on first sight, in "golden angle" hue
+// steps (~137.5° apart) — this spreads every new colour as far as possible
+// from every colour already handed out, so two different sub-categories
+// (e.g. "Foreign Investment Allocation" vs "Aggressive Allocation") never
+// land on near-identical purples the way a fixed 15-colour palette can when
+// two hashes collide into neighbouring hues. Assignment is remembered for
+// the rest of the session, so a given sub-category keeps the same colour
+// across every re-render (period change, weight edits, etc).
+const _subColorMap = {};
+let _subColorCount = 0;
+function colorForKey(key, useSub){
+  if (!useSub) return CAT_COLOR[key] || "#6b7280";
+  if (!_subColorMap[key]) {
+    const hue = (_subColorCount * 137.508) % 360;
+    _subColorCount++;
+    _subColorMap[key] = `hsl(${hue.toFixed(1)}, 62%, 45%)`;
+  }
+  return _subColorMap[key];
+}
+
 // Aggregate the current holdings into {mainCategory: total_weight_pct} pairs,
 // preserving CAT_ORDER for a stable visual order in the donut + legend.
-function groupByMainCat(){
-  const totals = {};
+// Groups holdings by asset class — main category (risk-grouped, e.g.
+// "Equity — Sector / Theme") or the finer AIMC sub-category (e.g. "Equity
+// Large Cap"), per state.catView — and sums each holding's CONTRIBUTION to
+// the portfolio's total return (w_i × r_i) within that group. This is a
+// return-attribution breakdown: the contributions across all groups (+
+// cash's 0%) add up to the portfolio's total Past Return, so a group showing
+// a big negative number is literally the one dragging performance down for
+// the selected period. Uses each holding's REAL return (from the
+// buy-and-hold curve) when available, else its naive per-window return.
+// Sub-category rows are coloured by their PARENT main category, so the
+// colour coding stays tied to the same risk grouping either way.
+function groupByCat(curves){
+  const useSub = state.catView === "sub";
+  const legByCode = {};
+  if (curves) for (const l of curves.legs) legByCode[l.code] = l;
+  const totals = {};   // key -> { w, contrib, contribDef, color, codes:[] }
   for (const h of state.holdings) {
     if (!h.w) continue;
     const f = byCode[h.code]; if (!f) continue;
-    const k = f.main || "Other";
-    totals[k] = (totals[k] || 0) + h.w;
+    const key = useSub ? (f.cat || "Uncategorised") : (f.main || "Other");
+    const leg = legByCode[h.code];
+    const r = leg ? (leg.series[leg.series.length - 1] / 100 - 1) * 100 : (f.rets ? f.rets[state.win] : null);
+    if (!totals[key]) totals[key] = { w: 0, contrib: 0, contribDef: false, codes: [] };
+    totals[key].w += h.w;
+    if (r != null && isFinite(r)) { totals[key].contrib += (h.w / 100) * r; totals[key].contribDef = true; }
+    totals[key].codes.push(`${h.code} (${h.w}%)`);
   }
-  // Return ordered array of {name, w, color, codes:[...]} for the legend
-  return CAT_ORDER.filter(k => totals[k]).map(k => ({
+  const keys = useSub
+    ? Object.keys(totals).sort((a, b) => totals[b].w - totals[a].w)
+    : CAT_ORDER.filter(k => totals[k]);
+  return keys.map(k => ({
     name: k,
-    w: totals[k],
-    color: CAT_COLOR[k] || "#6b7280",
-    codes: state.holdings.filter(h => h.w && (byCode[h.code] || {}).main === k).map(h => `${h.code} (${h.w}%)`),
+    w: totals[k].w,
+    ret: totals[k].contribDef ? totals[k].contrib : null,
+    color: colorForKey(k, useSub),
+    codes: totals[k].codes,
   }));
 }
 
@@ -831,6 +943,81 @@ function drawPerfChart(curves){
   }).join("") + `<div class="cl-item port"><span class="cl-dot" style="background:var(--scb)"></span><b>Portfolio</b> <span style="color:var(--grey)">${fmtPct(curves.portfolio[curves.portfolio.length-1]-100,1)}</span></div>`;
 }
 
+/* ---------- risk-vs-return dot plot: each holding, SD vs return for the selected window ---------- */
+// Uses the same SD/return figures already shown in the Holdings table (real,
+// from each fund's own daily NAV, when available — else the naive fallback)
+// so this plot always matches what's on screen elsewhere. No extra data or
+// build step needed: it's the same per-fund data already embedded in this
+// page for the Risk-Return dashboard's own build.
+function drawRiskReturnDots(curves){
+  const $w = document.getElementById("rr-chart-wrap");
+  if (!state.holdings.length) {
+    $w.innerHTML = '<div class="chart-empty mini">Add holdings to see them plotted by risk (SD) vs return.</div>';
+    return;
+  }
+  const useSub = state.catView === "sub";
+  const legByCode = {};
+  if (curves) for (const l of curves.legs) legByCode[l.code] = l;
+  const pts = [];
+  for (const h of state.holdings) {
+    if (!h.w) continue;
+    const f = byCode[h.code]; if (!f) continue;
+    const leg = legByCode[h.code];
+    const sd = leg ? sdFromSeries(leg.series) : riskOf(f).sd;
+    const ret = leg ? (leg.series[leg.series.length - 1] / 100 - 1) * 100 : (f.rets ? f.rets[state.win] : null);
+    if (sd == null || ret == null) continue;
+    const key = useSub ? (f.cat || "Uncategorised") : (f.main || "Other");
+    pts.push({ code: h.code, sd, ret, w: h.w, color: colorForKey(key, useSub) });
+  }
+  if (!pts.length) {
+    $w.innerHTML = '<div class="chart-empty mini">No SD/return data available to plot for the selected period.</div>';
+    return;
+  }
+
+  const W = 460, H = 140, PAD_L = 30, PAD_R = 10, PAD_T = 8, PAD_B = 18;
+  let xmin = 0, xmax = Math.max(...pts.map(p => p.sd));
+  let ymin = Math.min(0, ...pts.map(p => p.ret)), ymax = Math.max(0, ...pts.map(p => p.ret));
+  xmax += (xmax - xmin) * 0.15 || 1;
+  const ypad = (ymax - ymin) * 0.15 || 1;
+  ymin -= ypad; ymax += ypad;
+  const X = v => PAD_L + (xmax > xmin ? (v - xmin) / (xmax - xmin) : 0.5) * (W - PAD_L - PAD_R);
+  const Y = v => PAD_T + (1 - (ymax > ymin ? (v - ymin) / (ymax - ymin) : 0.5)) * (H - PAD_T - PAD_B);
+  const rOf = w => 3 + Math.sqrt(Math.max(w, 1)) * 1.1;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<line class="czero" x1="${PAD_L}" y1="${Y(0).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(0).toFixed(1)}"/>`;
+  for (const p of pts) {
+    const cx = X(p.sd).toFixed(1), cy = Y(p.ret).toFixed(1);
+    svg += `<circle cx="${cx}" cy="${cy}" r="${rOf(p.w).toFixed(1)}" fill="${p.color}" fill-opacity="0.75" stroke="#fff" stroke-width="1" ` +
+           `onmouseenter="showRRTip(event,'${p.code}')" onmousemove="showRRTip(event,'${p.code}')" onmouseleave="hideRRTip()">` +
+           `<title>${p.code} — SD ${p.sd.toFixed(2)}% · Return ${fmtPct(p.ret,2)} · weight ${p.w}%</title></circle>`;
+  }
+  svg += `<text class="caxis" x="${PAD_L}" y="${H-4}" text-anchor="start">SD ${xmin.toFixed(1)}%</text>`;
+  svg += `<text class="caxis" x="${W-PAD_R}" y="${H-4}" text-anchor="end">SD ${xmax.toFixed(1)}%</text>`;
+  svg += `<text class="caxis" x="${PAD_L-4}" y="${Y(ymax).toFixed(1)}" text-anchor="end" dy="3">${fmtPct(ymax,0)}</text>`;
+  svg += `<text class="caxis" x="${PAD_L-4}" y="${Y(ymin).toFixed(1)}" text-anchor="end" dy="3">${fmtPct(ymin,0)}</text>`;
+  svg += `</svg>`;
+  $w.innerHTML = svg;
+}
+
+// Small floating tooltip showing just the fund code on hover — the SVG
+// <title> already carries the full detail (SD/return/weight) as the native
+// browser tooltip, this is the fast always-visible-on-hover label.
+function showRRTip(evt, code){
+  const $t = document.getElementById("rr-tooltip");
+  const $card = document.getElementById("rr-chart-card");
+  if (!$t || !$card) return;
+  const rect = $card.getBoundingClientRect();
+  $t.textContent = code;
+  $t.style.left = (evt.clientX - rect.left) + "px";
+  $t.style.top = (evt.clientY - rect.top) + "px";
+  $t.style.display = "block";
+}
+function hideRRTip(){
+  const $t = document.getElementById("rr-tooltip");
+  if ($t) $t.style.display = "none";
+}
+
 function arcPath(CX, CY, R, IR, a0, a1){
   const x0 = CX + R*Math.cos(a0), y0 = CY + R*Math.sin(a0);
   const x1 = CX + R*Math.cos(a1), y1 = CY + R*Math.sin(a1);
@@ -841,7 +1028,7 @@ function arcPath(CX, CY, R, IR, a0, a1){
          `L${xi1.toFixed(2)},${yi1.toFixed(2)} A${IR},${IR} 0 ${large} 0 ${xi0.toFixed(2)},${yi0.toFixed(2)} Z`;
 }
 
-function drawDonut(sumw){
+function drawDonut(sumw, curves){
   const $d = document.getElementById("donut");
   const $l = document.getElementById("cat-legend");
   if (!state.holdings.length) {
@@ -851,7 +1038,7 @@ function drawDonut(sumw){
     $l.innerHTML = '<div class="leg-empty">Add a holding to see allocation by asset class.</div>';
     return;
   }
-  const groups = groupByMainCat();
+  const groups = groupByCat(curves);
   const CX=80, CY=80, R=55, IR=36;
   let segs = "";
   let a0 = -Math.PI/2;
@@ -874,22 +1061,34 @@ function drawDonut(sumw){
     <text x="80" y="92" text-anchor="middle">allocated</text>
   </svg>`;
 
-  // Legend: ordered main-category rows + residual cash row if any
-  const rows = groups.map(g =>
-    `<div class="leg-row" title="${g.codes.join(', ')}">
+  // Legend: ordered category rows (return-contribution shown per row, so the
+  // one dragging performance down for this window stands out) + residual
+  // cash row if any, plus a Main/Sub toggle.
+  const rows = groups.map(g => {
+    const retTxt = g.ret == null ? "" : `<span class="leg-ret ${pctClass(g.ret)}">${fmtPct(g.ret,2)}</span>`;
+    return `<div class="leg-row" title="${g.codes.join(', ')}">
       <span class="leg-dot" style="background:${g.color}"></span>
       <span class="leg-name">${g.name}</span>
+      ${retTxt}
       <span class="leg-pct">${g.w.toFixed(0)}%</span>
-    </div>`
-  ).join("");
+    </div>`;
+  }).join("");
   const residual = sumw < 99.99
     ? `<div class="leg-row leg-cash" title="Unallocated portion of the portfolio">
          <span class="leg-dot" style="background:#e5e7eb"></span>
          <span class="leg-name">Cash / unallocated</span>
+         <span class="leg-ret zero">+0.00%</span>
          <span class="leg-pct">${(100-sumw).toFixed(0)}%</span>
        </div>`
     : "";
-  $l.innerHTML = `<div class="leg-title">Allocation by Main Category</div>${rows}${residual}`;
+  const titleTxt = state.catView === "sub" ? "Allocation by Sub-category" : "Allocation by Main Category";
+  $l.innerHTML = `<div class="leg-title-row">
+      <span class="leg-title">${titleTxt}</span>
+      <span class="cat-toggle">
+        <button class="${state.catView==='main'?'active':''}" onclick="setCatView('main')">Main</button>
+        <button class="${state.catView==='sub'?'active':''}" onclick="setCatView('sub')">Sub</button>
+      </span>
+    </div>${rows}${residual}`;
 }
 
 render();
