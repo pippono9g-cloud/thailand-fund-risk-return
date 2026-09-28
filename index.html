@@ -361,6 +361,7 @@ td:nth-child(2) { text-align:left; max-width:118px; }
 td.rank { color:var(--mute); padding-right:2px; }
 .fname, .fcode { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:118px; }
 tbody tr:hover { background:#f5fbfe; }
+.pickable-row { cursor:pointer; }
 .fname { font-weight:700; font-size:8.5px; }
 .fcode { font-size:7.5px; color:var(--mute); }
 table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
@@ -1311,7 +1312,7 @@ function syncCardGeometry(hc){
 function renderHoverCard(f, pinned){
   const fundKey = String(f.id);
   if (pinned && _pinnedCards.has(fundKey)) return null;
-  if (pinned && _pinnedCards.size >= 2) return null;
+  if (pinned && _pinnedCards.size >= 10) return null;
   let hc = $("hover-card");
   if (!pinned && _pinnedCards.size) {
     const originalIsPinned = [..._pinnedCards.values()].includes(hc);
@@ -1397,6 +1398,18 @@ function separatePinnedCard(hc){
   if (Math.abs(left - o.left) < r.width * .6) top = Math.max(edge, Math.min(window.innerHeight - r.height - edge, o.top + 32));
   hc.style.left = left + "px";
   hc.style.top = top + "px";
+}
+
+// Shared pin path for both dot-plot clicks and Top/Worst 20 table row clicks:
+// renders (or no-ops past the 10-card cap / already-pinned fund), positions
+// at (x, y), and nudges apart from an overlapping neighbour.
+function pinFundCard(f, x, y){
+  if (!f) return;
+  hideHoverPreview();
+  const pinnedCard = renderHoverCard(f, true);
+  if (!pinnedCard) return;
+  positionHoverCard(pinnedCard, x, y);
+  separatePinnedCard(pinnedCard);
 }
 function hideHoverCard(card){
   const hc = card || $("hover-card");
@@ -1522,7 +1535,7 @@ function attachChartEvents(){
     _rrBound = true;
   }
   gd.on("plotly_hover", ev => {
-    if (_pinnedCards.size >= 2) return;
+    if (_pinnedCards.size >= 10) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
     if (_pinnedCards.has(String(p.customdata))) return;
@@ -1544,21 +1557,19 @@ function attachChartEvents(){
     if (!p || p.customdata == null) return;
     const f = byId.get(p.customdata);
     if (!f) return;
-    hideHoverPreview();
-    const pinnedCard = renderHoverCard(f, true);
-    if (!pinnedCard) return;
     const e = ev.event || window.event;
+    let x, y;
     if (e && typeof e.clientX === "number") {
-      positionHoverCard(pinnedCard, e.clientX, e.clientY);
+      x = e.clientX; y = e.clientY;
     } else {
       // No coords (some touch events) — anchor near top of chart
       const r = gd.getBoundingClientRect();
-      positionHoverCard(pinnedCard, r.left + r.width/2, r.top + 60);
+      x = r.left + r.width/2; y = r.top + 60;
     }
-    separatePinnedCard(pinnedCard);
+    pinFundCard(f, x, y);
   });
   gd.addEventListener("mousemove", ev => {
-    if (_pinnedCards.size >= 2) return;
+    if (_pinnedCards.size >= 10) return;
     const hoverCard = _hoverPreviewCard || (_pinnedCards.size ? null : $("hover-card"));
     if (!hoverCard || hoverCard.style.display !== "block") return;
     positionHoverCard(hoverCard, ev.clientX, ev.clientY);
@@ -1580,7 +1591,7 @@ function tableHTML(rows){
     colOrder.map(i => '<th class="'+(i===w?"win-active":"")+'">'+WIN_SHORT[i]+'</th>').join("") +
     "<th>SD</th><th>Sharpe</th></tr></thead><tbody>";
   rows.forEach((f, idx) => {
-    h += '<tr>' +
+    h += '<tr class="pickable-row" data-id="'+f.id+'">' +
       '<td class="rank">'+(idx+1)+'</td>' +
       '<td><div class="fname">'+f.name+shelfBadge(f)+proxyBadge(f)+youngBadge(f)+'</div><div class="fcode">'+f.code+' · '+f.cat+'</div></td>' +
       colOrder.map(i => '<td class="'+pctClass(f.rets[i])+(i===w?" win-active":"")+'">'+fmtPct1(f.rets[i])+'</td>').join("") +
@@ -1666,6 +1677,21 @@ function refresh(){
   renderChips();
   renderWatermarkButton();
 }
+
+// Clicking a Top/Worst 20 row pins that fund's Card, same as tapping its dot
+// on the plot. Delegated on the table element (persists across the innerHTML
+// rewrites in drawTables/drawTablesForViewport) rather than on each row.
+function bindTableRowPicks(tableEl){
+  tableEl.addEventListener("click", e => {
+    const row = e.target.closest(".pickable-row");
+    if (!row || !tableEl.contains(row)) return;
+    const f = byId.get(+row.dataset.id);
+    if (!f) return;
+    pinFundCard(f, e.clientX, e.clientY);
+  });
+}
+bindTableRowPicks($("top-table"));
+bindTableRowPicks($("bot-table"));
 
 /* ---------- init ---------- */
 buildPills();
