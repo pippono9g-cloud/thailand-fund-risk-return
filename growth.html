@@ -158,13 +158,12 @@
   <div class="title-bar">
     <div class="title-bar-row">
       <h1>Thailand Fund — Growth Comparison</h1>
-      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
+      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide fund names" aria-expanded="true">▾</button>
     </div>
   </div>
   <div id="style-pop"></div>
 
   <div class="panel">
-    <div id="filters-body">
     <div class="row">
       <span class="lbl">Add funds</span>
       <div class="search-wrap">
@@ -224,6 +223,7 @@
       </div>
       <span class="date-note" id="dateNote"></span>
     </div>
+    <div id="filters-body">
     <div id="chips"><span class="empty">No funds selected — search above to add some, or click a suggestion.</span></div>
     </div>
     <div class="view-row">
@@ -910,12 +910,13 @@ setPresetActive("1yr");
 setViewActive();
 renderChips(); render();
 
-// Collapse the input controls (Add funds / presets / date range / chips) so
-// a screenshot of the chart doesn't leak the current fund picks or filters.
+// Hide just the picked-fund name chips (not the search box, presets, or
+// date range) so a screenshot of the chart doesn't leak which funds are
+// selected.
 $("filters-toggle").onclick = () => {
   const collapsed = $("filters-body").classList.toggle("collapsed");
   $("filters-toggle").textContent = collapsed ? "▴" : "▾";
-  $("filters-toggle").title = collapsed ? "Show filters" : "Hide filters";
+  $("filters-toggle").title = collapsed ? "Show fund names" : "Hide fund names";
   $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
 };
 </script>
