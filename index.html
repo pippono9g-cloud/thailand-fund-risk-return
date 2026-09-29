@@ -65,6 +65,13 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .help-pop ul { margin:0; padding-left:16px; }
 .help-pop li { margin-bottom:4px; }
 .help-wrap { position:relative; }
+.filters-toggle {
+  width:24px; height:24px; border-radius:50%; border:1px solid var(--rule);
+  background:#fff; color:var(--cyan-d); font-weight:700; cursor:pointer; font-size:13px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+}
+.filters-toggle:hover { border-color:var(--cyan); }
+#filters-body.collapsed { display:none; }
 
 /* window selector = single dropdown control (one window shown at a time) */
 .pills { display:inline-flex; align-items:center; gap:9px; flex-wrap:wrap; margin:12px 0 4px; position:relative; }
@@ -390,6 +397,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
         <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
       </div>
       <div class="spacer"></div>
+      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
       <div class="help-wrap">
         <button class="help-btn" id="help-btn" title="How to use">?</button>
         <div class="help-pop" id="help-pop">
@@ -418,36 +426,38 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
 
     <div class="pills" id="pills"></div>
 
-    <div class="find-row filter-row">
-      <label for="main-select">Main</label>
-      <select id="main-select"></select>
-      <label for="cat-ms-btn">Sub-category</label>
-      <div class="ms-wrap" id="cat-ms">
-        <button type="button" class="ms-btn" id="cat-ms-btn">All sub-categories</button>
-        <div class="ms-panel" id="cat-ms-panel">
-          <div class="ms-list" id="cat-ms-list"></div>
-          <div class="ms-actions">
-            <button type="button" id="cat-ms-clear">Clear</button>
-            <button type="button" class="ms-apply" id="cat-ms-apply">Check Selection</button>
+    <div id="filters-body">
+      <div class="find-row filter-row">
+        <label for="main-select">Main</label>
+        <select id="main-select"></select>
+        <label for="cat-ms-btn">Sub-category</label>
+        <div class="ms-wrap" id="cat-ms">
+          <button type="button" class="ms-btn" id="cat-ms-btn">All sub-categories</button>
+          <div class="ms-panel" id="cat-ms-panel">
+            <div class="ms-list" id="cat-ms-list"></div>
+            <div class="ms-actions">
+              <button type="button" id="cat-ms-clear">Clear</button>
+              <button type="button" class="ms-apply" id="cat-ms-apply">Check Selection</button>
+            </div>
           </div>
         </div>
+        <label for="shelf-select">Shelf</label>
+        <select id="shelf-select"></select>
       </div>
-      <label for="shelf-select">Shelf</label>
-      <select id="shelf-select"></select>
-    </div>
-    <div class="find-row amc-row">
-      <label for="amc-select">AMC</label>
-      <select id="amc-select"></select>
-    </div>
-    <div class="find-row search-row">
-      <label for="find-input">Find</label>
-      <div class="find-wrap">
-        <input id="find-input" type="text" placeholder="type → pick from list → repeat to add more funds" autocomplete="off">
-        <div id="find-dd" class="find-dd"></div>
+      <div class="find-row amc-row">
+        <label for="amc-select">AMC</label>
+        <select id="amc-select"></select>
       </div>
-      <span class="find-status" id="find-status"></span>
+      <div class="find-row search-row">
+        <label for="find-input">Find</label>
+        <div class="find-wrap">
+          <input id="find-input" type="text" placeholder="type → pick from list → repeat to add more funds" autocomplete="off">
+          <div id="find-dd" class="find-dd"></div>
+        </div>
+        <span class="find-status" id="find-status"></span>
+      </div>
+      <div class="chips" id="chips"></div>
     </div>
-    <div class="chips" id="chips"></div>
 
     <div class="zoom-row">
       <label id="sdrange-label">X-axis range (SD 1Y)</label>
@@ -1822,6 +1832,14 @@ function bumpZoom(direction){
 $("zoom-in-btn").onclick  = () => bumpZoom(+1);
 $("zoom-out-btn").onclick = () => bumpZoom(-1);
 $("help-btn").onclick = e => { e.stopPropagation(); $("help-pop").classList.toggle("show"); };
+// Collapse the filter controls (Main/Sub-category/Shelf/AMC/Find + chips)
+// so a screenshot of the chart doesn't leak the current filter state.
+$("filters-toggle").onclick = () => {
+  const collapsed = $("filters-body").classList.toggle("collapsed");
+  $("filters-toggle").textContent = collapsed ? "▴" : "▾";
+  $("filters-toggle").title = collapsed ? "Show filters" : "Hide filters";
+  $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
+};
 document.addEventListener("click", e => { if (!$("help-pop").contains(e.target) && e.target !== $("help-btn")) $("help-pop").classList.remove("show"); });
 document.addEventListener("click", e => { const d = document.querySelector(".wdrop.open"); if (d && !d.contains(e.target)) d.classList.remove("open"); });
 setZoom(0, false);
