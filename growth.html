@@ -18,6 +18,14 @@
   /* Same title-bar treatment as Risk-Return / Trend — gradient box, rounded
      corners, purple bottom border — so all three dashboard headers match. */
   .title-bar { padding:2px 0 12px; margin-bottom:16px; border-bottom:1px solid var(--rule); }
+  .title-bar-row { display:flex; align-items:center; gap:10px; }
+  .filters-toggle {
+    width:24px; height:24px; border-radius:50%; border:1px solid var(--rule);
+    background:#fff; color:var(--scb-d); font-weight:700; cursor:pointer; font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .filters-toggle:hover { border-color:var(--scb); }
+  #filters-body.collapsed { display:none; }
   .tag{display:inline-flex;border:1px solid var(--ink);border-radius:999px;overflow:hidden;font-size:11px;font-weight:700;letter-spacing:0.04em}
   .tag span{padding:4px 14px;border-right:1px solid var(--ink);background:#fff}
   .tag span:last-child{border-right:none}
@@ -148,11 +156,15 @@
 <body>
 <div class="page">
   <div class="title-bar">
-    <h1>Thailand Fund — Growth Comparison</h1>
+    <div class="title-bar-row">
+      <h1>Thailand Fund — Growth Comparison</h1>
+      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
+    </div>
   </div>
   <div id="style-pop"></div>
 
   <div class="panel">
+    <div id="filters-body">
     <div class="row">
       <span class="lbl">Add funds</span>
       <div class="search-wrap">
@@ -213,6 +225,7 @@
       <span class="date-note" id="dateNote"></span>
     </div>
     <div id="chips"><span class="empty">No funds selected — search above to add some, or click a suggestion.</span></div>
+    </div>
     <div class="view-row">
       <span class="view-switch" id="viewSwitch" aria-label="Chart value mode">
         <button data-view-toggle class="active">%</button>
@@ -896,6 +909,15 @@ setRangeFromPreset("1yr");
 setPresetActive("1yr");
 setViewActive();
 renderChips(); render();
+
+// Collapse the input controls (Add funds / presets / date range / chips) so
+// a screenshot of the chart doesn't leak the current fund picks or filters.
+$("filters-toggle").onclick = () => {
+  const collapsed = $("filters-body").classList.toggle("collapsed");
+  $("filters-toggle").textContent = collapsed ? "▴" : "▾";
+  $("filters-toggle").title = collapsed ? "Show filters" : "Hide filters";
+  $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
+};
 </script>
 </body>
 </html>
