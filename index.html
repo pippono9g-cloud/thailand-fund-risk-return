@@ -71,6 +71,8 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   display:flex; align-items:center; justify-content:center;
 }
 .filters-toggle:hover { border-color:var(--cyan); }
+.filters-head { display:flex; align-items:center; justify-content:space-between; margin:8px 0 4px; padding-top:8px; border-top:1px solid var(--rule); }
+.filters-head-label { font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
 #filters-body.collapsed { display:none; }
 
 /* window selector = single dropdown control (one window shown at a time) */
@@ -397,7 +399,6 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
         <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
       </div>
       <div class="spacer"></div>
-      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
       <div class="help-wrap">
         <button class="help-btn" id="help-btn" title="How to use">?</button>
         <div class="help-pop" id="help-pop">
@@ -426,6 +427,10 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
 
     <div class="pills" id="pills"></div>
 
+    <div class="filters-head">
+      <span class="filters-head-label">Filters</span>
+      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
+    </div>
     <div id="filters-body">
       <div class="find-row filter-row">
         <label for="main-select">Main</label>
