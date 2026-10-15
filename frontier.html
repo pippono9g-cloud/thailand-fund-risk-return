@@ -81,6 +81,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   font-size:12.5px; padding:5px 8px; border:1px solid var(--rule); border-radius:7px; background:#fff; color:var(--ink);
 }
 .ctl-row input[type=number] { width:64px; }
+.ctl-row #cap-input { width:78px; }
 .ctl-row label.chk { display:inline-flex; align-items:center; gap:5px; font-weight:600; color:var(--grey); cursor:pointer; }
 
 .find-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 0; font-size:12.5px; }
@@ -92,7 +93,10 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .filter-row { margin-top:8px; }
 .amc-row select { min-width:260px; max-width:320px; }
 .find-wrap { position:relative; }
-#find-input { width:320px; }
+#find-input { width:360px; }
+.filter-rows.paused { opacity:.45; }
+.input-note { font-size:12px; color:var(--scb); font-weight:700; }
+.input-msg { font-size:12px; color:var(--amber); }
 .find-dd { position:absolute; top:calc(100% + 4px); left:0; width:460px; max-width:90vw; z-index:200;
   background:#fff; border:1px solid var(--rule); border-radius:8px;
   box-shadow:0 6px 22px rgba(13,30,60,0.10); max-height:300px; overflow-y:auto; display:none; }
@@ -119,7 +123,9 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .ms-btn::after { content:"\25BC"; font-size:9px; color:var(--mute); }
-.ms-btn.has-sel { border-color:var(--scb); color:var(--scb); font-weight:700; }
+.ms-btn.has-sel { border-color:var(--red); color:var(--red); font-weight:700; }
+.ms-hint { padding:7px 12px 3px; font-size:11px; color:var(--mute); }
+.ms-item input:checked + .ms-name { text-decoration:line-through; color:var(--red); }
 .ms-panel {
   display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; width:340px; max-width:90vw;
   background:#fff; border:1px solid var(--rule); border-radius:8px; box-shadow:0 6px 22px rgba(13,30,60,0.10);
@@ -148,8 +154,28 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .status .warn { color:var(--amber); font-weight:700; }
 
 #chart { width:100%; height:540px; margin-top:6px; }
+/* SD axis scale controls (same look as the Risk-Return zoom row) */
+.zoom-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 2px; font-size:12.5px; }
+.zoom-row label.zl { font-weight:600; }
+.zoom-row button { font-size:12px; padding:5px 11px; border:1px solid var(--rule); border-radius:7px; background:#fff; cursor:pointer; color:var(--grey); }
+.zoom-row button:hover { border-color:var(--scb); color:var(--scb); }
+.zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
+.zoom-slide { display:inline-flex; align-items:center; gap:6px; }
+.zoom-slide input[type=range] { width:220px; accent-color:var(--scb); }
+.zoom-readout { font-size:12px; color:var(--mute); font-variant-numeric:tabular-nums; min-width:92px; }
+@media (hover:none) and (pointer:coarse) {
+  .zoom-slide input[type=range] { width:200px; height:24px; }
+}
 #chart .nsewdrag { cursor: default !important; }
-#comp-chart { width:100%; height:300px; margin-top:4px; }
+#comp-chart { width:100%; height:250px; }
+.comp-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:4px 0 0; padding-top:8px; border-top:1px dashed var(--grid); }
+.comp-title { font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
+.comp-sub { font-size:12px; color:var(--mute); }
+/* hover sync: a ring on the frontier and a line on the allocation chart mark the same portfolio */
+.chart-wrap { position:relative; }
+.hv-dot { position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+  border:2.5px solid var(--scb); background:rgba(79,45,127,.18); pointer-events:none; z-index:5; }
+.hv-line { position:absolute; width:0; border-left:1.5px solid var(--scb); pointer-events:none; z-index:5; }
 .empty-msg { display:flex; align-items:center; justify-content:center; text-align:center; height:100%;
   color:var(--mute); font-size:14px; border:1px dashed var(--rule); border-radius:10px; padding:20px; }
 
@@ -204,9 +230,15 @@ table.dt tr.off .fc { color:#9ca3af; }
 table.dt tbody tr:hover { background:#f5fbfe; }
 table.dt .note { font-size:10px; color:var(--amber); }
 .pos { color:var(--green); } .neg { color:var(--red); }
-.pf-pick { display:flex; gap:6px; flex-wrap:wrap; }
-.pf-pick button { font-size:11.5px; padding:4px 10px; border:1px solid var(--rule); border-radius:7px; background:#fff; cursor:pointer; color:var(--grey); font-weight:600; }
+/* portfolio shortcuts sit inside the frontier chart, top-left of the plot area */
+.pf-pick { position:absolute; top:16px; left:66px; z-index:6; display:flex; gap:6px; flex-wrap:wrap;
+  background:rgba(255,255,255,.92); border:1px solid var(--grid); border-radius:9px; padding:5px; }
+.pf-pick button { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; padding:4px 10px; border:1px solid var(--rule);
+  border-radius:7px; background:#fff; cursor:pointer; color:var(--grey); font-weight:600; }
+.pf-pick button:hover { border-color:var(--scb); color:var(--scb); }
 .pf-pick button.active { background:var(--scb); border-color:var(--scb); color:#fff; }
+.pf-pick .mk { font-size:12px; line-height:1; }
+.pf-pick button.active .mk { color:#fff !important; }
 
 .footer { margin-top:22px; font-size:12px; color:var(--mute); border-top:1px solid var(--rule); padding-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 
@@ -238,10 +270,11 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <div class="help-pop" id="help-pop">
           <h4>How to use</h4>
           <ul>
-            <li><b>Build the universe</b> with the filters (Main / Sub-category / Shelf / AMC / Risk) and/or <b>Find</b> to add specific funds. Filters combine with AND; Find picks are always added on top.</li>
+            <li><b>Build the universe</b> with the filters (Main / Shelf / AMC / Risk; combined with AND). <b>Sub-category</b> works the other way: ticked sub-categories are removed from the universe, or list funds in <b>Input</b>. Once Input has funds, the frontier uses only those funds and the filters pause until you clear Input. With every filter on All and Input empty, the universe is all funds.</li>
+            <li><b>Input</b> takes one fund at a time from the suggestion list, or a pasted list of fund codes separated by commas or new lines.</li>
             <li><b>Pick the data window</b> — 1Y, 3Y or 5Y of weekly returns. Funds without that much history drop out (listed in the Universe table).</li>
             <li><b>Hover</b> any point on the purple frontier line to see its fund weights. <b>Click</b> to lock it into the Selected portfolio table.</li>
-            <li><b>Max weight</b> caps any single fund; untick a fund in the Universe table to exclude it.</li>
+            <li><b>Max weight / fund</b>: type a % (e.g. 25) to cap any single fund; leave it empty for no cap. Untick a fund in the Universe table to exclude it.</li>
           </ul>
         </div>
       </div>
@@ -252,7 +285,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <div class="body">
         <b>Inputs:</b> weekly <b>total-return</b> series for 2,848 share classes (dividend classes use the sister Acc class, or reinvested SEC dividend history — same treatment as the Risk-Return dashboard), sampled every 7 days back from the latest NAV date. Weekly rather than daily because Thai feeder funds price a day behind their master fund, which distorts daily correlations.<br>
         <b>Expected return</b> = mean weekly return × 52 (arithmetic, annualised). <b>Risk</b> = weekly StdDev × √52. <b>Covariance</b> = sample covariance with correlations shrunk toward zero (Schäfer–Strimmer intensity, shown in the status line) so the result stays stable when the universe is large relative to the number of weeks.<br>
-        <b>Optimisation:</b> for each point, minimise portfolio variance for its level of expected return, subject to weights ≥ 0, sum = 100%, and the max-weight cap. Solved in your browser each time the universe changes; at most 80 funds are optimised (the largest by AUM, plus every Find pick).<br>
+        <b>Optimisation:</b> for each point, minimise portfolio variance for its level of expected return, subject to weights ≥ 0, sum = 100%, and the max-weight cap. Solved in your browser each time the universe changes; at most 80 funds are optimised (the largest by AUM; every Input fund is always kept).<br>
         <b>Max Sharpe</b> uses the risk-free rate you enter. <b>One class per fund</b> keeps only the largest share class of each fund, because sibling classes have near-identical returns.<br>
         <b>Caveat:</b> the frontier is built from <i>historical</i> returns, so it favours whatever performed best in the chosen window. Use it to understand diversification trade-offs, not as a forecast or a recommendation.<br>
         <b>Source:</b> Thailand SEC Open Data API (<a href="https://api.sec.or.th" target="_blank" rel="noopener">api.sec.or.th</a>). NAV data as of 14 Oct 2026.
@@ -265,10 +298,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <button data-y="1">1Y</button><button data-y="3" class="active">3Y</button><button data-y="5">5Y</button>
       </span>
       <span class="ctl-label">Max weight / fund</span>
-      <select id="cap-select">
-        <option value="1">No cap</option><option value="0.5">50%</option><option value="0.3">30%</option>
-        <option value="0.2">20%</option><option value="0.1">10%</option>
-      </select>
+      <span><input id="cap-input" type="number" min="1" max="100" step="1" placeholder="No cap" title="Largest weight any one fund may take. Leave empty for no cap." aria-label="Max weight per fund (%)"> %</span>
       <span class="ctl-label">Risk-free</span>
       <span><input id="rf-input" type="number" step="0.25" min="0" max="15"> %</span>
       <label class="chk"><input type="checkbox" id="oneclass-chk" checked> One class per fund</label>
@@ -279,17 +309,19 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
     </div>
     <div id="filters-body">
+      <div class="filter-rows" id="filter-rows">
       <div class="find-row filter-row">
         <label for="main-select">Main</label>
         <select id="main-select"></select>
-        <label for="cat-ms-btn">Sub-category</label>
+        <label for="cat-ms-btn">Exclude sub-category</label>
         <div class="ms-wrap" id="cat-ms">
-          <button type="button" class="ms-btn" id="cat-ms-btn">All sub-categories</button>
+          <button type="button" class="ms-btn" id="cat-ms-btn">None excluded</button>
           <div class="ms-panel" id="cat-ms-panel">
+            <div class="ms-hint">Tick the sub-categories to take out of the universe</div>
             <div class="ms-list" id="cat-ms-list"></div>
             <div class="ms-actions">
               <button type="button" id="cat-ms-clear">Clear</button>
-              <button type="button" class="ms-apply" id="cat-ms-apply">Check Selection</button>
+              <button type="button" class="ms-apply" id="cat-ms-apply">Apply changes</button>
             </div>
           </div>
         </div>
@@ -303,40 +335,53 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <select id="amc-select"></select>
         <button type="button" id="clear-btn">Clear all filters</button>
       </div>
+      </div>
       <div class="find-row search-row">
-        <label for="find-input">Find</label>
+        <label for="find-input">Input</label>
         <div class="find-wrap">
-          <input id="find-input" type="text" placeholder="type → pick from list → repeat to add more funds" autocomplete="off">
+          <input id="find-input" type="text" placeholder="type a fund → pick from list, or paste codes separated by commas" autocomplete="off">
           <div id="find-dd" class="find-dd"></div>
         </div>
+        <span class="input-note" id="input-note" hidden>Input funds are the universe · filters paused</span>
+        <span class="input-msg" id="input-msg"></span>
       </div>
       <div class="chips" id="chips"></div>
     </div>
 
     <div class="status" id="status"></div>
-    <div id="chart"></div>
+    <div class="zoom-row">
+      <label class="zl" for="zoom-slider">X-axis (SD)</label>
+      <span class="zoom-slide">
+        <input id="zoom-slider" type="range" min="1" max="80" step="0.5" value="80" title="Drag to shrink or widen the SD axis" aria-label="Largest SD shown on the X axis">
+        <span class="zoom-readout" id="zoom-readout"></span>
+      </span>
+      <button type="button" class="reset-btn" id="reset-btn">⟲ Reset view</button>
+    </div>
+    <div class="chart-wrap"><div id="chart"></div><div class="hv-dot" id="hv-dot" hidden></div>
+      <div class="pf-pick" id="pf-pick" role="group" aria-label="Select a portfolio">
+        <button type="button" data-k="min"><span class="mk" style="color:#00A3D9">◆</span>Min variance</button>
+        <button type="button" data-k="sharpe" class="active"><span class="mk" style="color:#B45309">★</span>Max Sharpe</button>
+        <button type="button" data-k="max"><span class="mk" style="color:#4F2D7F">▲</span>Max return</button>
+      </div>
+    </div>
+    <div class="comp-head">
+      <span class="comp-title">Allocation along the frontier</span>
+      <span class="comp-sub">Fund weights at each risk level, on the same StdDev axis as the chart above</span>
+    </div>
+    <div class="chart-wrap"><div id="comp-chart"></div><div class="hv-line" id="hv-line" hidden></div></div>
     <div id="pf-card"></div>
     <div class="legend-note">
-      <span><span class="ln"></span>Efficient frontier — hover for weights, click to select</span>
+      <span><span class="ln"></span>Efficient frontier — hover either chart for weights, click to select</span>
       <span><span class="sw" style="background:#00A3D9"></span>Min variance</span>
       <span><span class="sw" style="background:#B45309"></span>Max Sharpe</span>
+      <span><span class="sw" style="background:#4F2D7F"></span>Max return</span>
       <span><span class="sw" style="background:#b8c0cc"></span>Individual funds in the universe</span>
     </div>
   </div>
 
-  <div class="card">
-    <p class="panel-title">Allocation along the frontier</p>
-    <span style="font-size:12px;color:var(--mute);">Fund weights from the lowest-risk (left) to the highest-return (right) portfolio · hover for the full mix at that risk level</span>
-    <div id="comp-chart"></div>
-  </div>
-
   <div class="two">
     <div class="table-wrap">
-      <header><span id="sel-title">Selected portfolio</span>
-        <span class="pf-pick" id="pf-pick">
-          <button data-k="min">Min variance</button><button data-k="sharpe" class="active">Max Sharpe</button><button data-k="max">Max return</button>
-        </span>
-      </header>
+      <header><span id="sel-title">Selected portfolio</span><span class="hint">pick on the chart</span></header>
       <div class="table-scroll" id="sel-wrap"></div>
     </div>
     <div class="table-wrap">
@@ -368,6 +413,7 @@ const state = {
   years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
   main: "All", cats: [], shelf: "All", amc: "All", risk: "All",
   picks: [], excluded: new Set(), sel: "sharpe",
+  sdRange: null,         // [min, max] SD % shown on the X axis; null = fit everything
 };
 let MODEL = null;      // last solved universe + frontier
 
@@ -390,7 +436,7 @@ const hasFilter = () => state.main !== "All" || state.cats.length || state.shelf
   state.amc !== "All" || state.risk !== "All";
 function passes(f, skip){
   if (skip !== "main" && state.main !== "All" && f.main !== state.main) return false;
-  if (skip !== "cat" && state.cats.length && !state.cats.includes(f.cat)) return false;
+  if (skip !== "cat" && state.cats.includes(f.cat)) return false;      // state.cats = excluded sub-categories
   if (state.shelf !== "All" && f.shelf !== state.shelf) return false;
   if (state.amc !== "All" && f.amc !== state.amc) return false;
   if (state.risk !== "All" && String(f.risk) !== state.risk) return false;
@@ -417,19 +463,21 @@ function rebuildCatList(){
   state.cats = state.cats.filter(c => counts[c]);
   catDraft = state.cats.slice();
   $("cat-ms-list").innerHTML = cats.map(c =>
-    `<label class="ms-item"><input type="checkbox" value="${esc(c)}"${catDraft.includes(c)?" checked":""}>${esc(c)}<span class="ms-n">${counts[c]}</span></label>`).join("")
+    `<label class="ms-item"><input type="checkbox" value="${esc(c)}"${catDraft.includes(c)?" checked":""}><span class="ms-name">${esc(c)}</span><span class="ms-n">${counts[c]}</span></label>`).join("")
     || '<div class="find-empty">No sub-categories for this selection</div>';
   const b = $("cat-ms-btn");
-  b.textContent = state.cats.length === 0 ? "All sub-categories" :
-    state.cats.length === 1 ? state.cats[0] : `${state.cats.length} sub-categories`;
+  b.textContent = state.cats.length === 0 ? "None excluded" :
+    state.cats.length === 1 ? `Excluding ${state.cats[0]}` : `Excluding ${state.cats.length} sub-categories`;
   b.classList.toggle("has-sel", state.cats.length > 0);
 }
 
 /* ---------- universe ---------- */
 function candidates(){
-  const picked = new Set(state.picks);
-  let list = hasFilter() ? FUNDS.filter(f => passes(f)) : [];
-  state.picks.forEach(c => { const f = BYCODE[c]; if (f && !list.includes(f)) list.push(f); });
+  // Input funds, when present, ARE the universe (filters paused); otherwise the filters
+  // decide, and with every filter on All the universe is every fund.
+  if (state.picks.length) return {list: state.picks.map(c => BYCODE[c]).filter(Boolean), dropped: new Map()};
+  const picked = new Set();
+  let list = hasFilter() ? FUNDS.filter(f => passes(f)) : FUNDS.slice();
   const dropped = new Map();      // fund -> reason
   if (state.oneClass){
     const best = new Map();
@@ -441,7 +489,7 @@ function candidates(){
     const pickedPids = new Set(list.filter(f => picked.has(f.code)).map(f => f.pid));
     list.forEach(f => {
       if (picked.has(f.code)) return;
-      if (pickedPids.has(f.pid)) dropped.set(f, "Sibling class of a Find pick");
+      if (pickedPids.has(f.pid)) dropped.set(f, "Sibling class of an Input fund");
       else if (best.get(f.pid) !== f) dropped.set(f, "Smaller share class of the same fund");
     });
   }
@@ -649,11 +697,12 @@ function recompute(){
 function renderStatus(){
   const m = MODEL, n = m.rows.length;
   if (!n){
-    $("status").innerHTML = "Choose at least one filter or <b>Find</b> funds to build a universe.";
+    $("status").innerHTML = "No funds match the filters. Change a filter, or list funds in <b>Input</b>.";
     return;
   }
   const noHist = m.rows.filter(r => r.reason && r.reason.startsWith("No full")).length;
-  let s = `Universe: <b>${n.toLocaleString()}</b> share classes · <b>${m.ok.length}</b> optimised over ${state.years}Y (${m.W} weekly returns, ${DATA.dates[NW-m.W]} → ${DATA.dates[NW]})`;
+  const scope = state.picks.length ? "Input funds · " : hasFilter() ? "" : "All funds · ";
+  let s = `${scope}Universe: <b>${n.toLocaleString()}</b> share classes · <b>${m.ok.length}</b> optimised over ${state.years}Y (${m.W} weekly returns, ${DATA.dates[NW-m.W]} → ${DATA.dates[NW]})`;
   if (noHist) s += ` · ${noHist} lack ${state.years}Y history`;
   const other = n - m.ok.length - noHist - m.trimmed;
   if (other > 0) s += ` · ${other} excluded (sibling class / by you)`;
@@ -668,7 +717,7 @@ function renderChart(){
   const el = $("chart"), m = MODEL;
   if (!m.fr){
     Plotly.purge(el);
-    el.innerHTML = `<div class="empty-msg">${m.rows.length ? "Not enough funds with " + state.years + "Y history to draw a frontier." : "Build a universe with the filters above, or add funds with Find."}</div>`;
+    el.innerHTML = `<div class="empty-msg">${m.rows.length ? "Not enough funds with " + state.years + "Y history to draw a frontier." : "No funds match the filters. Change a filter, or list funds in Input."}</div>`;
     return;
   }
   if (el.querySelector(".empty-msg")) el.innerHTML = "";     // never wipe a live Plotly graph
@@ -678,11 +727,9 @@ function renderChart(){
   const traces = [
     {x: others.map(r => r.sd*100), y: others.map(r => r.mu*100), mode:"markers", type:"scatter", name:"not optimised",
      marker:{size:5, color:"#e2e5ea"}, text: others.map(r => r.f.code), hovertemplate:"<b>%{text}</b><br>not optimised (outside top "+MAX_N+" by AUM)<extra></extra>"},
-    {x: fundPts.map(p => p.r.sd*100), y: fundPts.map(p => p.r.mu*100), mode:"markers+text", type:"scatter", name:"funds",
+    {x: fundPts.map(p => p.r.sd*100), y: fundPts.map(p => p.r.mu*100), mode:"markers", type:"scatter", name:"funds",
      marker:{size:fundPts.map(p => sel.w[p.i] > 0.005 ? 10 : 7), color:fundPts.map(p => sel.w[p.i] > 0.005 ? m.color[p.i] : "#b8c0cc"),
              line:{width:1, color:"#fff"}},
-     text: fundPts.map(p => sel.w[p.i] > 0.005 || fundPts.length <= 15 ? p.r.f.code : ""), textposition:"top center",
-     textfont:{size:10, color:"#4d4d4d"},
      customdata: fundPts.map(p => [p.r.f.code, p.r.f.name, p.r.f.cat, p.r.sharpe == null ? "–" : p.r.sharpe.toFixed(2)]),
      hovertemplate:"<b>%{customdata[0]}</b><br>%{customdata[1]}<br>%{customdata[2]}<br>Return %{y:.2f}% · SD %{x:.2f}% · Sharpe %{customdata[3]}<extra></extra>"},
     {x: fr.pts.map(p => p.sd*100), y: fr.pts.map(p => p.ret*100), mode:"lines+markers", type:"scatter", name:"frontier",
@@ -692,6 +739,8 @@ function renderChart(){
      marker:{size:14, color:"#00A3D9", symbol:"diamond", line:{width:2, color:"#fff"}}, hoverinfo:"none"},
     {x:[fr.maxSharpe.sd*100], y:[fr.maxSharpe.ret*100], mode:"markers", type:"scatter", name:"sharpe",
      marker:{size:17, color:"#B45309", symbol:"star", line:{width:1.5, color:"#fff"}}, hoverinfo:"none"},
+    {x:[fr.maxRet.sd*100], y:[fr.maxRet.ret*100], mode:"markers", type:"scatter", name:"max",
+     marker:{size:14, color:"#4F2D7F", symbol:"triangle-up", line:{width:1.5, color:"#fff"}}, hoverinfo:"none"},
     {x:[sel.sd*100], y:[sel.ret*100], mode:"markers", type:"scatter", name:"selected",
      marker:{size:20, color:"rgba(0,0,0,0)", line:{width:2.5, color:"#1a1a1a"}}, hoverinfo:"none"},
   ];
@@ -704,30 +753,105 @@ function renderChart(){
     traces.splice(2, 0, {x:[0, xmax], y:[m.rf*100, m.rf*100 + fr.maxSharpe.sharpe*xmax], mode:"lines", type:"scatter",
       name:"cml", line:{color:"#B45309", width:1, dash:"dot"}, hoverinfo:"skip"});
   }
+  // X axis follows the SD scale controls; Y refits to what is inside that SD range
+  let xr = null, yr = null;
+  if (state.sdRange){
+    xr = state.sdRange.slice();
+    const inX = (sd) => sd*100 >= xr[0] && sd*100 <= xr[1];
+    const ys = [...m.ok.filter(r => inX(r.sd)).map(r => r.mu), ...fr.pts.filter(p => inX(p.sd)).map(p => p.ret),
+                ...others.filter(r => inX(r.sd)).map(r => r.mu)].map(v => v*100);
+    if (ys.length){
+      let lo = Math.min(...ys), hi = Math.max(...ys); const pad = Math.max((hi - lo) * 0.08, 0.5);
+      yr = [lo - pad, hi + pad];
+    }
+  }
   const layout = {
     margin:{l:56, r:16, t:12, b:46}, showlegend:false, hovermode:"closest", dragmode:"pan",
     paper_bgcolor:"#fff", plot_bgcolor:"#fff", font:{family:"Arial, Helvetica, sans-serif", size:12, color:"#1a1a1a"},
-    xaxis:{...AX, title:{text:`Annualised StdDev, ${state.years}Y (%)`, font:{size:12}}, rangemode:"tozero"},
-    yaxis:{...AX, title:{text:`Annualised mean return, ${state.years}Y (%)`, font:{size:12}}},
+    xaxis:{...AX, title:{text:`Annualised StdDev, ${state.years}Y (%)`, font:{size:12}}, rangemode:"tozero",
+           ...(xr ? {range:xr, autorange:false} : {autorange:true})},
+    yaxis:{...AX, title:{text:`Annualised mean return, ${state.years}Y (%)`, font:{size:12}},
+           ...(yr ? {range:yr, autorange:false} : {autorange:true})},
   };
   Plotly.react(el, traces, layout, {displaylogo:false, responsive:true, scrollZoom:true,
     modeBarButtonsToRemove:["lasso2d","select2d","autoScale2d"]});
-  if (el.removeAllListeners) ["plotly_hover","plotly_unhover","plotly_click"].forEach(n => el.removeAllListeners(n));
+  if (el.removeAllListeners) ["plotly_hover","plotly_unhover","plotly_click","plotly_relayout"].forEach(n => el.removeAllListeners(n));
+  // keep the allocation chart's StdDev axis identical when the frontier is panned or zoomed
+  el.on("plotly_relayout", ev => {
+    if (ev && Object.keys(ev).some(k => k.startsWith("annotations"))) return;   // our own label pass
+    const c = $("comp-chart"), r = el._fullLayout?.xaxis?.range;
+    if (c._fullLayout && r) Plotly.relayout(c, {"xaxis.range": r.slice()});
+    placeLabels();                                                               // re-place after pan / zoom
+  });
+  placeLabels();
   el.on("plotly_hover", ev => {
     const p = ev.points[0], pf = pfFromPoint(p);
-    if (pf) showCard(pf, ev.event);
+    if (pf) syncHover(pf, ev.event);
   });
-  el.on("plotly_unhover", () => { $("pf-card").style.display = "none"; });
+  el.on("plotly_unhover", clearHover);
   el.on("plotly_click", ev => {
     const pf = pfFromPoint(ev.points[0]);
     if (pf){ state.sel = pf; render(); }
   });
+}
+/* Fund labels: top-centre above the point, as Plotly would place them. A label moves only
+   when it would overlap another label, a portfolio marker or the portfolio buttons: first to a nearby spot,
+   and only if none is free, further out with a thin leader line. Labels with no free spot
+   are skipped (the fund still shows on hover). */
+let _measureCtx = null;
+function labelWidth(t){
+  _measureCtx = _measureCtx || document.createElement("canvas").getContext("2d");
+  _measureCtx.font = "10px Arial, Helvetica, sans-serif";
+  return _measureCtx.measureText(t).width + 4;
+}
+function placeLabels(){
+  const el = $("chart"), fl = el._fullLayout, m = MODEL;
+  if (!fl || !fl.xaxis || !m || !m.fr) return;
+  const xa = fl.xaxis, ya = fl.yaxis, W = xa._length, H = ya._length;
+  const px = v => xa.l2p(v*100), py = v => ya.l2p(v*100);
+  const sel = selectedPortfolio(), boxes = [];
+  // the large portfolio markers (◆ ★ ▲ and the selection ring) would hide text drawn over them
+  [m.fr.minVar, m.fr.maxSharpe, m.fr.maxRet, sel].forEach(p => {
+    const x = px(p.sd), y = py(p.ret); boxes.push({x0:x-11, y0:y-11, x1:x+11, y1:y+11});
+  });
+  const pk = $("pf-pick").getBoundingClientRect(), cr = el.getBoundingClientRect();
+  boxes.push({x0:pk.left-cr.left-fl.margin.l-4, y0:pk.top-cr.top-fl.margin.t-4,
+              x1:pk.right-cr.left-fl.margin.l+4, y1:pk.bottom-cr.top-fl.margin.t+4});
+  const want = m.ok.map((r, i) => ({r, w: sel.w[i]}))
+    .filter(o => o.w > 0.005 || m.ok.length <= 15)
+    .sort((a, b) => b.w - a.w || (b.r.f.aum||0) - (a.r.f.aum||0));
+  const hit = b => b.x0 < -2 || b.x1 > W + 2 || b.y0 < -2 || b.y1 > H + 2 ||
+    boxes.some(q => b.x0 < q.x1 && b.x1 > q.x0 && b.y0 < q.y1 && b.y1 > q.y0);
+  const ann = [];
+  for (const o of want){
+    const x = px(o.r.sd), y = py(o.r.mu);
+    if (x < 0 || x > W || y < 0 || y > H) continue;
+    const t = o.r.f.code, hw = labelWidth(t)/2, hh = 6.5;
+    const spots = [[0,-13],[hw+8,0],[-(hw+8),0],[0,13],[hw+5,-11],[-(hw+5),-11],[hw+5,11],[-(hw+5),11],
+                   // just clear of a big portfolio marker, still close enough to need no line
+                   [0,-19],[hw+14,0],[-(hw+14),0],[0,19],[hw+12,-14],[-(hw+12),-14],[hw+12,14],[-(hw+12),14]];
+    for (const R of [30, 44, 60, 78]) for (let k=0; k<16; k++){
+      const a = -Math.PI/2 + k*Math.PI/8; spots.push([Math.cos(a)*(R + hw*0.7), Math.sin(a)*R]);
+    }
+    for (const [dx, dy] of spots){
+      const b = {x0:x+dx-hw, x1:x+dx+hw, y0:y+dy-hh, y1:y+dy+hh};
+      if (hit(b)) continue;
+      boxes.push(b);
+      const base = {x:o.r.sd*100, y:o.r.mu*100, xref:"x", yref:"y", text:esc(t), font:{size:10, color:"#4d4d4d"}};
+      ann.push(Math.hypot(dx, dy) > hw + 26
+        ? {...base, showarrow:true, arrowhead:0, arrowwidth:0.8, arrowcolor:"#9aa3b0", ax:dx, ay:dy, standoff:5}
+        : {...base, showarrow:false, xshift:dx, yshift:-dy});
+      break;
+    }
+  }
+  Plotly.relayout(el, {annotations: ann});
 }
 function pfFromPoint(p){
   const fr = MODEL.fr, n = p.data.name;
   if (n === "frontier") return fr.pts[p.pointIndex];
   if (n === "min") return fr.minVar;
   if (n === "sharpe") return fr.maxSharpe;
+  if (n === "max") return fr.maxRet;
   if (n === "selected") return selectedPortfolio();
   return null;
 }
@@ -788,16 +912,46 @@ function renderComp(){
   const traces = idx.map(i => ({
     x: xs, y: pts.map(p => p.w[i]*100), type:"scatter", mode:"lines", stackgroup:"one", name:m.ok[i].f.code,
     line:{width:0.5, color:m.color[i]}, fillcolor:m.color[i],
-    hovertemplate:`${esc(m.ok[i].f.code)} %{y:.1f}%<extra></extra>`,
+    hoverinfo:"none",
   }));
   const sel = selectedPortfolio();
+  const topX = $("chart")._fullLayout?.xaxis?.range;
   Plotly.react(el, traces, {
-    margin:{l:56, r:16, t:8, b:42}, showlegend:false, hovermode:"x unified", dragmode:false,
+    margin:{l:56, r:16, t:8, b:42}, showlegend:false, hovermode:"x", dragmode:false,
     paper_bgcolor:"#fff", plot_bgcolor:"#fff", font:{family:"Arial, Helvetica, sans-serif", size:12},
-    xaxis:{...AX, title:{text:"Portfolio StdDev (%)", font:{size:12}}, range:[xs[0], xs[xs.length-1]]},
+    xaxis:{...AX, title:{text:"Portfolio StdDev (%)", font:{size:12}}, range: topX ? topX.slice() : [xs[0], xs[xs.length-1]]},
     yaxis:{...AX, range:[0,100], title:{text:"Weight (%)", font:{size:12}}},
     shapes:[{type:"line", x0:sel.sd*100, x1:sel.sd*100, y0:0, y1:100, line:{color:"#1a1a1a", width:1.5, dash:"dot"}}],
   }, {displaylogo:false, responsive:true, displayModeBar:false});
+  if (el.removeAllListeners) ["plotly_hover","plotly_unhover","plotly_click"].forEach(n => el.removeAllListeners(n));
+  el.on("plotly_hover", ev => { const pf = pts[ev.points[0].pointIndex]; if (pf) syncHover(pf, ev.event); });
+  el.on("plotly_unhover", clearHover);
+  el.on("plotly_click", ev => { const pf = pts[ev.points[0].pointIndex]; if (pf){ state.sel = pf; render(); } });
+}
+// Hovering either chart shows the weights card and marks the same portfolio (same SD) on both charts.
+function placeOverlay(chartId, fn){
+  const el = $(chartId), fl = el._fullLayout;
+  if (!fl || !fl.xaxis) return false;
+  const off = el.getBoundingClientRect(), wrap = el.parentElement.getBoundingClientRect();
+  fn(fl, off.left - wrap.left, off.top - wrap.top);
+  return true;
+}
+function syncHover(pf, e){
+  showCard(pf, e);
+  const dot = $("hv-dot"), line = $("hv-line");
+  dot.hidden = !placeOverlay("chart", (fl, dx, dy) => {
+    dot.style.left = (dx + fl.margin.l + fl.xaxis.l2p(pf.sd*100)) + "px";
+    dot.style.top  = (dy + fl.margin.t + fl.yaxis.l2p(pf.ret*100)) + "px";
+  });
+  line.hidden = !placeOverlay("comp-chart", (fl, dx, dy) => {
+    line.style.left = (dx + fl.margin.l + fl.xaxis.l2p(pf.sd*100)) + "px";
+    line.style.top = (dy + fl.margin.t) + "px";
+    line.style.height = fl.yaxis._length + "px";
+  });
+}
+function clearHover(){
+  $("pf-card").style.display = "none";
+  $("hv-dot").hidden = true; $("hv-line").hidden = true;
 }
 function renderSelected(){
   const m = MODEL;
@@ -824,7 +978,7 @@ function renderUniverse(){
   });
   const LIMIT = 400;
   $("uni-hint").textContent = m.rows.length ? `${m.ok.length} optimised of ${m.rows.length}` + (rows.length > LIMIT ? ` · first ${LIMIT} shown` : "") : "";
-  if (!rows.length){ $("uni-wrap").innerHTML = '<div class="find-empty" style="padding:14px">Empty — set a filter or Find funds.</div>'; return; }
+  if (!rows.length){ $("uni-wrap").innerHTML = '<div class="find-empty" style="padding:14px">Empty — change a filter or list funds in Input.</div>'; return; }
   $("uni-wrap").innerHTML = `<table class="dt"><thead><tr><th class="l">Use</th><th class="l">Fund</th><th class="l">Sub-category</th><th>Return</th><th>SD</th><th>Sharpe</th><th>Weight</th></tr></thead><tbody>
     ${rows.slice(0, LIMIT).map(r => {
       const i = pos.get(r), w = i != null && pf ? pf.w[i] : null;
@@ -838,9 +992,14 @@ function renderUniverse(){
 function renderChips(){
   $("chips").innerHTML = state.picks.map(c => { const f = BYCODE[c];
     return `<span class="chip"><b>${esc(c)}</b> ${f ? "— " + esc(f.name.length > 34 ? f.name.slice(0,33) + "…" : f.name) : ""}<button data-rm="${esc(c)}" title="Remove">×</button></span>`; }).join("") +
-    (state.picks.length > 1 ? '<span class="chip clear-all" id="chip-clear">Clear picks</span>' : "");
+    (state.picks.length > 1 ? '<span class="chip clear-all" id="chip-clear">Clear input</span>' : "");
 }
-function render(){ renderStatus(); renderChart(); renderComp(); renderSelected(); renderUniverse(); renderChips(); }
+function renderInputState(){
+  const on = state.picks.length > 0;
+  $("filter-rows").classList.toggle("paused", on);
+  $("input-note").hidden = !on;
+}
+function render(){ renderInputState(); renderStatus(); renderChart(); renderComp(); syncSlider(); renderSelected(); renderUniverse(); renderChips(); }
 
 /* ---------- find ---------- */
 let findActive = -1, findList = [];
@@ -856,6 +1015,19 @@ function doFind(){
   dd.innerHTML = findList.map((f, i) => `<div class="find-item" data-i="${i}"><div class="fi-main"><div class="fi-code">${esc(f.code)}</div><div class="fi-name">${esc(f.name)} · ${esc(f.cat)}</div></div>
       <div class="fi-h">${f.hist ? f.hist + "Y history" : "&lt;1Y"}</div></div>`).join("") || '<div class="find-empty">No match</div>';
   dd.classList.add("open");
+}
+const BYCODE_UP = Object.fromEntries(FUNDS.map(f => [f.code.toUpperCase(), f.code]));
+function addCodes(text){
+  // a pasted list: codes separated by commas, semicolons, tabs or new lines
+  const toks = text.split(/[,;\t\n\r]+/).map(t => t.trim()).filter(Boolean);
+  const miss = [];
+  toks.forEach(t => {
+    const c = BYCODE_UP[t.toUpperCase()];
+    if (!c) miss.push(t); else if (!state.picks.includes(c)) state.picks.push(c);
+  });
+  $("input-msg").textContent = miss.length ? `Not found: ${miss.slice(0, 6).join(", ")}${miss.length > 6 ? ` +${miss.length - 6} more` : ""}` : "";
+  $("find-input").value = ""; $("find-dd").classList.remove("open");
+  onFilter();
 }
 function pick(i){
   const f = findList[i]; if (!f) return;
@@ -876,7 +1048,15 @@ $("win-seg").onclick = e => {
   if (typeof state.sel === "object") state.sel = "sharpe";
   recompute();
 };
-$("cap-select").onchange = e => { state.cap = +e.target.value; if (typeof state.sel === "object") state.sel = "sharpe"; recompute(); };
+// Max weight: empty (default) or >= 100 = no cap; otherwise the typed % (1-100)
+$("cap-input").onchange = e => {
+  const v = parseFloat(e.target.value);
+  if (!isFinite(v) || v >= 100){ state.cap = 1; e.target.value = ""; }
+  else { const c = Math.max(1, v); state.cap = c/100; e.target.value = c; }
+  if (typeof state.sel === "object") state.sel = "sharpe";
+  recompute();
+};
+$("cap-input").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
 $("rf-input").value = state.rf;
 $("rf-input").onchange = e => { const v = parseFloat(e.target.value); state.rf = isFinite(v) ? v : 0; recompute(); };
 $("oneclass-chk").onchange = e => { state.oneClass = e.target.checked; recompute(); };
@@ -898,7 +1078,11 @@ $("clear-btn").onclick = () => {
   ["main-select","shelf-select","amc-select","risk-select"].forEach(id => $(id).value = "All");
   rebuildCatList(); recompute();
 };
-$("find-input").oninput = doFind;
+$("find-input").oninput = () => { $("input-msg").textContent = ""; doFind(); };
+$("find-input").addEventListener("paste", e => {
+  const t = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+  if (/[,;\t\n\r]/.test(t.trim())){ e.preventDefault(); addCodes(t); }
+});
 $("find-input").onkeydown = e => {
   const items = $("find-dd").querySelectorAll(".find-item");
   if (e.key === "ArrowDown" || e.key === "ArrowUp"){
@@ -906,7 +1090,10 @@ $("find-input").onkeydown = e => {
     findActive = (findActive + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
     items.forEach((it, i) => it.classList.toggle("active", i === findActive));
     items[findActive].scrollIntoView({block:"nearest"});
-  } else if (e.key === "Enter"){ pick(findActive >= 0 ? findActive : 0); }
+  } else if (e.key === "Enter"){
+    const v = $("find-input").value;
+    if (/[,;\t]/.test(v)) addCodes(v); else pick(findActive >= 0 ? findActive : 0);
+  }
   else if (e.key === "Escape"){ $("find-dd").classList.remove("open"); }
 };
 $("find-dd").onclick = e => { const it = e.target.closest(".find-item"); if (it) pick(+it.dataset.i); };
@@ -915,6 +1102,36 @@ $("chips").onclick = e => {
   if (rm){ state.picks = state.picks.filter(c => c !== rm.dataset.rm); onFilter(); }
   else if (e.target.id === "chip-clear"){ state.picks = []; onFilter(); }
 };
+/* SD scale: one slider sets the largest SD shown on the X axis */
+function setSdRange(lo, hi){
+  state.sdRange = hi > lo ? [lo, hi] : null;
+  renderChart(); renderComp(); syncSlider();
+}
+$("reset-btn").onclick = () => setSdRange(0, 0);
+// Slider = right edge of the SD axis, from 1% up to the widest SD in the current universe.
+function fullMaxSd(){
+  const m = MODEL; if (!m || !m.fr) return 80;
+  const sds = [...m.rows.filter(r => r.sd != null).map(r => r.sd), ...m.fr.pts.map(p => p.sd)];
+  return Math.max(2, Math.ceil(Math.max(...sds) * 100 * 1.03));
+}
+function syncSlider(){
+  const sl = $("zoom-slider"), full = fullMaxSd();
+  sl.max = full;
+  const hi = state.sdRange ? Math.min(state.sdRange[1], full) : full;
+  sl.value = hi;
+  $("zoom-readout").textContent = state.sdRange ? `0–${+hi.toFixed(1)}%` : `0–${full}% (all)`;
+}
+function slideTo(hi){
+  const full = fullMaxSd();
+  hi = Math.round(Math.max(0.5, Math.min(hi, full)) * 2) / 2;
+  if (hi >= full) setSdRange(0, 0); else setSdRange(0, hi);
+}
+let slideRaf = 0;
+$("zoom-slider").oninput = () => {
+  cancelAnimationFrame(slideRaf);
+  slideRaf = requestAnimationFrame(() => slideTo(+$("zoom-slider").value));
+};
+
 $("pf-pick").onclick = e => { const b = e.target.closest("button"); if (b){ state.sel = b.dataset.k; render(); } };
 $("uni-wrap").onchange = e => {
   const c = e.target.dataset.code; if (!c) return;
