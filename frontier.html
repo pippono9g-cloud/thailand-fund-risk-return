@@ -391,7 +391,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
   </div>
 
   <div class="footer">
-    <span>Source: <a href="https://api.sec.or.th" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">SEC.or.th</a> · Data as of 14 Oct 2026 · Generated 15 Oct 2026</span>
+    <span>Source: <a href="https://api.sec.or.th" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">SEC.or.th</a> · Data as of 14 Oct 2026 · Generated 16 Oct 2026</span>
     <span>Historical analysis only — not investment advice.</span>
   </div>
 </div>
@@ -754,9 +754,10 @@ function renderChart(){
       name:"cml", line:{color:"#B45309", width:1, dash:"dot"}, hoverinfo:"skip"});
   }
   // X axis follows the SD scale controls; Y refits to what is inside that SD range
-  let xr = null, yr = null;
-  if (state.sdRange){
-    xr = state.sdRange.slice();
+  // Default view (sdRange null) ends just past the frontier's riskiest point, so the frontier
+  // and the allocation chart fill the width; the slider can widen it to every fund.
+  let xr = state.sdRange ? state.sdRange.slice() : [0, defaultSdHi()], yr = null;
+  {
     const inX = (sd) => sd*100 >= xr[0] && sd*100 <= xr[1];
     const ys = [...m.ok.filter(r => inX(r.sd)).map(r => r.mu), ...fr.pts.filter(p => inX(p.sd)).map(p => p.ret),
                 ...others.filter(r => inX(r.sd)).map(r => r.mu)].map(v => v*100);
@@ -1114,17 +1115,22 @@ function fullMaxSd(){
   const sds = [...m.rows.filter(r => r.sd != null).map(r => r.sd), ...m.fr.pts.map(p => p.sd)];
   return Math.max(2, Math.ceil(Math.max(...sds) * 100 * 1.03));
 }
+function defaultSdHi(){
+  const m = MODEL; if (!m || !m.fr) return 80;
+  return Math.round(m.fr.maxRet.sd * 100 * 1.04 * 2) / 2 + 0.5;
+}
 function syncSlider(){
   const sl = $("zoom-slider"), full = fullMaxSd();
   sl.max = full;
-  const hi = state.sdRange ? Math.min(state.sdRange[1], full) : full;
+  const hi = Math.min(state.sdRange ? state.sdRange[1] : defaultSdHi(), full);
   sl.value = hi;
-  $("zoom-readout").textContent = state.sdRange ? `0–${+hi.toFixed(1)}%` : `0–${full}% (all)`;
+  $("zoom-readout").textContent = !state.sdRange ? `0–${+hi.toFixed(1)}% (frontier)` :
+    hi >= full ? `0–${full}% (all funds)` : `0–${+hi.toFixed(1)}%`;
 }
 function slideTo(hi){
   const full = fullMaxSd();
   hi = Math.round(Math.max(0.5, Math.min(hi, full)) * 2) / 2;
-  if (hi >= full) setSdRange(0, 0); else setSdRange(0, hi);
+  setSdRange(0, hi);
 }
 let slideRaf = 0;
 $("zoom-slider").oninput = () => {
