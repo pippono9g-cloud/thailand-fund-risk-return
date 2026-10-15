@@ -227,6 +227,15 @@ table.dt .fc { font-weight:700; overflow:hidden; text-overflow:ellipsis; }
 table.dt .fn { font-size:10px; color:var(--mute); overflow:hidden; text-overflow:ellipsis; }
 table.dt tr.off td { color:#9ca3af; }
 table.dt tr.off .fc { color:#9ca3af; }
+table.dt tr.excl td { background:#fbf7f7; }
+table.dt tr.hit td { background:#f0fafe; }
+table.dt tr.hit-cur td { background:#d9f1fb; box-shadow:inset 0 1px 0 var(--cyan), inset 0 -1px 0 var(--cyan); }
+.uni-find { display:inline-flex; align-items:center; gap:6px; font-weight:400; }
+.uni-find input { font-size:12px; padding:4px 8px; border:1px solid var(--rule); border-radius:7px; width:170px; color:var(--ink); background:#fff; }
+.uni-find input:focus { outline:none; border-color:var(--cyan); }
+#uni-find-count { font-size:11px; color:var(--mute); min-width:34px; font-variant-numeric:tabular-nums; }
+table.dt tr.excl .fc { text-decoration:line-through; }
+table.dt tr.excl .note { color:var(--red); font-weight:700; }
 table.dt tbody tr:hover { background:#f5fbfe; }
 table.dt .note { font-size:10px; color:var(--amber); }
 .pos { color:var(--green); } .neg { color:var(--red); }
@@ -385,7 +394,9 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <div class="table-scroll" id="sel-wrap"></div>
     </div>
     <div class="table-wrap">
-      <header><span>Universe</span><span class="hint" id="uni-hint"></span></header>
+      <header><span>Universe</span>
+        <span class="uni-find"><input id="uni-find" type="search" placeholder="Find fund in this list" autocomplete="off" aria-label="Find a fund in the Universe table"><span id="uni-find-count"></span></span>
+        <span class="hint" id="uni-hint"></span></header>
       <div class="table-scroll" id="uni-wrap"></div>
     </div>
   </div>
@@ -412,7 +423,7 @@ const sgn = x => x > 0 ? "pos" : x < 0 ? "neg" : "";
 const state = {
   years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
   main: "All", cats: [], shelf: "All", amc: "All", risk: "All",
-  picks: [], excluded: new Set(), sel: "sharpe",
+  picks: [], excluded: new Set(), sel: "sharpe", uniQuery: "", uniHit: 0,
   sdRange: null,         // [min, max] SD % shown on the X axis; null = fit everything
 };
 let MODEL = null;      // last solved universe + frontier
@@ -970,25 +981,50 @@ function renderSelected(){
         <td class="l">${esc(r.f.cat)}</td><td><b>${pct(pf.w[i],1)}</b></td><td class="${sgn(r.mu)}">${pct(r.mu,1)}</td><td>${pct(r.sd,1)}</td><td>${r.sharpe == null ? "–" : r.sharpe.toFixed(2)}</td></tr>`; }).join("")}
     </tbody></table>`;
 }
+let UNI_ORDER = null, UNI_HITS = [];
+// scroll the Universe table so the current Find match sits mid-view
+function jumpToHit(){
+  const code = UNI_HITS[state.uniHit]; if (code == null) return;
+  const wrap = $("uni-wrap"), tr = [...wrap.querySelectorAll("tr[data-row]")].find(t => t.dataset.row === code);
+  if (tr) wrap.scrollTop = Math.max(0, tr.offsetTop - wrap.clientHeight/2 + tr.offsetHeight/2);
+}
 function renderUniverse(){
   const m = MODEL, pf = m.fr ? selectedPortfolio() : null;
   const pos = new Map(m.ok.map((r, i) => [r, i]));
-  const rows = m.rows.slice().sort((a,b) => {
-    const wa = pos.has(a) && pf ? pf.w[pos.get(a)] : -1, wb = pos.has(b) && pf ? pf.w[pos.get(b)] : -1;
-    return (wb - wa) || (!!b.rets - !!a.rets) || ((b.sharpe ?? -9) - (a.sharpe ?? -9));
-  });
+  // Order: funds with a weight (largest first), then funds you unticked, then the other
+  // optimised funds, then the rest. Right after a tick/untick the previous order is kept,
+  // so the row you clicked stays where it was (greyed and unticked when excluded).
+  const wOf = r => pos.has(r) && pf ? pf.w[pos.get(r)] : 0;
+  const tier = r => wOf(r) >= 0.0005 ? 0 : state.excluded.has(r.f.code) ? 1 : r.rets ? 2 : 3;
+  let rows = m.rows.slice().sort((a,b) => (tier(a) - tier(b)) || (wOf(b) - wOf(a)) || ((b.sharpe ?? -9) - (a.sharpe ?? -9)));
+  if (state.keepUniOrder && UNI_ORDER){
+    const at = new Map(UNI_ORDER.map((c, k) => [c, k]));
+    rows = m.rows.slice().sort((a,b) => (at.get(a.f.code) ?? 1e9) - (at.get(b.f.code) ?? 1e9));
+  }
+  state.keepUniOrder = false;
+  UNI_ORDER = rows.map(r => r.f.code);
+  const scrollTop = $("uni-wrap").scrollTop;
   const LIMIT = 400;
+  const q = (state.uniQuery || "").trim().toLowerCase();
+  const matches = q ? rows.filter(r => (r.f.code + " " + r.f.name).toLowerCase().includes(q)) : [];
+  UNI_HITS = matches.map(r => r.f.code);
+  if (state.uniHit >= UNI_HITS.length) state.uniHit = 0;
+  $("uni-find-count").textContent = q ? (matches.length ? `${state.uniHit + 1}/${matches.length}` : "0") : "";
+  const shown = rows.slice(0, LIMIT);
+  matches.forEach(r => { if (!shown.includes(r)) shown.push(r); });   // a match past the limit is still shown
   $("uni-hint").textContent = m.rows.length ? `${m.ok.length} optimised of ${m.rows.length}` + (rows.length > LIMIT ? ` · first ${LIMIT} shown` : "") : "";
   if (!rows.length){ $("uni-wrap").innerHTML = '<div class="find-empty" style="padding:14px">Empty — change a filter or list funds in Input.</div>'; return; }
   $("uni-wrap").innerHTML = `<table class="dt"><thead><tr><th class="l">Use</th><th class="l">Fund</th><th class="l">Sub-category</th><th>Return</th><th>SD</th><th>Sharpe</th><th>Weight</th></tr></thead><tbody>
-    ${rows.slice(0, LIMIT).map(r => {
+    ${shown.map(r => {
       const i = pos.get(r), w = i != null && pf ? pf.w[i] : null;
       const canToggle = !r.reason || r.reason === "Excluded by you";
-      return `<tr class="${r.rets ? "" : "off"}"><td class="l"><input type="checkbox" data-code="${esc(r.f.code)}" ${state.excluded.has(r.f.code) ? "" : "checked"} ${canToggle ? "" : "disabled"}></td>
+      const hitCls = UNI_HITS.includes(r.f.code) ? (UNI_HITS[state.uniHit] === r.f.code ? " hit hit-cur" : " hit") : "";
+      return `<tr data-row="${esc(r.f.code)}" class="${r.rets ? "" : "off"}${state.excluded.has(r.f.code) ? " excl" : ""}${hitCls}"><td class="l"><input type="checkbox" data-code="${esc(r.f.code)}" ${state.excluded.has(r.f.code) ? "" : "checked"} ${canToggle ? "" : "disabled"}></td>
         <td class="fund"><div class="fc">${esc(r.f.code)}</div><div class="fn">${esc(r.f.name)}</div>${r.reason ? `<div class="note">${esc(r.reason)}</div>` : ""}</td>
         <td class="l">${esc(r.f.cat)}</td><td class="${sgn(r.mu)}">${pct(r.mu,1)}</td><td>${pct(r.sd,1)}</td>
         <td>${r.sharpe == null ? "–" : r.sharpe.toFixed(2)}</td><td>${w == null ? "" : w >= 0.0005 ? "<b>" + pct(w,1) + "</b>" : "0%"}</td></tr>`;
     }).join("")}</tbody></table>`;
+  $("uni-wrap").scrollTop = scrollTop;
 }
 function renderChips(){
   $("chips").innerHTML = state.picks.map(c => { const f = BYCODE[c];
@@ -1139,9 +1175,17 @@ $("zoom-slider").oninput = () => {
 };
 
 $("pf-pick").onclick = e => { const b = e.target.closest("button"); if (b){ state.sel = b.dataset.k; render(); } };
+$("uni-find").oninput = e => { state.uniQuery = e.target.value; state.uniHit = 0; renderUniverse(); jumpToHit(); };
+$("uni-find").onkeydown = e => {
+  if (e.key !== "Enter" || !UNI_HITS.length) return;
+  e.preventDefault();
+  state.uniHit = (state.uniHit + (e.shiftKey ? -1 : 1) + UNI_HITS.length) % UNI_HITS.length;
+  renderUniverse(); jumpToHit();
+};
 $("uni-wrap").onchange = e => {
   const c = e.target.dataset.code; if (!c) return;
   if (e.target.checked) state.excluded.delete(c); else state.excluded.add(c);
+  state.keepUniOrder = true;
   onFilter();
 };
 document.addEventListener("click", e => {
