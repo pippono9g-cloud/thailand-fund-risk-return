@@ -297,7 +297,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <div class="body">
         <b>Inputs:</b> weekly <b>total-return</b> series for 2,848 share classes (dividend classes use the sister Acc class, or reinvested SEC dividend history — same treatment as the Risk-Return dashboard), sampled every 7 days back from the latest NAV date. Weekly rather than daily because Thai feeder funds price a day behind their master fund, which distorts daily correlations.<br>
         <b>Expected return</b> = mean weekly return × 52 (arithmetic, annualised). <b>Risk</b> = weekly StdDev × √52. <b>Covariance</b> = sample covariance with correlations shrunk toward zero (Schäfer–Strimmer intensity, shown in the status line) so the result stays stable when the universe is large relative to the number of weeks.<br>
-        <b>Optimisation:</b> for each point, minimise portfolio variance for its level of expected return, subject to weights ≥ 0, sum = 100%, and the max-weight cap. Solved in your browser each time the universe changes; usually 80 funds are optimised at once (more, up to 120, when a low max weight needs them, when Input / ticked funds exceed 80, or when the screening runs out of room). The first 80 are your Input / ticked funds, then the best Sharpe ratios; every other fund is then screened (would adding it lower the risk of any frontier portfolio?) and the ones that would are swapped in, until none would. So the frontier matches what the whole universe allows, not just the first 80.<br>
+        <b>Optimisation:</b> for each point, minimise portfolio variance for its level of expected return, subject to weights ≥ 0, sum = 100%, and the max-weight cap. Solved in your browser each time the universe changes; usually 80 funds are optimised at once (more, up to 120, when a low max weight needs them, when Input / ticked funds exceed 80, or when the screening runs out of room). The working set retains the highest-return funds needed for the max-weight cap, then your Input / ticked funds and the best Sharpe ratios. All eligible funds share one covariance estimate. Other funds are screened for feasible weight transfers that improve sampled frontier points. This is an approximation: small improvements or improvements between sampled points may remain; the status reports unresolved screening candidates.<br>
         <b>Max Sharpe</b> uses the risk-free rate you enter. <b>One class per fund</b> uses only the largest share class of each fund by default, because sibling classes have near-identical returns; the other classes stay in the Universe table unticked, and ticking one adds it.<br>
         <b>Caveat:</b> the frontier is built from <i>historical</i> returns, so it favours whatever performed best in the chosen window. Use it to understand diversification trade-offs, not as a forecast or a recommendation.<br>
         <b>Source:</b> Thailand SEC Open Data API (<a href="https://api.sec.or.th" target="_blank" rel="noopener">api.sec.or.th</a>). NAV data as of 14 Oct 2026.
@@ -345,6 +345,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
           <div class="ms-panel" id="risk-ms-panel">
             <div class="ms-hint">Ticked risk levels are in the universe; unticked levels are left out.</div>
             <div class="ms-list" id="risk-ms-list"></div>
+            <div id="risk-ms-msg" role="status" class="ms-hint" style="color:var(--red)"></div>
             <div class="ms-actions">
               <button type="button" id="risk-ms-all">Select all</button>
               <button type="button" class="ms-apply" id="risk-ms-apply">Apply changes</button>
@@ -497,6 +498,7 @@ function rebuildRiskList(){
   const counts = {};
   FUNDS.forEach(f => { if (passes(f, "risk")) counts[riskKey(f)] = (counts[riskKey(f)]||0) + 1; });
   riskDraft = state.risks.slice();
+  $("risk-ms-msg").textContent = "";
   $("risk-ms-list").innerHTML = ALL_RISKS.map(k =>
     `<label class="ms-item"><input type="checkbox" value="${esc(k)}"${riskDraft.includes(k)?" checked":""}><span class="ms-name">${riskLabel(k)}</span><span class="ms-n">${counts[k]||0}</span></label>`).join("");
   const b = $("risk-ms-btn"), all = state.risks.length === ALL_RISKS.length;
@@ -522,7 +524,7 @@ function rebuildCatList(){
 
 /* ---------- universe ---------- */
 const SIBLING_NOTE = "Other share class of this fund · tick to add";
-const OUTSIDE_NOTE = "Checked: would not improve the frontier · tick to add";
+const OUTSIDE_NOTE = "Outside working set · tick to add";
 function candidates(){
   // Input funds, when present, ARE the universe (filters paused); otherwise the filters
   // decide, and with every filter on All the universe is every fund.
@@ -701,50 +703,54 @@ function frontier(est, cap, rf, coarse){       // coarse: fewer points, for scre
 
 /* ---------- recompute ---------- */
 /* ---------- screening funds left out of the working set ----------
-   For a frontier portfolio solving  min w'Sw - t mu'w  (sum w = 1, 0 <= w <= cap), adding a
-   fund j at weight 0 can only help if its marginal cost  g_j = 2 (S w)_j - t mu_j  is below
-   the cost lambda shared by the funds held between 0 and the cap. g_j only needs j's
-   covariance with the funds actually held, so every left-out fund is cheap to check.
-   Covariances use the same correlation shrinkage as the working set. */
+   Test feasible transfers from each held fund to each outsider, including corners
+   where every holding is at its cap. The exact quadratic objective decrease along
+   each transfer is scored in equivalent SD units. This finite-point screen is an
+   approximation, not a certificate for the continuous full-universe frontier. */
 function screenOutside(work, est, fr, outside, cap){
   const T = work[0].rets.length, lam = est.lam;
-  const stdz = a => {
+  const centered = a => {
     let m = 0; for (const x of a) m += x; m /= T;
-    let v = 0; for (const x of a) v += (x-m)**2; const sd = Math.sqrt(v/(T-1));
-    const z = new Float64Array(T); if (sd > 1e-12) for (let k=0;k<T;k++) z[k] = (a[k]-m)/sd;
-    return {z, mu: m*52, sd: sd*Math.sqrt(52)};
+    const z = Float64Array.from(a, x => x-m);
+    let v = 0; for (const x of z) v += x*x;
+    return {z, mu:m*52, variance:v*52/(T-1)};
   };
   const held = [...work.keys()].filter(i => fr.pts.some(p => p.w[i] > 1e-6));
-  const zh = held.map(i => stdz(work[i].rets));
-  const outs = outside.map(r => stdz(r.rets));
-  // covariance of each outside fund with each held fund
+  const zh = held.map(i => centered(work[i].rets));
+  const outs = outside.map(r => centered(r.rets));
   const C = outs.map(o => zh.map(h => {
     let s = 0; for (let k=0;k<T;k++) s += o.z[k]*h.z[k];
-    return (1 - lam) * (s/(T-1)) * o.sd * h.sd;
+    return (1-lam)*s*52/(T-1);
   }));
-  // gain = how much adding j could lower the objective at that point, expressed as an
-  // equivalent cut in portfolio SD; only cuts of at least MIN_GAIN (0.01% a year) count, so
-  // near-identical money-market funds shaving a hair off ~0.07% SD do not churn the set.
   const MIN_GAIN = 1e-4;
-  const gain = new Float64Array(outside.length).fill(0);
+  const gain = new Float64Array(outside.length);
   for (const p of fr.pts){
-    const t = p.t ?? 0, Sw = matvec(est.S, Float64Array.from(p.w), new Float64Array(p.w.length));
-    const g = held.map(i => 2*Sw[i] - t*est.mu[i]);
-    const inner = held.map((i, a) => [p.w[i], g[a]]).filter(([w]) => w > 1e-6 && w < cap - 1e-6).map(([, x]) => x);
-    if (!inner.length) continue;                 // every holding sits at 0 or the cap; skip this point
-    const lamda = inner.reduce((x, y) => x + y, 0) / inner.length;
-    const vP = p.sd * p.sd, wh = held.map(i => p.w[i]);
-    for (let j=0; j<outside.length; j++){
-      let cw = 0; const Cj = C[j]; for (let a=0;a<held.length;a++) cw += Cj[a]*wh[a];
-      const slack = 2*cw - t*outs[j].mu - lamda;
-      if (slack >= 0) continue;
-      const v = outs[j].sd*outs[j].sd + vP - 2*cw;           // variance of (fund j - portfolio)
-      if (v <= 1e-12) continue;
-      const cut = (slack*slack / (4*v)) / (2*Math.max(p.sd, 1e-4));
-      if (cut > MIN_GAIN && cut > gain[j]) gain[j] = cut;
+    const t = p.t ?? 0, Sw = matvec(est.S, p.w, new Float64Array(p.w.length));
+    for (let j=0;j<outside.length;j++){
+      let cw = 0; for (let a=0;a<held.length;a++) cw += C[j][a]*p.w[held[a]];
+      const gj = 2*cw - t*outs[j].mu;
+      for (let a=0;a<held.length;a++){
+        const i = held[a]; if (p.w[i] <= 1e-6) continue;
+        const slack = gj - (2*Sw[i] - t*est.mu[i]);
+        if (slack >= 0) continue;
+        const curvature = Math.max(0, outs[j].variance + est.S[i][i] - 2*C[j][a]);
+        const amount = Math.min(cap, p.w[i], curvature > 1e-14 ? -slack/(2*curvature) : Infinity);
+        const improvement = -amount*slack - amount*amount*curvature;
+        const cut = improvement/(2*Math.max(p.sd, 1e-4));
+        if (cut > MIN_GAIN && cut > gain[j]) gain[j] = cut;
+      }
     }
   }
-  return outside.map((r, j) => [r, gain[j]]).filter(([, gj]) => gj > 0).sort((x, y) => y[1] - x[1]).map(([r]) => r);
+  return outside.map((r,j) => [r,gain[j]]).filter(([,g]) => g>0).sort((a,b) => b[1]-a[1]).map(([r]) => r);
+}
+
+// Reuse a single universe-wide covariance model throughout screening and solving.
+function subsetEstimate(full, indices){
+  return {mu:Float64Array.from(indices, i=>full.mu[i]), sd:Float64Array.from(indices, i=>full.sd[i]),
+    S:indices.map(i=>Float64Array.from(indices, j=>full.S[i][j])), lam:full.lam};
+}
+function maxReturnSeeds(pool, cap){
+  return pool.slice().sort((a,b)=>b.mu-a.mu).slice(0, Math.min(pool.length, Math.ceil(1/cap - 1e-10)));
 }
 
 // Recompute after a short delay so the "Calculating…" note can paint first; rapid changes
@@ -757,6 +763,8 @@ function recompute(){
   _recalcTimer = setTimeout(recomputeNow, 30);
 }
 function recomputeNow(){
+  // A clicked point contains indices and metrics from the previous model.
+  if (typeof state.sel === "object") state.sel = "sharpe";
   const t0 = performance.now();
   const W = WEEKS[state.years], rf = state.rf/100;
   const {list, dropped} = candidates();
@@ -775,21 +783,24 @@ function recomputeNow(){
     let v = 0; for (const x of a) v += (x-m)**2; v /= (n-1);
     r.mu = m*52; r.sd = Math.sqrt(v*52); r.sharpe = r.sd > 0 ? (r.mu - rf)/r.sd : null;
   });
-  // Working set: usually MAX_N funds (see limit below). Start from Input / ticked funds, then the best Sharpe
-  // ratios; after each solve, screen every fund left out and swap in those that would
-  // improve some frontier portfolio, until none would (see screenOutside()).
+  // Keep the maximum-return endpoint, Input / ticked funds, then best Sharpe ratios.
+  // Screen outsiders on sampled portfolios, subject to round and working-set limits.
   const pool = rows.filter(r => r.rets);
-  const keep = new Set([...state.picks, ...state.included]);
-  pool.sort((a,b) => (keep.has(b.f.code) - keep.has(a.f.code)) || ((b.sharpe ?? -9) - (a.sharpe ?? -9)));
+  const endpoints = new Set(maxReturnSeeds(pool, state.cap));
+  const keep = new Set([...state.picks, ...state.included, ...[...endpoints].map(r=>r.f.code)]);
+  pool.sort((a,b) => (endpoints.has(b) - endpoints.has(a)) || (keep.has(b.f.code) - keep.has(a.f.code)) || ((b.sharpe ?? -9) - (a.sharpe ?? -9)));
   // working-set size: 80 normally; more when the max weight needs more funds to reach 100%
   // (with 20% to spare), or when Input / ticked funds alone exceed 80
   let limit = Math.min(HARD_MAX_N, Math.max(MAX_N, Math.ceil(1.2 / Math.max(state.cap, 1e-3)), keep.size));
+  const fullEst = pool.length >= 2 ? estimate(pool.map(r=>r.rets)) : null;
+  const poolIndex = new Map(pool.map((r,i)=>[r,i]));
+  const estimateWork = work => subsetEstimate(fullEst, work.map(r=>poolIndex.get(r)));
   let ok = pool.slice(0, limit), est = null, fr = null, cap = state.cap, capNote = "";
   const scr = {checked: pool.length - ok.length, added: 0, rounds: 0, open: 0};
   for (let round = 0; round < 8 && ok.length >= 2; round++){
     cap = state.cap; capNote = "";
     if (cap * ok.length < 1){ cap = 1/ok.length; capNote = ` · cap raised to ${pct(cap,1)} (too few funds for the chosen cap)`; }
-    est = estimate(ok.map(r => r.rets));
+    est = estimateWork(ok);
     fr = frontier(est, cap, rf, ok.length < pool.length);     // coarse while screening
     if (ok.length === pool.length) break;
     const inSet = new Set(ok), outside = pool.filter(r => !inSet.has(r));
@@ -810,7 +821,9 @@ function recomputeNow(){
   if (ok.length < pool.length && ok.length >= 2){             // final, full-detail solve on the settled set
     cap = state.cap; capNote = "";
     if (cap * ok.length < 1){ cap = 1/ok.length; capNote = ` · cap raised to ${pct(cap,1)} (too few funds for the chosen cap)`; }
-    est = estimate(ok.map(r => r.rets)); fr = frontier(est, cap, rf);
+    est = estimateWork(ok); fr = frontier(est, cap, rf);
+    const finalSet = new Set(ok);
+    scr.open = screenOutside(ok, est, fr, pool.filter(r=>!finalSet.has(r)), cap).length;
   }
   const inOk = new Set(ok);
   pool.forEach(r => { if (!inOk.has(r)){ r.reason = OUTSIDE_NOTE; r.keepRets = r.rets; r.rets = null; } });
@@ -818,7 +831,7 @@ function recomputeNow(){
   scr.limit = limit;
   MODEL = {rows, ok, W, rf, cap, trimmed, capNote, scr};
   if (ok.length >= 2){
-    MODEL.est = est || estimate(ok.map(r => r.rets));
+    MODEL.est = est || estimateWork(ok);
     MODEL.fr = fr || frontier(MODEL.est, cap, rf);
   } else { MODEL.est = MODEL.fr = null; }
   MODEL.ms = performance.now() - t0;
@@ -850,7 +863,7 @@ function renderStatus(){
   if (m.trimmed){
     s += m.scr.open
       ? ` · <span class="warn">${m.trimmed} funds screened, some may still improve the frontier — narrow the filters</span>`
-      : ` · ${m.trimmed.toLocaleString()} more funds screened, none would improve the frontier` + (m.scr.added ? ` (${m.scr.added} swapped in)` : "");
+      : ` · ${m.trimmed.toLocaleString()} more funds screened; no sampled transfer exceeded the improvement threshold` + (m.scr.added ? ` (${m.scr.added} swapped in)` : "");
   }
   if (m.est) s += ` · correlation shrinkage ${(m.est.lam*100).toFixed(0)}% · solved in ${m.ms.toFixed(0)} ms`;
   s += m.capNote;
@@ -871,7 +884,7 @@ function renderChart(){
   const others = m.rows.filter(r => !r.rets && r.mu != null && r.reason === OUTSIDE_NOTE);
   const traces = [
     {x: others.map(r => r.sd*100), y: others.map(r => r.mu*100), mode:"markers", type:"scatter", name:"not optimised",
-     marker:{size:5, color:"#e2e5ea"}, text: others.map(r => r.f.code), hovertemplate:"<b>%{text}</b><br>screened: would not improve the frontier<extra></extra>"},
+     marker:{size:5, color:"#e2e5ea"}, text: others.map(r => r.f.code), hovertemplate:"<b>%{text}</b><br>outside working set; screening is approximate<extra></extra>"},
     {x: fundPts.map(p => p.r.sd*100), y: fundPts.map(p => p.r.mu*100), mode:"markers", type:"scatter", name:"funds",
      marker:{size:fundPts.map(p => sel.w[p.i] > 0.005 ? 10 : 7), color:fundPts.map(p => sel.w[p.i] > 0.005 ? m.color[p.i] : "#b8c0cc"),
              line:{width:1, color:"#fff"}},
@@ -1261,11 +1274,12 @@ $("amc-select").onchange = e => { state.amc = e.target.value; rebuildCatList(); 
 $("risk-ms-btn").onclick = e => { e.stopPropagation(); $("risk-ms-panel").classList.toggle("open"); };
 $("risk-ms-panel").onclick = e => e.stopPropagation();
 $("risk-ms-list").onchange = e => {
+  $("risk-ms-msg").textContent = "";
   const v = e.target.value; riskDraft = e.target.checked ? [...new Set([...riskDraft, v])] : riskDraft.filter(r => r !== v);
 };
-$("risk-ms-all").onclick = () => { riskDraft = ALL_RISKS.slice(); $("risk-ms-list").querySelectorAll("input").forEach(i => i.checked = true); };
+$("risk-ms-all").onclick = () => { $("risk-ms-msg").textContent = ""; riskDraft = ALL_RISKS.slice(); $("risk-ms-list").querySelectorAll("input").forEach(i => i.checked = true); };
 $("risk-ms-apply").onclick = () => {
-  if (!riskDraft.length){ $("risk-ms-list").querySelector("input")?.focus(); return; }   // at least one level
+  if (!riskDraft.length){ $("risk-ms-msg").textContent = "Select at least one risk level before applying."; $("risk-ms-list").querySelector("input")?.focus(); return; }   // at least one level
   state.risks = riskDraft.slice(); $("risk-ms-panel").classList.remove("open"); rebuildRiskList(); rebuildCatList(); onFilter();
 };
 $("cat-ms-btn").onclick = e => { e.stopPropagation(); $("cat-ms-panel").classList.toggle("open"); };
