@@ -81,7 +81,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   font-size:12.5px; padding:5px 8px; border:1px solid var(--rule); border-radius:7px; background:#fff; color:var(--ink);
 }
 .ctl-row input[type=number] { width:64px; }
-.ctl-row #cap-input { width:78px; }
+.ctl-row #cap-input, .ctl-row #maxfunds-input { width:78px; }
 .ctl-row label.chk { display:inline-flex; align-items:center; gap:5px; font-weight:600; color:var(--grey); cursor:pointer; }
 
 .find-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 0; font-size:12.5px; }
@@ -183,6 +183,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 
 .legend-note { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--mute); margin-top:6px; align-items:center; }
 .legend-note .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
+.legend-note .ul { display:inline-block; width:18px; height:0; border-top:2px dashed rgba(79,45,127,0.45); margin-right:5px; vertical-align:3px; }
 .legend-note .dl { display:inline-block; width:18px; height:0; border-top:2px dotted var(--amber); margin-right:5px; vertical-align:3px; }
 .legend-note .ln { display:inline-block; width:18px; height:3px; border-radius:2px; margin-right:5px; vertical-align:2px; background:var(--scb); }
 
@@ -287,6 +288,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
             <li><b>Pick the data window</b> — 1Y, 3Y or 5Y of weekly returns. Funds without that much history drop out (listed in the Universe table).</li>
             <li><b>Hover</b> any point on the purple frontier line to see its fund weights. <b>Click</b> to lock it into the Selected portfolio table.</li>
             <li><b>Max weight / fund</b>: type a % (e.g. 25) to cap any single fund; leave it empty for no cap. Untick a fund in the Universe table to exclude it.</li>
+            <li><b>Max funds</b>: type a number (e.g. 5) so every portfolio on the line holds at most that many funds; the dashed line shows the frontier with no limit.</li>
           </ul>
         </div>
       </div>
@@ -298,6 +300,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <b>Inputs:</b> weekly <b>total-return</b> series for 2,848 share classes (dividend classes use the sister Acc class, or reinvested SEC dividend history — same treatment as the Risk-Return dashboard), sampled every 7 days back from the latest NAV date. Weekly rather than daily because Thai feeder funds price a day behind their master fund, which distorts daily correlations.<br>
         <b>Expected return</b> = mean weekly return × 52 (arithmetic, annualised). <b>Risk</b> = weekly StdDev × √52. <b>Covariance</b> = sample covariance with correlations shrunk toward zero (Schäfer–Strimmer intensity, shown in the status line) so the result stays stable when the universe is large relative to the number of weeks.<br>
         <b>Optimisation:</b> for each point, minimise portfolio variance for its level of expected return, subject to weights ≥ 0, sum = 100%, and the max-weight cap. Solved in your browser each time the universe changes; usually 80 funds are optimised at once (more, up to 120, when a low max weight needs them, when Input / ticked funds exceed 80, or when the screening runs out of room). The working set retains the highest-return funds needed for the max-weight cap, then your Input / ticked funds and the best Sharpe ratios. All eligible funds share one covariance estimate. Other funds are screened for feasible weight transfers that improve sampled frontier points. This is an approximation: small improvements or improvements between sampled points may remain; the status reports unresolved screening candidates.<br>
+        <b>Max funds</b> (optional) limits how many funds each frontier portfolio may hold. Exact solutions are combinatorial, so each point keeps its largest holdings, re-optimises their weights and tries one-for-one swaps with the most promising other funds; the dashed line is the frontier without the limit, so the gap shows what the limit costs.<br>
         <b>Max Sharpe</b> uses the risk-free rate you enter. <b>One class per fund</b> uses only the largest share class of each fund by default, because sibling classes have near-identical returns; the other classes stay in the Universe table unticked, and ticking one adds it.<br>
         <b>Caveat:</b> the frontier is built from <i>historical</i> returns, so it favours whatever performed best in the chosen window. Use it to understand diversification trade-offs, not as a forecast or a recommendation.<br>
         <b>Source:</b> Thailand SEC Open Data API (<a href="https://api.sec.or.th" target="_blank" rel="noopener">api.sec.or.th</a>). NAV data as of 14 Oct 2026.
@@ -311,6 +314,8 @@ table.dt .note { font-size:10px; color:var(--amber); }
       </span>
       <span class="ctl-label">Max weight / fund</span>
       <span><input id="cap-input" type="number" min="1" max="100" step="1" placeholder="No cap" title="Largest weight any one fund may take. Leave empty for no cap." aria-label="Max weight per fund (%)"> %</span>
+      <span class="ctl-label">Max funds</span>
+      <span><input id="maxfunds-input" type="number" min="1" max="120" step="1" placeholder="No limit" title="Most funds any one portfolio on the frontier may hold. Leave empty for no limit." aria-label="Max funds per portfolio"></span>
       <span class="ctl-label">Risk-free</span>
       <span><input id="rf-input" type="number" step="0.25" min="0" max="15"> %</span>
       <label class="chk"><input type="checkbox" id="oneclass-chk" checked> One class per fund</label>
@@ -399,6 +404,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <span><span class="sw" style="background:#B45309"></span>Max Sharpe</span>
       <span><span class="sw" style="background:#4F2D7F"></span>Max return</span>
       <span><span class="dl"></span>Capital Market Line: mixes of risk-free and the Max Sharpe portfolio</span>
+      <span id="lg-unlimited" hidden><span class="ul"></span>Frontier with no fund-count limit</span>
       <span><span class="sw" style="background:#b8c0cc"></span>Individual funds in the universe</span>
     </div>
   </div>
@@ -446,7 +452,7 @@ const isDefaultExcl = cats => cats.length === DEFAULT_EXCL.length && DEFAULT_EXC
 const state = {
   years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
   main: "All", cats: DEFAULT_EXCL.slice(), shelf: "All", amc: "All", risks: ALL_RISKS.slice(),
-  picks: [], excluded: new Set(), included: new Set(), sel: "sharpe", uniQuery: "", uniHit: 0,
+  picks: [], excluded: new Set(), included: new Set(), sel: "sharpe", maxFunds: null, uniQuery: "", uniHit: 0,
   sdRange: null,         // [min, max] SD % shown on the X axis; null = fit everything
 };
 let MODEL = null;      // last solved universe + frontier
@@ -753,6 +759,62 @@ function maxReturnSeeds(pool, cap){
   return pool.slice().sort((a,b)=>b.mu-a.mu).slice(0, Math.min(pool.length, Math.ceil(1/cap - 1e-10)));
 }
 
+/* ---------- max funds per portfolio (cardinality limit, heuristic) ----------
+   For each frontier point holding more than K funds: keep its K largest holdings,
+   re-solve their weights, then for up to 4 rounds try swapping each of the 3 smallest holdings
+   for each of the 5 outsiders with the lowest marginal cost 2(Sw)_j - t*mu_j, keeping the best swap if it
+   improves the point's objective w'Sw - t*mu'w. Approximate: the exact problem is combinatorial. */
+function limitFunds(est, fr, K, cap, rf){
+  const N = est.mu.length, capK = Math.max(cap, 1/K);
+  const obj = (w, t) => {
+    const Sw = matvec(est.S, w, new Float64Array(N)); let v = 0, r = 0;
+    for (let i=0;i<N;i++){ v += w[i]*Sw[i]; r += est.mu[i]*w[i]; }
+    return v - t*r;
+  };
+  const solveOn = (idx, t, wPrev) => {
+    const sub = subsetEstimate(est, idx);
+    const w0 = project(Float64Array.from(idx, i => wPrev[i] || 1/idx.length), capK, new Float64Array(idx.length));
+    const ws = makeSolver(sub, capK)(t, w0);
+    const w = new Float64Array(N); idx.forEach((i, k) => { w[i] = ws[k] < 1e-9 ? 0 : ws[k]; });
+    return w;
+  };
+  const pts = []; let changed = 0;
+  for (const p of fr.pts){
+    const t = p.t ?? 0, held = [...p.w.keys()].filter(i => p.w[i] > 1e-4);
+    if (held.length <= K && capK <= cap + 1e-12){ pts.push(p); continue; }
+    changed++;
+    let set = held.sort((a, b) => p.w[b] - p.w[a]).slice(0, K);
+    let w = solveOn(set, t, p.w), best = obj(w, t);
+    for (let it=0; it<4; it++){
+      // the 5 outsiders with the lowest marginal cost, each tried against the 3 smallest holdings
+      const Sw = matvec(est.S, w, new Float64Array(N)), g = i => 2*Sw[i] - t*est.mu[i];
+      const inSet = new Set(set);
+      const cands = [...Array(N).keys()].filter(j => !inSet.has(j)).sort((x, y) => g(x) - g(y)).slice(0, 5);
+      let bestTrial = null, bestW = null, bestO = best;
+      const weakest = set.slice().sort((x, y) => w[x] - w[y]).slice(0, 3);
+      for (const jIn of cands) for (const out of weakest){
+        const trial = set.map(i => i === out ? jIn : i), wt = solveOn(trial, t, w), o = obj(wt, t);
+        if (o < bestO - 1e-12){ bestO = o; bestTrial = trial; bestW = wt; }
+      }
+      if (!bestTrial) break;
+      set = bestTrial; w = bestW; best = bestO;
+    }
+    pts.push({t, ...stats(est, w, rf)});
+  }
+  if (!changed) return null;
+  // max return with K funds: the K highest means, filling the cap
+  const order = [...est.mu.keys()].sort((a, b) => est.mu[b] - est.mu[a]), wm = new Float64Array(N);
+  let left = 1;
+  for (const i of order.slice(0, K)){ const x = Math.min(capK, left); wm[i] = x; left -= x; if (left <= 1e-12) break; }
+  pts.push({t: Infinity, ...stats(est, wm, rf)});
+  // keep the efficient part: rising return with rising risk
+  pts.sort((a, b) => a.sd - b.sd || b.ret - a.ret);
+  const out = [];
+  for (const q of pts){ const last = out[out.length-1]; if (last && q.ret <= last.ret + 1e-9) continue; out.push(q); }
+  let ms = out[0]; out.forEach(q => { if ((q.sharpe ?? -1e9) > (ms.sharpe ?? -1e9)) ms = q; });
+  return {pts: out, minVar: out[0], maxSharpe: ms, maxRet: out[out.length-1], capK};
+}
+
 // Recompute after a short delay so the "Calculating…" note can paint first; rapid changes
 // (e.g. typing) collapse into one run.
 let _recalcTimer = 0;
@@ -833,6 +895,13 @@ function recomputeNow(){
   if (ok.length >= 2){
     MODEL.est = est || estimateWork(ok);
     MODEL.fr = fr || frontier(MODEL.est, cap, rf);
+    if (state.maxFunds){                                     // fund-count limit: the shown frontier
+      const lim = limitFunds(MODEL.est, MODEL.fr, state.maxFunds, cap, rf);
+      if (lim){
+        MODEL.frFull = MODEL.fr; MODEL.fr = lim;               // frFull = faint "no limit" line
+        if (lim.capK > cap + 1e-9) MODEL.capNote += ` · max weight raised to ${pct(lim.capK,1)} so ${state.maxFunds} funds can reach 100%`;
+      }
+    }
   } else { MODEL.est = MODEL.fr = null; }
   MODEL.ms = performance.now() - t0;
   // stable colours: by peak weight along the frontier
@@ -866,6 +935,7 @@ function renderStatus(){
       : ` · ${m.trimmed.toLocaleString()} more funds screened; no sampled transfer exceeded the improvement threshold` + (m.scr.added ? ` (${m.scr.added} swapped in)` : "");
   }
   if (m.est) s += ` · correlation shrinkage ${(m.est.lam*100).toFixed(0)}% · solved in ${m.ms.toFixed(0)} ms`;
+  if (m.frFull) s += ` · <b>max ${state.maxFunds} funds</b> per portfolio (approximate; dashed line = no limit)`;
   s += m.capNote;
   if (m.ok.length < 2) s += ` · <span class="warn">need at least 2 funds with ${state.years}Y history</span>`;
   $("status").innerHTML = s;
@@ -890,8 +960,10 @@ function renderChart(){
              line:{width:1, color:"#fff"}},
      customdata: fundPts.map(p => [p.r.f.code, p.r.f.name, p.r.f.cat, p.r.sharpe == null ? "–" : p.r.sharpe.toFixed(2)]),
      hovertemplate:"<b>%{customdata[0]}</b><br>%{customdata[1]}<br>%{customdata[2]}<br>Return %{y:.2f}% · SD %{x:.2f}% · Sharpe %{customdata[3]}<extra></extra>"},
+    ...(m.frFull ? [{x: m.frFull.pts.map(p => p.sd*100), y: m.frFull.pts.map(p => p.ret*100), mode:"lines", type:"scatter",
+      name:"unlimited", line:{color:"rgba(79,45,127,0.35)", width:2, dash:"dash", shape:"spline", smoothing:0.6}, hoverinfo:"skip"}] : []),
     {x: fr.pts.map(p => p.sd*100), y: fr.pts.map(p => p.ret*100), mode:"lines+markers", type:"scatter", name:"frontier",
-     line:{color:"#4F2D7F", width:3, shape:"spline", smoothing:0.6}, marker:{size:6, color:"#4F2D7F", opacity:0.001},
+     line:{color:"#4F2D7F", width:3, shape: m.frFull ? "linear" : "spline", smoothing:0.6}, marker:{size:6, color:"#4F2D7F", opacity:0.001},
      hoverinfo:"none"},
     {x:[fr.minVar.sd*100], y:[fr.minVar.ret*100], mode:"markers", type:"scatter", name:"min",
      marker:{size:14, color:"#00A3D9", symbol:"diamond", line:{width:2, color:"#fff"}}, hoverinfo:"none"},
@@ -1206,7 +1278,7 @@ function renderInputState(){
   $("filter-rows").classList.toggle("paused", on);
   $("input-note").hidden = !on;
 }
-function render(){ renderInputState(); renderStatus(); renderChart(); renderComp(); syncSlider(); renderSelected(); renderUniverse(); renderChips(); }
+function render(){ $("lg-unlimited").hidden = !(MODEL && MODEL.frFull); renderInputState(); renderStatus(); renderChart(); renderComp(); syncSlider(); renderSelected(); renderUniverse(); renderChips(); }
 
 /* ---------- find ---------- */
 let findActive = -1, findList = [];
@@ -1264,6 +1336,14 @@ $("cap-input").onchange = e => {
   recompute();
 };
 $("cap-input").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+// Max funds: empty (default) = no limit; otherwise a whole number 1-120
+$("maxfunds-input").onchange = e => {
+  const v = parseInt(e.target.value, 10);
+  if (!isFinite(v) || v <= 0){ state.maxFunds = null; e.target.value = ""; }
+  else { state.maxFunds = Math.min(HARD_MAX_N, v); e.target.value = state.maxFunds; }
+  recompute();
+};
+$("maxfunds-input").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
 $("rf-input").value = state.rf;
 $("rf-input").onchange = e => { const v = parseFloat(e.target.value); state.rf = isFinite(v) ? v : 0; recompute(); };
 $("oneclass-chk").onchange = e => { state.oneClass = e.target.checked; recompute(); };
