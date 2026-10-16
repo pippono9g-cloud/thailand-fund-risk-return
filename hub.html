@@ -68,6 +68,7 @@
     </div>
     <nav class="nav" aria-label="Dashboard menu">
       <button type="button" data-panel="risk" class="active">Risk vs Return</button>
+      <button type="button" data-panel="frontier">Efficient Frontier</button>
       <button type="button" data-panel="trend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
       <button type="button" data-panel="longterm">Long-term Markets</button>
@@ -79,6 +80,7 @@
     </nav>
     <select class="mobile-select" aria-label="เลือก Dashboard">
       <option value="risk">Risk vs Return</option>
+      <option value="frontier">Efficient Frontier</option>
       <option value="trend">Trend</option>
       <option value="growth">Growth Comparison</option>
       <option value="longterm">Long-term Markets</option>
@@ -92,6 +94,10 @@
   <section id="panel-risk" class="panel active" aria-label="Risk vs Return dashboard">
     <div class="loading">กำลังโหลด Risk vs Return…</div>
     <iframe data-src="index.html" title="Thailand Fund Risk vs Return"></iframe>
+  </section>
+  <section id="panel-frontier" class="panel" aria-label="Efficient Frontier dashboard">
+    <div class="loading">กำลังโหลด Efficient Frontier…</div>
+    <iframe data-src="frontier.html" title="Thailand Fund Efficient Frontier"></iframe>
   </section>
   <section id="panel-trend" class="panel" aria-label="Trend dashboard">
     <div class="loading">กำลังโหลด Trend…</div>
@@ -117,7 +123,7 @@
 <script>
 (function(){
   "use strict";
-  var valid={risk:1,trend:1,growth:1,longterm:1,signals:1,set100:1};
+  var valid={risk:1,frontier:1,trend:1,growth:1,longterm:1,signals:1,set100:1};
   var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
   var select=document.querySelector(".mobile-select");
   var signalSelect=document.querySelector(".signal-select"),loaded={};
