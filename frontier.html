@@ -118,7 +118,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .ms-wrap { position:relative; display:inline-block; }
 .ms-btn {
   font-size:12.5px; padding:5px 8px; border:1px solid var(--rule); border-radius:7px;
-  background:#fff; color:var(--ink); cursor:pointer; min-width:170px; max-width:260px;
+  background:#fff; color:var(--ink); cursor:pointer; min-width:170px; max-width:340px;
   text-align:left; display:inline-flex; align-items:center; justify-content:space-between; gap:6px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
@@ -182,6 +182,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 
 .legend-note { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--mute); margin-top:6px; align-items:center; }
 .legend-note .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
+.legend-note .dl { display:inline-block; width:18px; height:0; border-top:2px dotted var(--amber); margin-right:5px; vertical-align:3px; }
 .legend-note .ln { display:inline-block; width:18px; height:3px; border-radius:2px; margin-right:5px; vertical-align:2px; background:var(--scb); }
 
 /* hover card — same look as the Risk-Return fund card */
@@ -327,7 +328,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <div class="ms-wrap" id="cat-ms">
           <button type="button" class="ms-btn" id="cat-ms-btn">None excluded</button>
           <div class="ms-panel" id="cat-ms-panel">
-            <div class="ms-hint">Tick the sub-categories to take out of the universe</div>
+            <div class="ms-hint">Tick the sub-categories to take out of the universe. Money market and short-term bond are ticked by default.</div>
             <div class="ms-list" id="cat-ms-list"></div>
             <div class="ms-actions">
               <button type="button" id="cat-ms-clear">Clear</button>
@@ -385,6 +386,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <span><span class="sw" style="background:#00A3D9"></span>Min variance</span>
       <span><span class="sw" style="background:#B45309"></span>Max Sharpe</span>
       <span><span class="sw" style="background:#4F2D7F"></span>Max return</span>
+      <span><span class="dl"></span>Capital Market Line: mixes of risk-free and the Max Sharpe portfolio</span>
       <span><span class="sw" style="background:#b8c0cc"></span>Individual funds in the universe</span>
     </div>
   </div>
@@ -422,9 +424,14 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const pct = (x, d=2) => x == null || !isFinite(x) ? "–" : (x*100).toFixed(d) + "%";
 const sgn = x => x > 0 ? "pos" : x < 0 ? "neg" : "";
 
+// Near-cash funds (money market, short-term bond) are excluded by default: their ~0% SD
+// with returns just above the risk-free rate pins the Max Sharpe point and the Capital
+// Market Line to the bottom-left corner. Untick them in "Exclude sub-category" to add back.
+const DEFAULT_EXCL = [...new Set(FUNDS.filter(f => f.main === "Money Market" || /^Short Term/i.test(f.cat)).map(f => f.cat))].sort();
+const isDefaultExcl = cats => cats.length === DEFAULT_EXCL.length && DEFAULT_EXCL.every(c => cats.includes(c));
 const state = {
   years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
-  main: "All", cats: [], shelf: "All", amc: "All", risk: "All",
+  main: "All", cats: DEFAULT_EXCL.slice(), shelf: "All", amc: "All", risk: "All",
   picks: [], excluded: new Set(), included: new Set(), sel: "sharpe", uniQuery: "", uniHit: 0,
   sdRange: null,         // [min, max] SD % shown on the X axis; null = fit everything
 };
@@ -473,13 +480,13 @@ function rebuildCatList(){
   const counts = {};
   FUNDS.forEach(f => { if (passes(f, "cat")) counts[f.cat] = (counts[f.cat]||0) + 1; });
   const cats = Object.keys(counts).sort();
-  state.cats = state.cats.filter(c => counts[c]);
   catDraft = state.cats.slice();
   $("cat-ms-list").innerHTML = cats.map(c =>
     `<label class="ms-item"><input type="checkbox" value="${esc(c)}"${catDraft.includes(c)?" checked":""}><span class="ms-name">${esc(c)}</span><span class="ms-n">${counts[c]}</span></label>`).join("")
     || '<div class="find-empty">No sub-categories for this selection</div>';
   const b = $("cat-ms-btn");
   b.textContent = state.cats.length === 0 ? "None excluded" :
+    isDefaultExcl(state.cats) ? "Excluding money market & short-term (default)" :
     state.cats.length === 1 ? `Excluding ${state.cats[0]}` : `Excluding ${state.cats.length} sub-categories`;
   b.classList.toggle("has-sel", state.cats.length > 0);
 }
@@ -805,7 +812,8 @@ function renderStatus(){
     return;
   }
   const noHist = m.rows.filter(r => r.reason && r.reason.startsWith("No full")).length;
-  const scope = state.picks.length ? "Input funds · " : hasFilter() ? "" : "All funds · ";
+  const onlyDefault = state.main === "All" && state.shelf === "All" && state.amc === "All" && state.risk === "All" && isDefaultExcl(state.cats);
+  const scope = state.picks.length ? "Input funds · " : onlyDefault ? "All funds except money market &amp; short-term bond · " : hasFilter() ? "" : "All funds · ";
   let s = `${scope}Universe: <b>${n.toLocaleString()}</b> share classes · <b>${m.ok.length}</b> optimised over ${state.years}Y (${m.W} weekly returns, ${DATA.dates[NW-m.W]} → ${DATA.dates[NW]})`;
   if (noHist) s += ` · ${noHist} lack ${state.years}Y history`;
   const other = n - m.ok.length - noHist - m.trimmed;
@@ -923,6 +931,29 @@ function placeLabels(){
   [m.fr.minVar, m.fr.maxSharpe, m.fr.maxRet, sel].forEach(p => {
     const x = px(p.sd), y = py(p.ret); boxes.push({x0:x-11, y0:y-11, x1:x+11, y1:y+11});
   });
+  // Label the dotted Capital Market Line along its slope, a little above the line, about
+  // halfway along the part that is on screen. Placed first so fund labels keep clear of it.
+  const ann = [];
+  const cmlTr = el.data.find(d => d.name === "cml");
+  if (cmlTr){
+    const [X0, X1] = cmlTr.x, [Y0, Y1] = cmlTr.y, xrg = xa.range, yrg = ya.range;
+    let lo = 0, hi = 1;
+    const clip = (v0, dv, a, b) => { if (Math.abs(dv) < 1e-12) return;
+      let s0 = (a - v0)/dv, s1 = (b - v0)/dv; if (s0 > s1) [s0, s1] = [s1, s0];
+      lo = Math.max(lo, s0); hi = Math.min(hi, s1); };
+    clip(X0, X1 - X0, xrg[0], xrg[1]); clip(Y0, Y1 - Y0, yrg[0], yrg[1]);
+    if (hi - lo > 0.15){
+      const sm = lo + 0.55*(hi - lo), xs = X0 + sm*(X1 - X0), ys = Y0 + sm*(Y1 - Y0);
+      const ax0 = xa.l2p(X0), ay0 = ya.l2p(Y0), ax1 = xa.l2p(X1), ay1 = ya.l2p(Y1);
+      const th = Math.atan2(ay1 - ay0, ax1 - ax0), nx = Math.sin(th), ny = -Math.cos(th);
+      const txt = `Capital Market Line: Risk-free ${+(m.rf*100).toFixed(2)}% → ★ Max Sharpe`;
+      const w = labelWidth(txt), h = 13, cx = xa.l2p(xs) + nx*9, cy = ya.l2p(ys) + ny*9;
+      const bw = Math.abs(w*Math.cos(th)) + Math.abs(h*Math.sin(th)), bh = Math.abs(w*Math.sin(th)) + Math.abs(h*Math.cos(th));
+      boxes.push({x0:cx-bw/2, x1:cx+bw/2, y0:cy-bh/2, y1:cy+bh/2});
+      ann.push({x:xs, y:ys, xref:"x", yref:"y", text:txt, showarrow:false, textangle: th*180/Math.PI,
+        xshift: nx*9, yshift: -ny*9, font:{size:10, color:"#B45309"}, bgcolor:"rgba(255,255,255,0.8)"});
+    }
+  }
   const pk = $("pf-pick").getBoundingClientRect(), cr = el.getBoundingClientRect();
   boxes.push({x0:pk.left-cr.left-fl.margin.l-4, y0:pk.top-cr.top-fl.margin.t-4,
               x1:pk.right-cr.left-fl.margin.l+4, y1:pk.bottom-cr.top-fl.margin.t+4});
@@ -931,7 +962,6 @@ function placeLabels(){
     .sort((a, b) => b.w - a.w || (b.r.f.aum||0) - (a.r.f.aum||0));
   const hit = b => b.x0 < -2 || b.x1 > W + 2 || b.y0 < -2 || b.y1 > H + 2 ||
     boxes.some(q => b.x0 < q.x1 && b.x1 > q.x0 && b.y0 < q.y1 && b.y1 > q.y0);
-  const ann = [];
   for (const o of want){
     const x = px(o.r.sd), y = py(o.r.mu);
     if (x < 0 || x > W || y < 0 || y > H) continue;
@@ -1208,7 +1238,7 @@ $("cat-ms-list").onchange = e => {
 $("cat-ms-clear").onclick = () => { catDraft = []; $("cat-ms-list").querySelectorAll("input").forEach(i => i.checked = false); };
 $("cat-ms-apply").onclick = () => { state.cats = catDraft.slice(); $("cat-ms-panel").classList.remove("open"); rebuildCatList(); onFilter(); };
 $("clear-btn").onclick = () => {
-  Object.assign(state, {main:"All", cats:[], shelf:"All", amc:"All", risk:"All", picks:[], sel:"sharpe"});
+  Object.assign(state, {main:"All", cats:DEFAULT_EXCL.slice(), shelf:"All", amc:"All", risk:"All", picks:[], sel:"sharpe"});
   state.excluded.clear(); state.included.clear();
   ["main-select","shelf-select","amc-select","risk-select"].forEach(id => $(id).value = "All");
   rebuildCatList(); recompute();
