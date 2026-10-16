@@ -124,8 +124,9 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 .ms-btn::after { content:"\25BC"; font-size:9px; color:var(--mute); }
 .ms-btn.has-sel { border-color:var(--red); color:var(--red); font-weight:700; }
+.ms-btn.has-pick { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .ms-hint { padding:7px 12px 3px; font-size:11px; color:var(--mute); }
-.ms-item input:checked + .ms-name { text-decoration:line-through; color:var(--red); }
+#cat-ms-list .ms-item input:not(:checked) + .ms-name { text-decoration:line-through; color:var(--red); }
 .ms-panel {
   display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; width:340px; max-width:90vw;
   background:#fff; border:1px solid var(--rule); border-radius:8px; box-shadow:0 6px 22px rgba(13,30,60,0.10);
@@ -281,7 +282,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <div class="help-pop" id="help-pop">
           <h4>How to use</h4>
           <ul>
-            <li><b>Build the universe</b> with the filters (Main / Shelf / AMC / Risk; combined with AND). <b>Sub-category</b> works the other way: ticked sub-categories are removed from the universe, or list funds in <b>Input</b>. Once Input has funds, the frontier uses only those funds and the filters pause until you clear Input. With every filter on All and Input empty, the universe is all funds.</li>
+            <li><b>Build the universe</b> with the filters (Main / Shelf / AMC / Risk; combined with AND). <b>Sub-category</b> and <b>Risk</b> are tick lists: unticked items are left out (money market and short-term bond start unticked), or list funds in <b>Input</b>. Once Input has funds, the frontier uses only those funds and the filters pause until you clear Input. With every filter on All and Input empty, the universe is all funds.</li>
             <li><b>Input</b> takes one fund at a time from the suggestion list, or a pasted list of fund codes separated by commas or new lines.</li>
             <li><b>Pick the data window</b> — 1Y, 3Y or 5Y of weekly returns. Funds without that much history drop out (listed in the Universe table).</li>
             <li><b>Hover</b> any point on the purple frontier line to see its fund weights. <b>Click</b> to lock it into the Selected portfolio table.</li>
@@ -324,22 +325,32 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <div class="find-row filter-row">
         <label for="main-select">Main</label>
         <select id="main-select"></select>
-        <label for="cat-ms-btn">Exclude sub-category</label>
+        <label for="cat-ms-btn">Sub-category</label>
         <div class="ms-wrap" id="cat-ms">
-          <button type="button" class="ms-btn" id="cat-ms-btn">None excluded</button>
+          <button type="button" class="ms-btn" id="cat-ms-btn">All sub-categories</button>
           <div class="ms-panel" id="cat-ms-panel">
-            <div class="ms-hint">Tick the sub-categories to take out of the universe. Money market and short-term bond are ticked by default.</div>
+            <div class="ms-hint">Ticked sub-categories are in the universe; untick one to leave it out. Money market and short-term bond start unticked.</div>
             <div class="ms-list" id="cat-ms-list"></div>
             <div class="ms-actions">
-              <button type="button" id="cat-ms-clear">Clear</button>
+              <button type="button" id="cat-ms-clear">Select all</button>
               <button type="button" class="ms-apply" id="cat-ms-apply">Apply changes</button>
             </div>
           </div>
         </div>
         <label for="shelf-select">Shelf</label>
         <select id="shelf-select"></select>
-        <label for="risk-select">Risk</label>
-        <select id="risk-select"></select>
+        <label for="risk-ms-btn">Risk</label>
+        <div class="ms-wrap" id="risk-ms">
+          <button type="button" class="ms-btn" id="risk-ms-btn">All levels</button>
+          <div class="ms-panel" id="risk-ms-panel">
+            <div class="ms-hint">Ticked risk levels are in the universe; unticked levels are left out.</div>
+            <div class="ms-list" id="risk-ms-list"></div>
+            <div class="ms-actions">
+              <button type="button" id="risk-ms-all">Select all</button>
+              <button type="button" class="ms-apply" id="risk-ms-apply">Apply changes</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="find-row amc-row">
         <label for="amc-select">AMC</label>
@@ -426,12 +437,14 @@ const sgn = x => x > 0 ? "pos" : x < 0 ? "neg" : "";
 
 // Near-cash funds (money market, short-term bond) are excluded by default: their ~0% SD
 // with returns just above the risk-free rate pins the Max Sharpe point and the Capital
-// Market Line to the bottom-left corner. Untick them in "Exclude sub-category" to add back.
+// Market Line to the bottom-left corner. Tick them in "Sub-category" to add them back.
+const ALL_RISKS = [...new Set(FUNDS.map(f => f.risk == null || f.risk === "" ? "none" : String(f.risk)))]
+  .sort((a, b) => a === "none" ? 1 : b === "none" ? -1 : (+a) - (+b));
 const DEFAULT_EXCL = [...new Set(FUNDS.filter(f => f.main === "Money Market" || /^Short Term/i.test(f.cat)).map(f => f.cat))].sort();
 const isDefaultExcl = cats => cats.length === DEFAULT_EXCL.length && DEFAULT_EXCL.every(c => cats.includes(c));
 const state = {
   years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
-  main: "All", cats: DEFAULT_EXCL.slice(), shelf: "All", amc: "All", risk: "All",
+  main: "All", cats: DEFAULT_EXCL.slice(), shelf: "All", amc: "All", risks: ALL_RISKS.slice(),
   picks: [], excluded: new Set(), included: new Set(), sel: "sharpe", uniQuery: "", uniHit: 0,
   sdRange: null,         // [min, max] SD % shown on the X axis; null = fit everything
 };
@@ -453,13 +466,13 @@ FUNDS.forEach(f => f.hist = histYears(f));
 
 /* ---------- filters ---------- */
 const hasFilter = () => state.main !== "All" || state.cats.length || state.shelf !== "All" ||
-  state.amc !== "All" || state.risk !== "All";
+  state.amc !== "All" || state.risks.length < ALL_RISKS.length;
 function passes(f, skip){
   if (skip !== "main" && state.main !== "All" && f.main !== state.main) return false;
   if (skip !== "cat" && state.cats.includes(f.cat)) return false;      // state.cats = excluded sub-categories
   if (state.shelf !== "All" && f.shelf !== state.shelf) return false;
   if (state.amc !== "All" && f.amc !== state.amc) return false;
-  if (state.risk !== "All" && String(f.risk) !== state.risk) return false;
+  if (skip !== "risk" && !state.risks.includes(riskKey(f))) return false;    // state.risks = ticked levels
   return true;
 }
 function fillSelect(sel, values, cur, allLabel){
@@ -472,23 +485,39 @@ function initFilters(){
   fillSelect($("main-select"), uniq("main"), "All", "All main categories");
   fillSelect($("shelf-select"), uniq("shelf"), "All", "All");
   fillSelect($("amc-select"), uniq("amc"), "All", "All AMCs");
-  fillSelect($("risk-select"), uniq("risk").map(String), "All", "All levels");
+  rebuildRiskList();
   rebuildCatList();
 }
 let catDraft = [];
+// Risk levels: SEC risk spectrum 1-8, plus funds without a level
+function riskKey(f){ return f.risk == null || f.risk === "" ? "none" : String(f.risk); }
+const riskLabel = k => k === "none" ? "No risk level" : `Level ${k}`;
+let riskDraft = [];
+function rebuildRiskList(){
+  const counts = {};
+  FUNDS.forEach(f => { if (passes(f, "risk")) counts[riskKey(f)] = (counts[riskKey(f)]||0) + 1; });
+  riskDraft = state.risks.slice();
+  $("risk-ms-list").innerHTML = ALL_RISKS.map(k =>
+    `<label class="ms-item"><input type="checkbox" value="${esc(k)}"${riskDraft.includes(k)?" checked":""}><span class="ms-name">${riskLabel(k)}</span><span class="ms-n">${counts[k]||0}</span></label>`).join("");
+  const b = $("risk-ms-btn"), all = state.risks.length === ALL_RISKS.length;
+  b.textContent = all ? "All levels" : state.risks.length === 1 ? riskLabel(state.risks[0]) :
+    "Levels " + state.risks.filter(k => k !== "none").join(", ") + (state.risks.includes("none") ? " + unrated" : "");
+  b.classList.toggle("has-pick", !all);
+}
 function rebuildCatList(){
   const counts = {};
   FUNDS.forEach(f => { if (passes(f, "cat")) counts[f.cat] = (counts[f.cat]||0) + 1; });
   const cats = Object.keys(counts).sort();
   catDraft = state.cats.slice();
   $("cat-ms-list").innerHTML = cats.map(c =>
-    `<label class="ms-item"><input type="checkbox" value="${esc(c)}"${catDraft.includes(c)?" checked":""}><span class="ms-name">${esc(c)}</span><span class="ms-n">${counts[c]}</span></label>`).join("")
+    `<label class="ms-item"><input type="checkbox" value="${esc(c)}"${catDraft.includes(c)?"":" checked"}><span class="ms-name">${esc(c)}</span><span class="ms-n">${counts[c]}</span></label>`).join("")
     || '<div class="find-empty">No sub-categories for this selection</div>';
   const b = $("cat-ms-btn");
-  b.textContent = state.cats.length === 0 ? "None excluded" :
-    isDefaultExcl(state.cats) ? "Excluding money market & short-term (default)" :
-    state.cats.length === 1 ? `Excluding ${state.cats[0]}` : `Excluding ${state.cats.length} sub-categories`;
+  b.textContent = state.cats.length === 0 ? "All sub-categories" :
+    isDefaultExcl(state.cats) ? "All except money market & short-term (default)" :
+    state.cats.length === 1 ? `All except ${state.cats[0]}` : `All except ${state.cats.length} sub-categories`;
   b.classList.toggle("has-sel", state.cats.length > 0);
+  if (!$("risk-ms-panel").classList.contains("open")) rebuildRiskList();   // keep risk counts in step with the other filters
 }
 
 /* ---------- universe ---------- */
@@ -812,7 +841,7 @@ function renderStatus(){
     return;
   }
   const noHist = m.rows.filter(r => r.reason && r.reason.startsWith("No full")).length;
-  const onlyDefault = state.main === "All" && state.shelf === "All" && state.amc === "All" && state.risk === "All" && isDefaultExcl(state.cats);
+  const onlyDefault = state.main === "All" && state.shelf === "All" && state.amc === "All" && state.risks.length === ALL_RISKS.length && isDefaultExcl(state.cats);
   const scope = state.picks.length ? "Input funds · " : onlyDefault ? "All funds except money market &amp; short-term bond · " : hasFilter() ? "" : "All funds · ";
   let s = `${scope}Universe: <b>${n.toLocaleString()}</b> share classes · <b>${m.ok.length}</b> optimised over ${state.years}Y (${m.W} weekly returns, ${DATA.dates[NW-m.W]} → ${DATA.dates[NW]})`;
   if (noHist) s += ` · ${noHist} lack ${state.years}Y history`;
@@ -1229,18 +1258,29 @@ const onFilter = () => { if (typeof state.sel === "object") state.sel = "sharpe"
 $("main-select").onchange = e => { state.main = e.target.value; rebuildCatList(); onFilter(); };
 $("shelf-select").onchange = e => { state.shelf = e.target.value; rebuildCatList(); onFilter(); };
 $("amc-select").onchange = e => { state.amc = e.target.value; rebuildCatList(); onFilter(); };
-$("risk-select").onchange = e => { state.risk = e.target.value; rebuildCatList(); onFilter(); };
+$("risk-ms-btn").onclick = e => { e.stopPropagation(); $("risk-ms-panel").classList.toggle("open"); };
+$("risk-ms-panel").onclick = e => e.stopPropagation();
+$("risk-ms-list").onchange = e => {
+  const v = e.target.value; riskDraft = e.target.checked ? [...new Set([...riskDraft, v])] : riskDraft.filter(r => r !== v);
+};
+$("risk-ms-all").onclick = () => { riskDraft = ALL_RISKS.slice(); $("risk-ms-list").querySelectorAll("input").forEach(i => i.checked = true); };
+$("risk-ms-apply").onclick = () => {
+  if (!riskDraft.length){ $("risk-ms-list").querySelector("input")?.focus(); return; }   // at least one level
+  state.risks = riskDraft.slice(); $("risk-ms-panel").classList.remove("open"); rebuildRiskList(); rebuildCatList(); onFilter();
+};
 $("cat-ms-btn").onclick = e => { e.stopPropagation(); $("cat-ms-panel").classList.toggle("open"); };
 $("cat-ms-panel").onclick = e => e.stopPropagation();
 $("cat-ms-list").onchange = e => {
-  const v = e.target.value; catDraft = e.target.checked ? [...catDraft, v] : catDraft.filter(c => c !== v);
+  // ticked = keep in the universe; unticked = leave out (catDraft lists the left-out ones)
+  const v = e.target.value; catDraft = e.target.checked ? catDraft.filter(c => c !== v) : [...new Set([...catDraft, v])];
 };
-$("cat-ms-clear").onclick = () => { catDraft = []; $("cat-ms-list").querySelectorAll("input").forEach(i => i.checked = false); };
+$("cat-ms-clear").onclick = () => { catDraft = []; $("cat-ms-list").querySelectorAll("input").forEach(i => i.checked = true); };
 $("cat-ms-apply").onclick = () => { state.cats = catDraft.slice(); $("cat-ms-panel").classList.remove("open"); rebuildCatList(); onFilter(); };
 $("clear-btn").onclick = () => {
-  Object.assign(state, {main:"All", cats:DEFAULT_EXCL.slice(), shelf:"All", amc:"All", risk:"All", picks:[], sel:"sharpe"});
+  Object.assign(state, {main:"All", cats:DEFAULT_EXCL.slice(), shelf:"All", amc:"All", risks:ALL_RISKS.slice(), picks:[], sel:"sharpe"});
   state.excluded.clear(); state.included.clear();
-  ["main-select","shelf-select","amc-select","risk-select"].forEach(id => $(id).value = "All");
+  ["main-select","shelf-select","amc-select"].forEach(id => $(id).value = "All");
+  rebuildRiskList();
   rebuildCatList(); recompute();
 };
 $("find-input").oninput = () => { $("input-msg").textContent = ""; doFind(); };
@@ -1320,6 +1360,7 @@ $("uni-wrap").onchange = e => {
 };
 document.addEventListener("click", e => {
   $("help-pop").classList.remove("show");
+  if (!e.target.closest("#risk-ms") && $("risk-ms-panel").classList.contains("open")){ $("risk-ms-panel").classList.remove("open"); rebuildRiskList(); }
   if (!e.target.closest("#cat-ms")){ if ($("cat-ms-panel").classList.contains("open")) { $("cat-ms-panel").classList.remove("open"); rebuildCatList(); } }
   if (!e.target.closest(".find-wrap")) $("find-dd").classList.remove("open");
 });
