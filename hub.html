@@ -145,10 +145,10 @@
     var panel=document.getElementById("panel-"+name),frame=panel.querySelector("iframe");
     if(frame&&!frame.getAttribute("src")){
       var target=frame.getAttribute("data-src");
-      // Cache-bust: force a fresh fetch of the local dashboard on every Hub
-      // load, so a rebuilt index/trend/growth.html doesn't sit stale behind
-      // the iframe's own HTTP cache after the daily 11:00 auto-publish.
-      if(target&&!/^https?:\/\//.test(target))target+=(target.indexOf("?")===-1?"?":"&")+"v="+Date.now();
+      // Refresh our own dashboards and the separately deployed Long-term Markets
+      // page when the Hub loads, so an iframe cannot retain an older release.
+      if(target&&(!/^https?:\/\//.test(target)||/^https:\/\/pippono9g-cloud\.github\.io\/longterm-markets-chart\//.test(target)))
+        target+=(target.indexOf("?")===-1?"?":"&")+"v="+Date.now();
       frame.setAttribute("src",target);
     }
     if(feeds[name])loadSignals(name);
