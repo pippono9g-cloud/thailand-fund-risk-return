@@ -652,14 +652,16 @@ function project(v, cap, out){
 }
 function makeSolver(est, cap){
   const {mu, S} = est, N = mu.length;
-  // Lipschitz constant of grad = 2*lambda_max(S) via power iteration
-  let v = new Float64Array(N).fill(1/Math.sqrt(N)), Av = new Float64Array(N), lmax = 0;
-  for (let it=0; it<200; it++){
-    matvec(S, v, Av); const n = Math.hypot(...Av); if (!n) break;
-    const nl = n; for (let i=0;i<N;i++) v[i] = Av[i]/n;
-    if (Math.abs(nl - lmax) < 1e-12*nl){ lmax = nl; break; } lmax = nl;
+  // For symmetric covariance, max absolute row sum bounds lambda_max(S).
+  // A uniform power-iteration seed can miss the largest eigenmode when
+  // correlations are negative, yielding an unsafe gradient step.
+  let spectralBound = 0;
+  for (let i=0;i<N;i++){
+    let rowSum = 0;
+    for (let j=0;j<N;j++) rowSum += Math.abs(S[i][j]);
+    spectralBound = Math.max(spectralBound, rowSum);
   }
-  const L = 2*lmax || 1;
+  const L = 2*spectralBound || 1;
   const g = new Float64Array(N), z = new Float64Array(N), Sy = new Float64Array(N);
   return function solve(t, w0){
     let w = Float64Array.from(w0), y = Float64Array.from(w0), a = 1;
@@ -1280,7 +1282,7 @@ function mainMix(pf){
 }
 function cardHTML(pf){
   const n = pf.w.filter(w => w >= 0.005).length;
-  return `<div class="pf-head"><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.cap,0)}</div>
+  return `<div class="pf-head"><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.fr.capK ?? MODEL.cap,0)}</div>
     <div class="kpis"><div><div class="h">${MODEL.bl ? "Exp. return" : "Return"}</div><div class="v ${sgn(pf.ret)}">${pct(pf.ret)}</div></div>
     <div><div class="h">StdDev</div><div class="v">${pct(pf.sd)}</div></div>
     <div><div class="h">Sharpe</div><div class="v">${pf.sharpe == null ? "–" : pf.sharpe.toFixed(2)}</div></div></div></div>
