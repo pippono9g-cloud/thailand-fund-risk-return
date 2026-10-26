@@ -43,6 +43,18 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   html:not(.fit-on) .layout.perf-collapsed .perf-rail { position:static; display:flex; align-items:center; gap:8px; text-align:left; }
   html:not(.fit-on) .layout.perf-collapsed .perf-rail .rail-label { writing-mode:horizontal-tb; margin:0; }
 }
+/* Performance column hidden: the right column becomes wide, so re-flow its three charts into
+   two columns (Risk vs Return + Performance stacked | Allocation donut) so they fit the screen
+   instead of stretching to a huge, tall single stack. */
+@media (min-width:901px) {
+  .layout.perf-collapsed #rr-chart-card { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); column-gap:18px; align-items:start; }
+  .layout.perf-collapsed #rr-chart-card > h2 { grid-column:1; grid-row:1; }
+  .layout.perf-collapsed #rr-chart-card > .mini-chart-hdr { grid-column:1; grid-row:2; }
+  .layout.perf-collapsed #rr-chart-card > #rr-chart-wrap { grid-column:1; grid-row:3; }
+  .layout.perf-collapsed #rr-chart-card > #mini-chart-card { grid-column:1; grid-row:4; }
+  .layout.perf-collapsed #rr-chart-card > #alloc-donut-card { grid-column:2; grid-row:1 / span 4; margin-top:0; padding:0 0 0 18px; border-top:none; border-left:1px dashed var(--rule); }
+  .layout.perf-collapsed .donut.donut-big { max-width:100%; }
+}
 @media (max-width:900px) {
   .layout,.layout.editor-collapsed,.layout.perf-collapsed,.layout.editor-collapsed.perf-collapsed { grid-template-columns:1fr; }
   .layout.perf-collapsed .perf-rail { position:static; display:flex; align-items:center; gap:8px; text-align:left; }
