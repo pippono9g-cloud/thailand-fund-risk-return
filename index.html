@@ -1226,6 +1226,40 @@ function drawChart(list){
     ? baseStatus + " · " + watermarkPts.length.toLocaleString() + " peer funds in background"
     : baseStatus;
 }
+// Hover crosshair: hairlines from the hovered dot to the X and Y axes with the
+// dot's values printed on the axes. Drawn in a pointer-events:none SVG overlay
+// (not Plotly shapes) so it never triggers relayout/label placement.
+function hideHairlines(){ const s = document.getElementById("rr-hair"); if (s) s.style.display = "none"; }
+function drawHairlines(gd, p){
+  if (!p || typeof p.x !== "number" || typeof p.y !== "number") return hideHairlines();
+  const fl = gd._fullLayout, xa = fl && fl.xaxis, ya = fl && fl.yaxis;
+  if (!xa || !ya || !xa.l2p || !ya.l2p) return hideHairlines();
+  let s = document.getElementById("rr-hair");
+  if (!s) {
+    if (getComputedStyle(gd).position === "static") gd.style.position = "relative";
+    s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.id = "rr-hair";
+    s.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:visible";
+    gd.appendChild(s);
+  }
+  const px = xa._offset + xa.l2p(xa.d2l(p.x)), py = ya._offset + ya.l2p(ya.d2l(p.y));
+  const x0 = xa._offset, y1 = ya._offset + ya._length;
+  if (!(px >= x0 - 1 && px <= x0 + xa._length + 1 && py >= ya._offset - 1 && py <= y1 + 1)) return hideHairlines();
+  const pill = (cx, cy, txt, anchor) => {
+    const w = txt.length * 6.6 + 10, rx = anchor === "end" ? cx - w : cx - w / 2;
+    return '<rect x="' + rx.toFixed(1) + '" y="' + (cy - 9).toFixed(1) + '" width="' + w.toFixed(1) +
+      '" height="18" rx="3" fill="#4F2D7F"/><text x="' + (rx + w / 2).toFixed(1) + '" y="' + (cy + 4).toFixed(1) +
+      '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial,sans-serif">' + txt + '</text>';
+  };
+  s.innerHTML =
+    '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + y1.toFixed(1) +
+      '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+    '<line x1="' + x0.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
+      '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+    pill(px, y1 + 12, p.x.toFixed(2) + "%", "middle") +
+    pill(x0 - 4, py, (p.y > 0 ? "+" : "") + p.y.toFixed(2) + "%", "end");
+  s.style.display = "block";
+}
 // Card is "pinned" when a tap (touch) opened it. Hover events don't dismiss
 // a pinned card — only the close button or tapping outside can.
 let _cardPinned = false;
@@ -1543,6 +1577,7 @@ function attachChartEvents(){
   // Re-place labels after pan / zoom (same pattern as Trend dashboard)
   if (!_rrBound) {
     gd.on("plotly_relayout", () => {
+      hideHairlines();
       if (!_placingRR) placeLabelsRR();
       drawTablesForViewport();
     });
@@ -1550,6 +1585,7 @@ function attachChartEvents(){
     _rrBound = true;
   }
   gd.on("plotly_hover", ev => {
+    drawHairlines(gd, ev.points && ev.points[0]);
     if (_pinnedCards.size >= 10) return;
     const p = ev.points && ev.points[0];
     if (!p || p.customdata == null) return;
@@ -1561,6 +1597,7 @@ function attachChartEvents(){
     if (e && hoverCard) positionHoverCard(hoverCard, e.clientX, e.clientY);
   });
   gd.on("plotly_unhover", () => {
+    hideHairlines();
     if (_pinnedCards.size) hideHoverPreview();
     else hideHoverCard();
   });
@@ -1590,6 +1627,7 @@ function attachChartEvents(){
     positionHoverCard(hoverCard, ev.clientX, ev.clientY);
   });
   gd.addEventListener("mouseleave", () => {
+    hideHairlines();
     if (_pinnedCards.size) hideHoverPreview();
     else hideHoverCard();
   });
