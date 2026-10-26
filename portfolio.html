@@ -31,10 +31,10 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .layout.editor-collapsed .editor-expanded { display:none; }
 .layout.editor-collapsed .editor-rail { display:block; }
 @media (max-width:1600px) and (min-width:901px) {
-  .layout { grid-template-columns:minmax(420px,.8fr) minmax(600px,1.2fr); }
-  .layout > div:nth-child(3) { grid-column:2; }
-  .layout.editor-collapsed { grid-template-columns:54px minmax(600px,1.2fr) minmax(400px,.85fr); }
-  .layout.editor-collapsed > div:nth-child(3) { grid-column:auto; }
+  html:not(.fit-on) .layout { grid-template-columns:minmax(420px,.8fr) minmax(600px,1.2fr); }
+  html:not(.fit-on) .layout > div:nth-child(3) { grid-column:2; }
+  html:not(.fit-on) .layout.editor-collapsed { grid-template-columns:54px minmax(600px,1.2fr) minmax(400px,.85fr); }
+  html:not(.fit-on) .layout.editor-collapsed > div:nth-child(3) { grid-column:auto; }
 }
 @media (max-width:900px) {
   .layout,.layout.editor-collapsed { grid-template-columns:1fr; }
@@ -1386,8 +1386,8 @@ function drawPerfChart(curves){
     $dot.setAttribute("cx", px); $dot.setAttribute("cy", py); $dot.style.display = "";
     $tip.innerHTML = `${curves.dates[bi]}<br>${selectedLabel}: <b class="${ret>=0?'pos':'neg'}">${fmtPct(ret,2)}</b>`;
     $tip.style.display = "block";
-    const sx = px / W * r.width, sy = py / H * r.height;
-    $tip.style.left = Math.min(Math.max(sx, 60), r.width - 60) + "px";
+    const kk = kOf($s), sx = px / W * r.width / kk, sy = py / H * r.height / kk, lw = r.width / kk;
+    $tip.style.left = Math.min(Math.max(sx, 60), lw - 60) + "px";
     $tip.style.top = sy + "px";
   });
   $s.addEventListener("mouseleave", hide);
@@ -1459,12 +1459,13 @@ function drawPerfChart(curves){
     if (!seg) { $t.style.display = "none"; return; }
     if (seg.dataset.cash) $t.innerHTML = `<div class="dt-head">${esc(seg.dataset.cash)}</div>`;
     else { const g = (window._donutGroups||[])[+seg.dataset.i]; if (!g) return; $t.innerHTML = html(g); }
-    const box = $t.parentElement.getBoundingClientRect();
+    const par = $t.parentElement, box = par.getBoundingClientRect(), kk = kOf(par);
     $t.style.display = "block";
     const tw = $t.offsetWidth, th = $t.offsetHeight;
-    let x = e.clientX - box.left + 14, y = e.clientY - box.top + 14;
-    if (x + tw > box.width) x = Math.max(0, e.clientX - box.left - tw - 14);
-    if (y + th > box.height) y = Math.max(0, box.height - th);
+    const cx = (e.clientX - box.left) / kk, cy = (e.clientY - box.top) / kk;
+    let x = cx + 14, y = cy + 14;
+    if (x + tw > par.offsetWidth) x = Math.max(0, cx - tw - 14);
+    if (y + th > par.offsetHeight) y = Math.max(0, par.offsetHeight - th);
     $t.style.left = x + "px"; $t.style.top = y + "px";
   });
   $d.addEventListener("mouseleave", () => { $t.style.display = "none"; });
@@ -1576,6 +1577,8 @@ function drawRiskReturnDots(curves){
 
 // Hover tooltip plus projected guides to both axes. This keeps dense charts
 // readable while preserving exact Return and SD values for every point.
+// visual-px per local-px of an element (1 normally; <1 while fit-to-screen scaling is on)
+function kOf(el){ return (el && el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1) || 1; }
 function showRRTip(evt, code){
   const $t = document.getElementById("rr-tooltip");
   const $card = document.getElementById("rr-chart-card");
@@ -1586,8 +1589,9 @@ function showRRTip(evt, code){
   $t.textContent = `${code} · Return ${fmtPct(ret,2)} · SD ${sd.toFixed(2)}%`;
   const clientX = Number.isFinite(evt.clientX) && evt.clientX ? evt.clientX : rect.left + rect.width/2;
   const clientY = Number.isFinite(evt.clientY) && evt.clientY ? evt.clientY : rect.top + rect.height/2;
-  $t.style.left = (clientX - rect.left) + "px";
-  $t.style.top = (clientY - rect.top) + "px";
+  const kk = kOf($card);
+  $t.style.left = ((clientX - rect.left) / kk) + "px";
+  $t.style.top = ((clientY - rect.top) / kk) + "px";
   $t.style.display = "block";
 
   const svg = point.ownerSVGElement;
@@ -1862,6 +1866,24 @@ function loadPortfolioFile(input){
   };
   rd.readAsText(f);
 }
+// Fit-to-screen (default): the 3-column layout is designed for FIT_DESIGN_W css px.
+// On narrower desktop windows the page is scaled down to fit (same as zooming the
+// browser out) instead of collapsing to 2 columns. Phones/narrow (<=900px) keep the
+// single-column layout; browsers without CSS zoom keep the old 2-column fallback.
+const FIT_DESIGN_W = 1680, FIT_MIN_SCALE = 0.6;
+let fitScale = 1;
+function applyFit(){
+  const wrap = document.querySelector(".wrap"), root = document.documentElement;
+  const vw = root.clientWidth;
+  const ok = window.CSS && CSS.supports && CSS.supports("zoom", "1");
+  if (!ok || vw <= 900 || vw >= FIT_DESIGN_W || vw / FIT_DESIGN_W < FIT_MIN_SCALE) {
+    wrap.style.zoom = ""; root.classList.remove("fit-on"); fitScale = 1; return;
+  }
+  fitScale = vw / FIT_DESIGN_W;
+  wrap.style.zoom = fitScale; root.classList.add("fit-on");
+}
+window.addEventListener("resize", applyFit);
+applyFit();
 document.getElementById("portfolio-layout").classList.toggle("editor-collapsed", state.editorCollapsed);
 render();
 </script>
