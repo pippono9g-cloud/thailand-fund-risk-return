@@ -28,6 +28,10 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .editor-rail .rail-label { display:block; color:var(--grey); font-size:9px; text-transform:uppercase; letter-spacing:.05em; writing-mode:vertical-rl; margin:7px auto 2px; }
 .editor-collapse { width:26px; height:26px; border-radius:6px; font-size:17px; line-height:1; margin-left:auto; }
 .editor-collapse:hover,.editor-rail button:hover { border-color:var(--cyan); color:var(--cyan); }
+.layout.perf-collapsed { grid-template-columns:minmax(480px,.9fr) 54px minmax(420px,1.7fr); }
+.layout.editor-collapsed.perf-collapsed { grid-template-columns:54px 54px minmax(420px,1fr); }
+.layout.perf-collapsed .perf-expanded { display:none; }
+.layout.perf-collapsed .perf-rail { display:block; }
 .layout.editor-collapsed .editor-expanded { display:none; }
 .layout.editor-collapsed .editor-rail { display:block; }
 @media (max-width:1600px) and (min-width:901px) {
@@ -35,9 +39,13 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   html:not(.fit-on) .layout > div:nth-child(3) { grid-column:2; }
   html:not(.fit-on) .layout.editor-collapsed { grid-template-columns:54px minmax(600px,1.2fr) minmax(400px,.85fr); }
   html:not(.fit-on) .layout.editor-collapsed > div:nth-child(3) { grid-column:auto; }
+  html:not(.fit-on) .layout.perf-collapsed { grid-template-columns:minmax(420px,.8fr) minmax(600px,1.2fr); }
+  html:not(.fit-on) .layout.perf-collapsed .perf-rail { position:static; display:flex; align-items:center; gap:8px; text-align:left; }
+  html:not(.fit-on) .layout.perf-collapsed .perf-rail .rail-label { writing-mode:horizontal-tb; margin:0; }
 }
 @media (max-width:900px) {
-  .layout,.layout.editor-collapsed { grid-template-columns:1fr; }
+  .layout,.layout.editor-collapsed,.layout.perf-collapsed,.layout.editor-collapsed.perf-collapsed { grid-template-columns:1fr; }
+  .layout.perf-collapsed .perf-rail { position:static; display:flex; align-items:center; gap:8px; text-align:left; }
   .layout.editor-collapsed .editor-rail { position:static; display:flex; align-items:center; gap:8px; text-align:left; }
   .editor-rail .rail-count { margin:0; }
   .editor-rail .rail-label { writing-mode:horizontal-tb; margin:0; }
@@ -172,7 +180,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut-wrap { display:flex; gap:14px; align-items:center; justify-content:center; margin:6px 0 10px; }
 .donut { flex:0 0 160px; }
 .donut svg { width:160px; height:160px; display:block; }
-.donut.donut-big { flex:none; width:100%; max-width:340px; margin:8px auto 4px; }
+.donut.donut-big { flex:none; width:100%; max-width:560px; margin:8px auto 4px; }
 .donut.donut-big svg { width:100%; height:auto; }
 .donut text { font-size:11px; fill:var(--grey); }
 .donut-seg { cursor:pointer; transition:opacity .12s; }
@@ -196,6 +204,11 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut-tip .pos { color:#86efac; } .donut-tip .neg { color:#fca5a5; }
 .donut .center-v { font-size:18px; font-weight:700; fill:var(--ink); }
 .cat-legend { flex:1; min-width:0; font-size:11.5px; line-height:1.4; }
+.cat-legend .leg-title-wrap { display:flex; align-items:center; gap:8px; }
+.cat-legend .tbl-collapse { margin-left:0; font-size:13px; }
+.cat-legend.table-collapsed > :not(.leg-title-row) { display:none; }
+.cat-legend.table-collapsed .legend-controls { display:none; }
+.cat-legend.table-collapsed .leg-title-row { margin-bottom:0; }
 .cat-legend .leg-title-row { display:flex; align-items:center; justify-content:space-between; gap:6px 8px; margin-bottom:5px; flex-wrap:wrap; }
 .cat-legend .leg-title { font-size:10px; font-weight:700; color:var(--grey); text-transform:uppercase;
                          letter-spacing:0.04em; }
@@ -411,9 +424,10 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     </div>
 
     <!-- ============= RIGHT: portfolio expectation ============= -->
-    <div>
+    <div id="perf-col">
+      <div class="perf-expanded">
       <div class="card stats">
-        <h2><span>Portfolio Past Performance</span><span class="asof" id="asof-label">as of 22 Oct 2026</span></h2>
+        <h2><span>Portfolio Past Performance</span><span class="asof" id="asof-label">as of 22 Oct 2026</span><button class="editor-collapse" onclick="setPerfCollapsed(true)" title="Hide Portfolio Past Performance" aria-label="Hide Portfolio Past Performance" style="margin-left:0;flex:0 0 auto">‹</button></h2>
 
         <div class="win-row">
           <label for="win-select">Period</label>
@@ -441,6 +455,11 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
         <div class="cat-legend" id="cat-legend"></div>
         <div class="status-note"><b>Include</b> = counted in Allocation, Return, Contribution and Risk · <b>Exclude</b> = not counted in any of them · <b>Just Include</b> = counted in Allocation only (0% return)</div>
 
+      </div>
+      </div>
+      <div class="editor-rail perf-rail card" aria-label="Portfolio Past Performance hidden">
+        <button onclick="setPerfCollapsed(false)" title="Show Portfolio Past Performance" aria-label="Show Portfolio Past Performance">›</button>
+        <span class="rail-label">Performance</span>
       </div>
     </div>
 
@@ -512,6 +531,8 @@ const state = {
   highlightMain: null,     // clicked Asset class highlighted on Risk vs Return
   editorCollapsed: false,  // hide fund inputs to prioritise the two analysis columns
   hideAttribution: false,  // allocation-only table hides Return and Contribution
+  tableCollapsed: false,   // hide the allocation performance table (header stays)
+  perfCollapsed: false,    // hide the whole Portfolio Past Performance column (rail stays)
 };
 
 const byCode = Object.fromEntries(FUNDS.map(f => [f.code, f]));
@@ -831,7 +852,13 @@ function setEditorCollapsed(collapsed){
   state.editorCollapsed = !!collapsed;
   document.getElementById("portfolio-layout").classList.toggle("editor-collapsed", state.editorCollapsed);
   document.getElementById("rail-count").textContent = state.holdings.length;
-  try { localStorage.setItem("portfolio-analysts-v3", JSON.stringify({holdings:state.holdings,win:state.win,catView:state.catView,basis:state.basis,editorCollapsed:state.editorCollapsed,hideAttribution:state.hideAttribution})); } catch {}
+  try { localStorage.setItem("portfolio-analysts-v3", JSON.stringify({holdings:state.holdings,win:state.win,catView:state.catView,basis:state.basis,editorCollapsed:state.editorCollapsed,hideAttribution:state.hideAttribution,tableCollapsed:state.tableCollapsed,perfCollapsed:state.perfCollapsed})); } catch {}
+}
+
+function setPerfCollapsed(collapsed){
+  state.perfCollapsed = !!collapsed;
+  document.getElementById("portfolio-layout").classList.toggle("perf-collapsed", state.perfCollapsed);
+  try { localStorage.setItem("portfolio-analysts-v3", JSON.stringify({holdings:state.holdings,win:state.win,catView:state.catView,basis:state.basis,editorCollapsed:state.editorCollapsed,hideAttribution:state.hideAttribution,tableCollapsed:state.tableCollapsed,perfCollapsed:state.perfCollapsed})); } catch {}
 }
 
 function addFund(code){
@@ -947,6 +974,7 @@ function setBasis(v){
   render();
 }
 
+function toggleTable(){ state.tableCollapsed=!state.tableCollapsed; renderStats(); }
 function toggleAttribution(){
   state.hideAttribution=!state.hideAttribution;
   renderStats();
@@ -1163,7 +1191,7 @@ function renderStats(){
   $status.querySelectorAll(".status-exclude").forEach(btn => {
     btn.onclick = () => setHoldingStatus(decodeURIComponent(btn.dataset.code),"just");
   });
-  try { localStorage.setItem("portfolio-analysts-v3", JSON.stringify({holdings:state.holdings,win:state.win,catView:state.catView,basis:state.basis,editorCollapsed:state.editorCollapsed,hideAttribution:state.hideAttribution})); } catch {}
+  try { localStorage.setItem("portfolio-analysts-v3", JSON.stringify({holdings:state.holdings,win:state.win,catView:state.catView,basis:state.basis,editorCollapsed:state.editorCollapsed,hideAttribution:state.hideAttribution,tableCollapsed:state.tableCollapsed,perfCollapsed:state.perfCollapsed})); } catch {}
   drawPerfChart(curves);
   drawRiskReturnDots(curves);
   refreshIWColumn(curves);
@@ -1652,7 +1680,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   const groups = groupByCat(curves);
   const legByCode = {};
   if (curves) for (const leg of curves.legs) legByCode[leg.code] = leg;
-  const CX=80, CY=80, R=55, IR=36;
+  const CX=80, CY=80, R=70, IR=47;
   // Follows the basis toggle: Fund sleeve = invested funds only (=100%); Portfolio model = % of total incl. Other Assets / Cash.
   const donutInvest = state.basis === "fund";
   const $dh = document.getElementById("donut-hdr");
@@ -1663,12 +1691,14 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   window._donutScale = 100 / scaleDen;
   let segs = "";
   let a0 = -Math.PI/2;
+  const slices = [];   // for the name tags drawn around the ring
   for (const g of groups) {
     if (g.w <= 0) continue;
     const frac = g.w / scaleDen;
     const a1 = a0 + frac * 2 * Math.PI;
     const tip = `${state.catView==='sub' ? g.main+' · ' : ''}${g.name} · ${g.w.toFixed(0)}%\n  ${g.codes.join("\n  ")}`;
     segs += `<path class="donut-seg" data-i="${groups.indexOf(g)}" d="${arcPath(CX,CY,R,IR,a0,a1)}" fill="${g.color}"></path>`;
+    slices.push({ name: g.name, frac, a0, a1, color: g.color });
     a0 = a1;
   }
   // residual (cash / unallocated) — light grey
@@ -1677,11 +1707,37 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     const a1 = a0 + frac * 2 * Math.PI;
     const cashTip = `Other Assets / Cash · ${(100-sumw).toFixed(0)}%`;
     segs += `<path d="${arcPath(CX,CY,R,IR,a0,a1)}" fill="#e5e7eb" class="donut-seg" data-cash="${cashTip}"></path>`;
+    slices.push({ name: "Other Assets / Cash", frac, a0, a1, color: "#9ca3af" });
   }
-  $d.innerHTML = `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  // Name tags: label (name + share) placed right next to each slice >= 2%, no
+  // leader lines; labels on each side are pushed apart vertically so they never overlap.
+  const esc = t => String(t).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const LBL_MIN = 0.02, LBL_GAP = 11, RL = R + 4;
+  const sides = { L: [], R: [] };
+  for (const sl of slices) {
+    if (sl.frac < LBL_MIN) continue;
+    const am = (sl.a0 + sl.a1) / 2, cs = Math.cos(am), sn = Math.sin(am);
+    sides[cs >= 0 ? "R" : "L"].push({ sl, x: CX + RL * cs, y: CY + RL * sn });
+  }
+  let tags = "";
+  for (const side of ["L", "R"]) {
+    const arr = sides[side].sort((a, b) => a.y - b.y);
+    for (let i = 0; i < arr.length; i++) if (i && arr[i].y < arr[i-1].y + LBL_GAP) arr[i].y = arr[i-1].y + LBL_GAP;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const maxY = 166 - (arr.length - 1 - i) * LBL_GAP;
+      if (arr[i].y > maxY) arr[i].y = maxY;
+    }
+    for (const t of arr) {
+      const anchor = side === "R" ? "start" : "end";
+      const nm = t.sl.name.length > 26 ? t.sl.name.slice(0, 25) + "…" : t.sl.name;
+      tags += `<text x="${t.x.toFixed(1)}" y="${(t.y + 2.2).toFixed(1)}" text-anchor="${anchor}" pointer-events="none" style="font-size:8px;fill:var(--ink);font-weight:700">${esc(nm)}<title>${esc(t.sl.name)}</title></text>`;
+    }
+  }
+  $d.innerHTML = `<svg viewBox="-130 -10 420 180" xmlns="http://www.w3.org/2000/svg">
     ${segs}
-    <text x="80" y="76" text-anchor="middle" class="center-v">${donutInvest?'100':sumw.toFixed(0)}%</text>
-    <text x="80" y="92" text-anchor="middle">${donutInvest?'invested':'allocated'}</text>
+    ${tags}
+    <text x="80" y="79" text-anchor="middle" class="center-v" style="font-size:22px">${donutInvest?'100':sumw.toFixed(0)}%</text>
+    <text x="80" y="96" text-anchor="middle" style="font-size:13px">${donutInvest?'invested':'allocated'}</text>
   </svg>`;
   window._donutGroups = groups;
 
@@ -1766,6 +1822,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   const titleTxt = state.catView === "sub" ? "Allocation performance · Sub-sector" : "Allocation performance · Asset class";
   $l.classList.toggle("sub-view",state.catView==="sub");
   $l.classList.toggle("allocation-only",state.hideAttribution);
+  $l.classList.toggle("table-collapsed",state.tableCollapsed);
   // Show only the weight column that belongs to the selected basis:
   // Fund sleeve -> % Invest, Portfolio model -> % Portfolio.
   $l.classList.toggle("basis-fund",state.basis==="fund");
@@ -1774,7 +1831,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     ? '<span></span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>'
     : '<span></span><span>Asset class</span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>';
   $l.innerHTML = `<div class="leg-title-row">
-      <span class="leg-title">${titleTxt}</span>
+      <span class="leg-title-wrap"><button class="editor-collapse tbl-collapse" onclick="toggleTable()" title="${state.tableCollapsed?'Show table':'Hide table'}" aria-label="${state.tableCollapsed?'Show table':'Hide table'}" aria-expanded="${!state.tableCollapsed}">${state.tableCollapsed?'▾':'▴'}</button><span class="leg-title">${titleTxt}</span></span>
       <span class="legend-controls">
         <button class="attrib-toggle ${state.hideAttribution?'active':''}" onclick="toggleAttribution()" title="${state.hideAttribution?'Show Return and Contribution columns':'Hide Return and Contribution; show Allocation only'}">${state.hideAttribution?'Show performance':'Allocation only'}</button>
         <span class="cat-toggle">
@@ -1818,6 +1875,8 @@ function applySaved(saved){
     state.basis=saved.basis==="fund"?"fund":"portfolio";
     state.editorCollapsed=saved.editorCollapsed===true;
     state.hideAttribution=saved.hideAttribution===true;
+    state.tableCollapsed=saved.tableCollapsed===true;
+    state.perfCollapsed=saved.perfCollapsed===true;
     res.loaded=state.holdings.length;
     populateWinSelect();
   }
@@ -1885,6 +1944,7 @@ function applyFit(){
 window.addEventListener("resize", applyFit);
 applyFit();
 document.getElementById("portfolio-layout").classList.toggle("editor-collapsed", state.editorCollapsed);
+document.getElementById("portfolio-layout").classList.toggle("perf-collapsed", state.perfCollapsed);
 render();
 </script>
 </body>
