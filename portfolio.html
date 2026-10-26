@@ -24,14 +24,27 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .editor-rail { display:none; padding:8px 6px; text-align:center; position:sticky; top:12px; }
 .editor-rail button,.editor-collapse { border:1px solid var(--rule); background:#fff; color:var(--scb); cursor:pointer; font-weight:800; }
 .editor-rail button { width:34px; height:34px; border-radius:7px; font-size:20px; line-height:1; }
-.editor-rail .rail-count { display:block; margin-top:8px; color:var(--ink); font-weight:800; font-size:12px; }
-.editor-rail .rail-label { display:block; color:var(--grey); font-size:9px; text-transform:uppercase; letter-spacing:.05em; writing-mode:vertical-rl; margin:7px auto 2px; }
+.editor-rail .rail-count { display:block; margin-top:8px; color:var(--scb); font-weight:800; font-size:15px; }
+.editor-rail .rail-label { display:block; color:var(--scb); font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; writing-mode:vertical-rl; margin:9px auto 2px; }
 .editor-collapse { width:26px; height:26px; border-radius:6px; font-size:17px; line-height:1; margin-left:auto; }
 .editor-collapse:hover,.editor-rail button:hover { border-color:var(--cyan); color:var(--cyan); }
 .layout.perf-collapsed { grid-template-columns:minmax(480px,.9fr) 54px minmax(420px,1.7fr); }
 .layout.editor-collapsed.perf-collapsed { grid-template-columns:54px 54px minmax(420px,1fr); }
 .layout.perf-collapsed .perf-expanded { display:none; }
 .layout.perf-collapsed .perf-rail { display:block; }
+/* A collapsed column's rail stretches to the full row height, i.e. as tall as the cards that stay visible. */
+.layout.perf-collapsed > #perf-col, .layout.editor-collapsed > #editor-col { align-self:stretch; display:flex; flex-direction:column; }
+.layout.perf-collapsed .perf-rail, .layout.editor-collapsed .editor-rail { flex:1; }
+.rr-h2 { display:flex; align-items:center; gap:12px; }
+.chart-period { display:none; align-items:center; gap:6px; font-weight:500; text-transform:none; letter-spacing:0; }
+.chart-period label { font-size:11px; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
+.chart-period select { padding:3px 7px; font-size:12px; border:1px solid var(--rule); border-radius:6px; background:#fff; color:var(--ink); outline:none; }
+.chart-period select:focus { border-color:var(--cyan); }
+.layout.perf-collapsed .chart-period { display:inline-flex; }
+.chart-group.cat-toggle { border:1px solid var(--rule); border-radius:5px; overflow:hidden; }
+.chart-group.cat-toggle button { border:none; background:#fff; color:var(--grey); font-size:10px; font-weight:700; padding:3px 8px; cursor:pointer; text-transform:uppercase; letter-spacing:.03em; }
+.chart-group.cat-toggle button + button { border-left:1px solid var(--rule); }
+.chart-group.cat-toggle button.active { background:var(--cyan); color:#fff; }
 .layout.editor-collapsed .editor-expanded { display:none; }
 .layout.editor-collapsed .editor-rail { display:block; }
 @media (max-width:1600px) and (min-width:901px) {
@@ -52,7 +65,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   .layout.perf-collapsed #rr-chart-card > .mini-chart-hdr { grid-column:1; grid-row:2; }
   .layout.perf-collapsed #rr-chart-card > #rr-chart-wrap { grid-column:1; grid-row:3; }
   .layout.perf-collapsed #rr-chart-card > #mini-chart-card { grid-column:1; grid-row:4; }
-  .layout.perf-collapsed #rr-chart-card > #alloc-donut-card { grid-column:2; grid-row:1 / span 4; margin-top:0; padding:0 0 0 18px; border-top:none; border-left:1px dashed var(--rule); }
+  .layout.perf-collapsed #rr-chart-card > #alloc-donut-card { grid-column:2; grid-row:1 / span 4; align-self:center; margin-top:0; padding:0 0 0 18px; border-top:none; border-left:1px dashed var(--rule); }
   .layout.perf-collapsed .donut.donut-big { max-width:100%; }
 }
 @media (max-width:900px) {
@@ -478,7 +491,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     <!-- ============= RIGHT: risk vs return ============= -->
     <div>
       <div class="card" id="rr-chart-card" style="position:relative;">
-        <h2>Risk vs Return</h2>
+        <h2 class="rr-h2"><span>Risk vs Return</span><span class="chart-period" title="Same Period as in Portfolio Past Performance"><label for="win-select-2">Period</label><select id="win-select-2"></select></span><span class="chart-period chart-group cat-toggle" title="Group the donut and dot colours by Asset class or Sub-sector"><button id="grp-main" onclick="setCatView('main')">Asset class</button><button id="grp-sub" onclick="setCatView('sub')">Sub-sector</button></span></h2>
         <div class="mini-chart-hdr">Each point is a fund <span>· labelled by fund code, sized by weight</span></div>
         <div class="chart-wrap mini" id="rr-chart-wrap"></div>
         <div class="rr-tip" id="rr-tooltip"></div>
@@ -803,9 +816,12 @@ function badgeFor(f){
 
 
 function populateWinSelect(){
-  const $w = document.getElementById("win-select");
-  $w.innerHTML = WINDOWS.map((w,i) => `<option value="${i}"${i===state.win?" selected":""}>${w}</option>`).join("");
-  $w.onchange = e => { state.win = +e.target.value; render(); };
+  const opts = WINDOWS.map((w,i) => `<option value="${i}"${i===state.win?" selected":""}>${w}</option>`).join("");
+  for (const id of ["win-select","win-select-2"]) {          // second copy lives in the chart card (shown when Performance is hidden)
+    const $w = document.getElementById(id);
+    $w.innerHTML = opts;
+    $w.onchange = e => { state.win = +e.target.value; render(); };
+  }
   const $a = document.getElementById("asof-input");
   if (NAV_GRID.length) {
     $a.min = NAV_GRID[Math.min(30, NAV_GRID.length-1)]; $a.max = NAV_GRID[NAV_GRID.length-1]; $a.value = $a.max;
@@ -978,6 +994,7 @@ function rearrangeByRisk(){
 function setCatView(v){
   state.catView = v;
   if (v !== "main") state.highlightMain = null;
+  syncGroupToggle();
   renderStats();
 }
 
@@ -1247,7 +1264,9 @@ function renderStats(){
   drawDonut(allocatedSumw, curves, excludedWeight, justIncludedWeight);
 }
 
-function render(){ renderHoldingsList(); renderStats(); }
+function syncGroupToggle(){ const m=document.getElementById('grp-main'), u=document.getElementById('grp-sub'); if(m&&u){ m.classList.toggle('active',state.catView==='main'); u.classList.toggle('active',state.catView==='sub'); } }
+function syncWinSelects(){ for (const id of ["win-select","win-select-2"]) { const el=document.getElementById(id); if (el && +el.value !== state.win) el.value = state.win; } }
+function render(){ syncGroupToggle(); syncWinSelects(); renderHoldingsList(); renderStats(); }
 populateWinSelect();
 
 /* ---------- composition donut — grouped by MAIN CATEGORY ---------- */
@@ -1565,28 +1584,38 @@ function drawRiskReturnDots(curves){
   const Y = v => PAD_T + (1 - (ymax > ymin ? (v - ymin) / (ymax - ymin) : 0.5)) * (H - PAD_T - PAD_B);
   const rOf = w => 3 + Math.sqrt(Math.max(w, 1)) * 1.1;
 
-  // Label every spatially isolated point. Points in a tight cluster stay
-  // unlabelled because their fund codes would overlap; hover/focus still reveals
-  // the exact code, Return and SD for every point.
-  const LABEL_CLEARANCE=24;
-  const labelledCodes = new Set(pts.filter((p,i)=>{
-    const px=X(p.sd), py=Y(p.ret);
-    return pts.every((q,j)=>i===j || Math.hypot(px-X(q.sd),py-Y(q.ret))>=LABEL_CLEARANCE);
-  }).map(p=>p.code));
+  // Label EVERY point. Each label tries positions around its dot (right, left,
+  // above, below, diagonals) at growing distances and takes the first spot that
+  // does not overlap another label, another dot, or the chart edge; a leader line
+  // is drawn when the label ends up away from its dot. Most crowded dots go first.
+  const LBL_H = 7.5;
+  const dots = pts.map(p => ({ p, cx: X(p.sd), cy: Y(p.ret), r: rOf(p.w) }));
+  const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  const dotBox = d => ({ x0: d.cx - d.r - 1, x1: d.cx + d.r + 1, y0: d.cy - d.r - 1, y1: d.cy + d.r + 1 });
+  const crowd = d => dots.reduce((n, o) => n + (o !== d && Math.hypot(o.cx - d.cx, o.cy - d.cy) < 45 ? 1 : 0), 0);
+  const placedBoxes = [];
   const labelByCode = {};
-  const ordered=pts.filter(p=>labelledCodes.has(p.code)).map(p=>({p,cx:X(p.sd),cy:Y(p.ret)})).sort((a,b)=>a.cy-b.cy);
-  const gap=11, minY=PAD_T+8, maxY=H-PAD_B-2;
-  for (let i=0;i<ordered.length;i++) ordered[i].ty=Math.max(minY,ordered[i].cy,i ? ordered[i-1].ty+gap : minY);
-  if (ordered.length && ordered.at(-1).ty>maxY) {
-    ordered.at(-1).ty=maxY;
-    for (let i=ordered.length-2;i>=0;i--) ordered[i].ty=Math.min(ordered[i].ty,ordered[i+1].ty-gap);
-  }
-  for (const item of ordered) {
-    const {p,cx,cy,ty}=item, width=Math.max(18,p.code.length*4.25), radius=rOf(p.w);
-    const useRight=cx+radius+5+width<=W-PAD_R;
-    const tx=useRight ? cx+radius+5 : cx-radius-5;
-    const anchor=useRight ? "start" : "end";
-    labelByCode[p.code]={tx,ty,anchor,distance:Math.hypot(tx-cx,ty-cy)};
+  const ANGLES = [0, 180, -90, 90, -35, 35, -145, 145];
+  for (const d of dots.slice().sort((x, y) => crowd(y) - crowd(x))) {
+    const wTxt = Math.max(18, d.p.code.length * 4.25);
+    let best = null;
+    search: for (const k of [5, 15, 26, 38, 52, 68]) {
+      for (const ang of ANGLES) {
+        const rad = ang * Math.PI / 180, dist = d.r + k;
+        const cs = Math.cos(rad), sn = Math.sin(rad);
+        const tx = d.cx + cs * dist, ty = d.cy + sn * dist + 2.5;
+        const anchor = cs > 0.35 ? "start" : cs < -0.35 ? "end" : "middle";
+        const x0 = anchor === "start" ? tx : anchor === "end" ? tx - wTxt : tx - wTxt / 2;
+        const box = { x0, x1: x0 + wTxt, y0: ty - LBL_H + 1.5, y1: ty + 2 };
+        const inside = box.x0 >= PAD_L - 4 && box.x1 <= W - 2 && box.y0 >= 2 && box.y1 <= H - PAD_B + 2;
+        const clashes = placedBoxes.filter(b => hit(box, b)).length + dots.filter(o => o !== d && hit(box, dotBox(o))).length;
+        const score = clashes * 1000 + (inside ? 0 : 500) + k;
+        if (!best || score < best.score) best = { score, tx, ty, anchor, box, distance: Math.hypot(tx - d.cx, ty - 2.5 - d.cy) };
+        if (clashes === 0 && inside) break search;
+      }
+    }
+    placedBoxes.push(best.box);
+    labelByCode[d.p.code] = { tx: best.tx, ty: best.ty, anchor: best.anchor, distance: best.distance };
   }
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" data-w="${W}" data-h="${H}" data-pad-l="${PAD_L}" data-pad-r="${PAD_R}" data-pad-t="${PAD_T}" data-pad-b="${PAD_B}" xmlns="http://www.w3.org/2000/svg">`;
