@@ -1801,6 +1801,12 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       tags += `<text x="${t.x.toFixed(1)}" y="${(t.y + 2.2).toFixed(1)}" text-anchor="${anchor}" pointer-events="none" style="font-size:8px;fill:var(--ink);font-weight:700">${esc(nm)}<title>${esc(t.sl.name)}</title></text>`;
     }
   }
+  // Share printed on the coloured ring itself (grey-white; dark grey on the pale cash slice).
+  for (const sl of slices) {
+    if (sl.frac < 0.06) continue;
+    const am = (sl.a0 + sl.a1) / 2, rm = (R + IR) / 2, cash = sl.color === "#9ca3af";
+    tags += `<text x="${(CX + rm * Math.cos(am)).toFixed(1)}" y="${(CY + rm * Math.sin(am) + 2.6).toFixed(1)}" text-anchor="middle" pointer-events="none" style="font-size:7.5px;font-weight:700;fill:${cash ? "#6b7280" : "#e5e7eb"}">${(sl.frac*100).toFixed(0)}%</text>`;
+  }
   $d.innerHTML = `<svg viewBox="-130 -10 420 180" xmlns="http://www.w3.org/2000/svg">
     ${segs}
     ${tags}
