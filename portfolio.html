@@ -210,6 +210,12 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut text { font-size:11px; fill:var(--grey); }
 .donut-seg { cursor:pointer; transition:opacity .12s; }
 .donut-seg:hover { opacity:.82; }
+#donut-tip.pinned { pointer-events:auto; cursor:grab; user-select:none; box-shadow:0 4px 14px rgba(0,0,0,.28); }
+#donut-tip.pinned.dragging { cursor:grabbing; }
+#donut svg.has-sel .donut-seg:not(.sel) { opacity:.22; }   /* a slice was clicked: the other slices drop back */
+#donut svg.has-sel .donut-seg.sel { opacity:1; }
+#donut .donut-seg.sel { stroke:#0b1a3a; stroke-width:1.6; }   /* clicked slice; the other groups also fade on Risk vs Return (dots) */
+#rr-chart-wrap svg.pie-sel .rr-point:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-label:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-leader:not(.pie-on) { opacity:.13; }
 .donut-tip { position:absolute; display:none; pointer-events:none; z-index:6; background:var(--ink); color:#fff;
   font-size:11px; padding:7px 10px; border-radius:6px; min-width:240px; max-width:340px; box-shadow:0 4px 14px rgba(0,0,0,.25); }
 .donut-tip .dt-head { font-weight:700; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,.25); }
@@ -354,6 +360,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .chart-wrap .rr-axis-badge { fill:var(--scb); pointer-events:none; }
 .chart-wrap .rr-axis-value { fill:#fff; font-size:7.5px; font-weight:700; pointer-events:none; }
 .chart-wrap .rr-point { transition:opacity .12s ease, stroke-width .12s ease; }
+.chart-wrap .rr-point:focus, .chart-wrap .rr-point:focus-visible { outline:none; }   /* no browser focus ring around a clicked dot */
 .chart-wrap svg.rr-hovering .rr-point { opacity:.22; }
 .chart-wrap svg.rr-hovering .rr-point.rr-active { opacity:1; stroke:var(--scb-d); stroke-width:2.4; }
 .chart-legend { display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:10px; font-size:11.5px; }
@@ -366,8 +373,12 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .chart-empty { padding:24px 6px; text-align:center; color:var(--mute); font-size:13px; font-style:italic; }
 .chart-empty.mini { padding:14px 6px; font-size:11.5px; }
 .rr-tip { position:absolute; display:none; pointer-events:none; background:var(--ink); color:#fff;
-  font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:5px; white-space:nowrap; z-index:5;
-  transform:translate(-50%, -130%); }
+  font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:5px; white-space:nowrap; z-index:5; }   /* sits in the chart's top-right corner by default */
+.rr-tip.pinned { pointer-events:auto; cursor:grab; user-select:none; box-shadow:0 4px 14px rgba(0,0,0,.28); }
+.rr-tip.pinned.dragging { cursor:grabbing; }
+/* A clicked dot: the other dots / labels drop back, hairlines + info box stay; no outline on the dot itself. */
+.chart-wrap svg.rr-pinned .rr-point:not(.pin-on), .chart-wrap svg.rr-pinned .rr-label:not(.pin-on), .chart-wrap svg.rr-pinned .rr-leader:not(.pin-on) { opacity:.13; }
+.chart-wrap svg.rr-hovering.rr-pinned .rr-point.pin-on { opacity:1; stroke:#fff; stroke-width:1; }
 .mini-chart { margin-top:12px; padding-top:10px; border-top:1px dashed var(--rule); }
 .mini-chart-hdr { font-size:11px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; }
 .mini-chart-hdr span { font-weight:500; text-transform:none; letter-spacing:0; }
@@ -1549,21 +1560,69 @@ function drawPerfChart(curves){
     }
     return out;
   }
+  // Click a slice: pin its info box and fade the other groups; click another slice to switch; click anywhere else to clear.
+  let pinned = null;   // { key }
+  const keyOf = seg => seg.dataset.cash ? "cash" : decodeURIComponent(seg.dataset.key || "");
+  const contentOf = seg => {
+    if (seg.dataset.cash) return `<div class="dt-head">${esc(seg.dataset.cash)}</div>`;
+    const g = (window._donutGroups||[])[+seg.dataset.i]; return g ? html(g) : null;
+  };
+  // The info box sits in the card's top-right corner by default (hover or click); once dragged it stays where you drop it.
+  let boxPos = null;   // { x, y } in the card's local px, null = default corner
+  const place = () => {
+    const par = $t.parentElement;
+    $t.style.display = "block";
+    if (boxPos) { $t.style.left = boxPos.x + "px"; $t.style.top = boxPos.y + "px"; return; }
+    $t.style.left = Math.max(0, par.offsetWidth - $t.offsetWidth - 8) + "px"; $t.style.top = "8px";
+  };
+  window._donutApplySel = () => {
+    const svg = $d.querySelector("svg"); if (!svg) return;
+    let sel = null;
+    if (pinned) svg.querySelectorAll(".donut-seg").forEach(sg => { if (keyOf(sg) === pinned.key) sel = sg; });
+    if (pinned && !sel) { pinned = null; $t.style.display = "none"; }   // that group no longer exists
+    svg.classList.toggle("has-sel", !!sel);
+    svg.querySelectorAll(".donut-seg").forEach(sg => sg.classList.toggle("sel", sg === sel));
+    $t.style.width = "";
+    if (sel) { $t.innerHTML = contentOf(sel); $t.classList.add("pinned"); place(); }
+    else $t.classList.remove("pinned", "dragging");
+    window._pieSelKey = sel ? pinned.key : null;
+    if (typeof applyPieSelToDots === "function") applyPieSelToDots();
+  };
   $d.addEventListener("mousemove", e => {
+    if (pinned) return;   // the clicked slice's info stays up
     const seg = e.target.closest(".donut-seg");
     if (!seg) { $t.style.display = "none"; return; }
-    if (seg.dataset.cash) $t.innerHTML = `<div class="dt-head">${esc(seg.dataset.cash)}</div>`;
-    else { const g = (window._donutGroups||[])[+seg.dataset.i]; if (!g) return; $t.innerHTML = html(g); }
-    const par = $t.parentElement, box = par.getBoundingClientRect(), kk = kOf(par);
-    $t.style.display = "block";
-    const tw = $t.offsetWidth, th = $t.offsetHeight;
-    const cx = (e.clientX - box.left) / kk, cy = (e.clientY - box.top) / kk;
-    let x = cx + 14, y = cy + 14;
-    if (x + tw > par.offsetWidth) x = Math.max(0, cx - tw - 14);
-    if (y + th > par.offsetHeight) y = Math.max(0, par.offsetHeight - th);
-    $t.style.left = x + "px"; $t.style.top = y + "px";
+    const c = contentOf(seg); if (c == null) return;
+    $t.style.width = "";
+    $t.innerHTML = c;
+    place();
   });
-  $d.addEventListener("mouseleave", () => { $t.style.display = "none"; });
+  $d.addEventListener("mouseleave", () => { if (!pinned) $t.style.display = "none"; });
+  // Pinned info box can be dragged by its body (it stays where you drop it, also across re-renders; limited only by the window edges).
+  $t.addEventListener("mousedown", e => {
+    if (!pinned || e.button !== 0) return;
+    e.preventDefault();
+    const par = $t.parentElement, kk = kOf(par);
+    const sx = e.clientX, sy = e.clientY, ox = parseFloat($t.style.left) || 0, oy = parseFloat($t.style.top) || 0;
+    $t.classList.add("dragging");
+    $t.style.width = $t.offsetWidth + "px";   // freeze the size so it cannot re-wrap (and grow) near a window edge while dragging
+    const move = ev => {
+      // The box may be dragged anywhere in the visible window (not just inside this card).
+      const box = par.getBoundingClientRect(), M = 4, tw = $t.offsetWidth * kk, th = $t.offsetHeight * kk;
+      const x = Math.min(Math.max((M - box.left) / kk, ox + (ev.clientX - sx) / kk), (innerWidth - M - tw - box.left) / kk);
+      const y = Math.min(Math.max((M - box.top) / kk, oy + (ev.clientY - sy) / kk), (innerHeight - M - th - box.top) / kk);
+      $t.style.left = x + "px"; $t.style.top = y + "px";
+      boxPos = { x, y };
+    };
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); $t.classList.remove("dragging"); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
+  document.addEventListener("click", e => {
+    if (e.target.closest && e.target.closest("#donut-tip")) return;   // clicking / dropping the info box keeps it pinned
+    const seg = e.target.closest && e.target.closest("#donut .donut-seg");
+    if (seg) { pinned = { key: keyOf(seg) }; window._donutApplySel(); return; }
+    if (pinned) { pinned = null; $t.style.display = "none"; window._donutApplySel(); }
+  });
 })();
 
 (function(){
@@ -1641,20 +1700,39 @@ function drawRiskReturnDots(curves){
   const medRetTxt = medRet == null ? "" : `Port return ${fmtPct(medRet,1)}`;
   const medLbl = {};
   const medBoxes = [];
-  if (medSd != null) {
-    const w = medSdTxt.length * 3.7, tx = Math.min(Math.max(X(medSd), PAD_L + w/2 + 2), W - PAD_R - w/2 - 2), ty = PAD_T + 4;
-    medLbl.sd = { tx, ty }; medBoxes.push({ x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 });
-  }
-  if (medRet != null) {
-    const w = medRetTxt.length * 3.7, tx = W - PAD_R - 2, ty = Y(medRet) - 3;
-    medLbl.ret = { tx, ty }; medBoxes.push({ x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 });
-  }
   let ppLbl = null;
   if (pp) {
     const cx = X(pp.sd), cy = Y(pp.ret), w = 8 * 4.6, right = cx + 9 + w <= W - PAD_R;
     ppLbl = { cx, cy, tx: right ? cx + 9 : cx - 9, ty: cy + 2.8, anchor: right ? "start" : "end" };
     const x0 = right ? cx + 9 : cx - 9 - w;
     medBoxes.push({ x0: cx - 7, x1: cx + 7, y0: cy - 7, y1: cy + 7 }, { x0, x1: x0 + w, y0: cy - 5, y1: cy + 4 });
+  }
+  // "Port SD" / "Port return" labels: take the first spot along their hairline that does not cover a dot,
+  // the Portfolio marker or the other label (Port return: right end first, then stepping left, above then below the line;
+  // Port SD: top first, then stepping down the line).
+  const boxClear = b => b.x0 >= PAD_L && b.x1 <= W - PAD_R && b.y0 >= 1 && b.y1 <= H - PAD_B + 1 &&
+    !medBoxes.some(o => hit(b, o)) && !dots.some(o => hit(b, dotBox(o)));
+  if (medRet != null) {
+    const w = medRetTxt.length * 3.7, yl = Y(medRet);
+    let pick = null;
+    search: for (let dx = 0; dx <= W - PAD_L - PAD_R - w; dx += 12) {
+      for (const dy of [-3, 9]) {
+        const tx = W - PAD_R - 2 - dx, ty = yl + dy, box = { x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 };
+        if (boxClear(box)) { pick = { tx, ty, box }; break search; }
+      }
+    }
+    if (!pick) { const tx = W - PAD_R - 2, ty = yl - 3; pick = { tx, ty, box: { x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 } }; }
+    medLbl.ret = { tx: pick.tx, ty: pick.ty }; medBoxes.push(pick.box);
+  }
+  if (medSd != null) {
+    const w = medSdTxt.length * 3.7, tx = Math.min(Math.max(X(medSd), PAD_L + w/2 + 2), W - PAD_R - w/2 - 2);
+    let pick = null;
+    for (let ty = PAD_T + 4; ty <= H - PAD_B - 3; ty += 9) {
+      const box = { x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 };
+      if (boxClear(box)) { pick = { ty, box }; break; }
+    }
+    if (!pick) { const ty = PAD_T + 4; pick = { ty, box: { x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 } }; }
+    medLbl.sd = { tx, ty: pick.ty }; medBoxes.push(pick.box);
   }
   const placedBoxes = medBoxes.slice();
   const labelByCode = {};
@@ -1682,6 +1760,10 @@ function drawRiskReturnDots(curves){
   }
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" data-w="${W}" data-h="${H}" data-pad-l="${PAD_L}" data-pad-r="${PAD_R}" data-pad-t="${PAD_T}" data-pad-b="${PAD_B}" xmlns="http://www.w3.org/2000/svg">`;
+  // Faint zone shading: green above 0% return, red below, so a point's zone reads at a glance.
+  const y0 = Math.min(Math.max(Y(0), PAD_T), H - PAD_B);
+  svg += `<rect class="rr-zone-pos" x="${PAD_L}" y="${PAD_T}" width="${W-PAD_L-PAD_R}" height="${(y0-PAD_T).toFixed(1)}" fill="#16a34a" fill-opacity=".07" pointer-events="none"/>`;
+  svg += `<rect class="rr-zone-neg" x="${PAD_L}" y="${y0.toFixed(1)}" width="${W-PAD_L-PAD_R}" height="${(H-PAD_B-y0).toFixed(1)}" fill="#dc2626" fill-opacity=".07" pointer-events="none"/>`;
   svg += `<line class="czero" x1="${PAD_L}" y1="${Y(0).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(0).toFixed(1)}"/>`;
   if (medSd != null) svg += `<line class="rr-median" x1="${X(medSd).toFixed(1)}" y1="${PAD_T}" x2="${X(medSd).toFixed(1)}" y2="${H-PAD_B}"><title>${medSdTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.sd.tx.toFixed(1)}" y="${medLbl.sd.ty.toFixed(1)}" text-anchor="middle">${medSdTxt}</text>`;
   if (medRet != null) svg += `<line class="rr-median" x1="${PAD_L}" y1="${Y(medRet).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(medRet).toFixed(1)}"><title>${medRetTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.ret.tx.toFixed(1)}" y="${medLbl.ret.ty.toFixed(1)}" text-anchor="end">${medRetTxt}</text>`;
@@ -1694,12 +1776,13 @@ function drawRiskReturnDots(curves){
   for (const p of pts) {
     const cx = X(p.sd).toFixed(1), cy = Y(p.ret).toFixed(1);
     const label=labelByCode[p.code];
+    const gk = encodeURIComponent(useSub ? `${p.main}\u0000${p.sub}` : `${p.main}\u0000${p.main}`);
     const selected=(state.catView==="sub" && state.highlightSubs.includes(`${p.main}\u0000${p.sub}`)) || (state.catView==="main" && state.highlightMains.includes(p.main));
-    if (label && label.distance > 17) svg += `<line class="rr-leader" x1="${cx}" y1="${cy}" x2="${label.tx.toFixed(1)}" y2="${(label.ty-3).toFixed(1)}"/>`;
-    svg += `<circle class="rr-point" cx="${cx}" cy="${cy}" r="${rOf(p.w).toFixed(1)}" fill="${p.color}" fill-opacity="${selected?'1':'0.75'}" stroke="${selected?'#0b1a3a':'#fff'}" stroke-width="${selected?'2.8':'1'}" data-sd="${p.sd.toFixed(2)}" data-ret="${p.ret.toFixed(2)}" ` +
-           `tabindex="0" role="img" aria-label="${p.code}: SD ${p.sd.toFixed(2)}%, return ${fmtPct(p.ret,2)}, weight ${p.w}%" onclick="showRRTip(event,\'${p.code}\')" onmouseenter="showRRTip(event,'${p.code}')" onmousemove="showRRTip(event,'${p.code}')" onfocus="showRRTip(event,'${p.code}')" onmouseleave="hideRRTip()" onblur="hideRRTip()">` +
-           `<title>${p.code} — SD ${p.sd.toFixed(2)}% · Return ${fmtPct(p.ret,2)} · weight ${p.w}%</title></circle>`;
-    if (label) svg += `<text class="rr-label" x="${label.tx.toFixed(1)}" y="${label.ty.toFixed(1)}" text-anchor="${label.anchor}">${p.code}</text>`;
+    if (label && label.distance > 17) svg += `<line class="rr-leader" data-gkey="${gk}" data-code="${p.code}" x1="${cx}" y1="${cy}" x2="${label.tx.toFixed(1)}" y2="${(label.ty-3).toFixed(1)}"/>`;
+    svg += `<circle class="rr-point" data-gkey="${gk}" data-code="${p.code}" cx="${cx}" cy="${cy}" r="${rOf(p.w).toFixed(1)}" fill="${p.color}" fill-opacity="${selected?'1':'0.75'}" stroke="${selected?'#0b1a3a':'#fff'}" stroke-width="${selected?'2.8':'1'}" data-sd="${p.sd.toFixed(2)}" data-ret="${p.ret.toFixed(2)}" data-w="${p.w}" ` +
+           `tabindex="0" role="img" aria-label="${p.code}: SD ${p.sd.toFixed(2)}%, return ${fmtPct(p.ret,2)}, weight ${p.w}%" onclick="pinRRDot(event,\'${p.code}\')" onmouseenter="showRRTip(event,'${p.code}')" onmousemove="showRRTip(event,'${p.code}')" onfocus="showRRTip(event,'${p.code}')" onmouseleave="hideRRTip()" onblur="hideRRTip()">` +
+           `</circle>`;   // no native <title>: the dark tooltip shows the weight; SD / Return are read off the hover hairlines
+    if (label) svg += `<text class="rr-label" data-gkey="${gk}" data-code="${p.code}" x="${label.tx.toFixed(1)}" y="${label.ty.toFixed(1)}" text-anchor="${label.anchor}">${p.code}</text>`;
   }
   if (pp) svg += `<g class="rr-portfolio" tabindex="0" role="img" aria-label="Portfolio: SD ${pp.sd.toFixed(2)}%, return ${fmtPct(pp.ret,2)}"><rect x="${(ppLbl.cx-4.5).toFixed(1)}" y="${(ppLbl.cy-4.5).toFixed(1)}" width="9" height="9" transform="rotate(45 ${ppLbl.cx.toFixed(1)} ${ppLbl.cy.toFixed(1)})" fill="#0b1a3a" stroke="#fff" stroke-width="1.2"/><text class="rr-label" x="${ppLbl.tx.toFixed(1)}" y="${ppLbl.ty.toFixed(1)}" text-anchor="${ppLbl.anchor}" style="font-weight:800;fill:#0b1a3a">Portfolio</text><title>Portfolio — SD ${pp.sd.toFixed(2)}% · Return ${fmtPct(pp.ret,2)} (from the buy-and-hold portfolio curve)</title></g>`;
   svg += `<text class="caxis" x="${PAD_L}" y="${H-4}" text-anchor="start">SD ${xmin.toFixed(1)}%</text>`;
@@ -1708,26 +1791,42 @@ function drawRiskReturnDots(curves){
   svg += `<text class="caxis" x="${PAD_L-4}" y="${Y(ymin).toFixed(1)}" text-anchor="end" dy="3">${fmtPct(ymin,0)}</text>`;
   svg += `</svg>`;
   $w.innerHTML = svg;
+  applyPieSelToDots();
+  applyRRPin();
+}
+// A pie slice was clicked (window._pieSelKey): fade every dot that is not in that group.
+function applyPieSelToDots(){
+  const svg = document.querySelector("#rr-chart-wrap svg"); if (!svg) return;
+  const k = window._pieSelKey || null;
+  svg.classList.toggle("pie-sel", !!k);
+  svg.querySelectorAll("[data-gkey]").forEach(el => el.classList.toggle("pie-on", !!k && decodeURIComponent(el.dataset.gkey) === k));
 }
 
 // Hover tooltip plus projected guides to both axes. This keeps dense charts
 // readable while preserving exact Return and SD values for every point.
 // visual-px per local-px of an element (1 normally; <1 while fit-to-screen scaling is on)
 function kOf(el){ return (el && el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1) || 1; }
+// Default spot for the dot chart's info box: top-right corner of the plot; remembered once the user drags it.
+window._rrBoxPos = null;
+function rrPlaceBox($t, $card){
+  if (window._rrBoxPos) { $t.style.left = window._rrBoxPos.x + "px"; $t.style.top = window._rrBoxPos.y + "px"; return; }
+  const wrap = document.getElementById("rr-chart-wrap");
+  if (!wrap) return;
+  const cr = $card.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), kk = kOf($card);
+  $t.style.left = Math.max(0, (wr.right - cr.left) / kk - $t.offsetWidth - 8) + "px";
+  $t.style.top = ((wr.top - cr.top) / kk + 6) + "px";
+}
 function showRRTip(evt, code){
+  if (window._rrPin && !(evt && evt._pin)) return;   // a clicked dot keeps its hairlines + info box
   const $t = document.getElementById("rr-tooltip");
   const $card = document.getElementById("rr-chart-card");
   const point = evt.currentTarget;
   if (!$t || !$card || !point) return;
   const rect = $card.getBoundingClientRect();
   const sd = Number(point.dataset.sd), ret = Number(point.dataset.ret);
-  $t.textContent = `${code} · Return ${fmtPct(ret,2)} · SD ${sd.toFixed(2)}%`;
-  const clientX = Number.isFinite(evt.clientX) && evt.clientX ? evt.clientX : rect.left + rect.width/2;
-  const clientY = Number.isFinite(evt.clientY) && evt.clientY ? evt.clientY : rect.top + rect.height/2;
-  const kk = kOf($card);
-  $t.style.left = ((clientX - rect.left) / kk) + "px";
-  $t.style.top = ((clientY - rect.top) / kk) + "px";
+  $t.textContent = `${code} · weight ${Number(point.dataset.w).toFixed(2)}%`;
   $t.style.display = "block";
+  rrPlaceBox($t, $card);
 
   const svg = point.ownerSVGElement;
   const guides = svg && svg.querySelector("#rr-hover-guides");
@@ -1752,7 +1851,8 @@ function showRRTip(evt, code){
   vy.setAttribute("x",PAD_L-21.5); vy.setAttribute("y",byY+9); vy.textContent=fmtPct(ret,2);
   guides.style.display="";
 }
-function hideRRTip(){
+function hideRRTip(force){
+  if (window._rrPin && !force) return;
   const $t = document.getElementById("rr-tooltip");
   if ($t) $t.style.display = "none";
   const svg=document.querySelector("#rr-chart-wrap svg");
@@ -1762,6 +1862,52 @@ function hideRRTip(){
   const guides=svg.querySelector("#rr-hover-guides");
   if (guides) guides.style.display="none";
 }
+
+// ---- click a dot: pin it (hairlines + draggable info box stay, other dots drop back) ----
+window._rrPin = null;   // { code }
+function applyRRPin(){
+  const $t = document.getElementById("rr-tooltip");
+  const svg = document.querySelector("#rr-chart-wrap svg");
+  const pin = window._rrPin;
+  if (!pin) { if ($t) $t.classList.remove("pinned", "dragging"); if (svg) { svg.classList.remove("rr-pinned"); svg.querySelectorAll(".pin-on").forEach(el => el.classList.remove("pin-on")); } return; }
+  const pt = svg && [...svg.querySelectorAll(".rr-point")].find(c => c.dataset.code === pin.code);
+  if (!pt) { window._rrPin = null; hideRRTip(true); applyRRPin(); return; }   // that fund is no longer plotted
+  svg.classList.add("rr-pinned");
+  svg.querySelectorAll("[data-code]").forEach(el => el.classList.toggle("pin-on", el.dataset.code === pin.code));
+  showRRTip({ currentTarget: pt, _pin: true }, pin.code);
+  $t.classList.add("pinned");
+  $t.style.display = "block"; rrPlaceBox($t, document.getElementById("rr-chart-card"));
+}
+function pinRRDot(evt, code){
+  if (!evt.currentTarget) return;
+  window._rrPin = { code };
+  applyRRPin();
+}
+(function(){
+  const $t = document.getElementById("rr-tooltip");
+  if (!$t) return;
+  $t.addEventListener("mousedown", e => {
+    if (!window._rrPin || e.button !== 0) return;
+    e.preventDefault();
+    const par = $t.parentElement, kk = kOf(par);
+    const sx = e.clientX, sy = e.clientY, ox = parseFloat($t.style.left) || 0, oy = parseFloat($t.style.top) || 0;
+    $t.classList.add("dragging");
+    const move = ev => {
+      const box = par.getBoundingClientRect(), M = 4, tw = $t.offsetWidth * kk, th = $t.offsetHeight * kk;
+      const x = Math.min(Math.max((M - box.left) / kk, ox + (ev.clientX - sx) / kk), (innerWidth - M - tw - box.left) / kk);
+      const y = Math.min(Math.max((M - box.top) / kk, oy + (ev.clientY - sy) / kk), (innerHeight - M - th - box.top) / kk);
+      window._rrBoxPos = { x, y };
+      $t.style.left = x + "px"; $t.style.top = y + "px";
+    };
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); $t.classList.remove("dragging"); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
+  document.addEventListener("click", e => {
+    if (!window._rrPin) return;
+    if (e.target.closest && (e.target.closest("#rr-chart-wrap .rr-point") || e.target.closest("#rr-tooltip"))) return;
+    window._rrPin = null; hideRRTip(true); applyRRPin();   // click anywhere else clears it
+  });
+})();
 
 function arcPath(CX, CY, R, IR, a0, a1){
   const x0 = CX + R*Math.cos(a0), y0 = CY + R*Math.sin(a0);
@@ -1804,7 +1950,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     const frac = g.w / scaleDen;
     const a1 = a0 + frac * 2 * Math.PI;
     const tip = `${state.catView==='sub' ? g.main+' · ' : ''}${g.name} · ${g.w.toFixed(0)}%\n  ${g.codes.join("\n  ")}`;
-    segs += `<path class="donut-seg" data-i="${groups.indexOf(g)}" d="${arcPath(CX,CY,R,IR,a0,a1)}" fill="${g.color}"></path>`;
+    segs += `<path class="donut-seg" data-key="${encodeURIComponent(g.main+"\u0000"+g.name)}" data-i="${groups.indexOf(g)}" d="${arcPath(CX,CY,R,IR,a0,a1)}" fill="${g.color}"></path>`;
     slices.push({ name: g.name, frac, a0, a1, color: g.color });
     a0 = a1;
   }
@@ -1853,6 +1999,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     <text x="80" y="96" text-anchor="middle" style="font-size:13px">${donutInvest?'invested':'allocated'}</text>
   </svg>`;
   window._donutGroups = groups;
+  if (window._donutApplySel) window._donutApplySel();   // keep a pinned (clicked) slice across re-renders
 
   // Legend: ordered category rows (return-contribution shown per row, so the
   // one dragging performance down for this window stands out) + residual
