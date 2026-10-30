@@ -44,7 +44,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .chart-group.cat-toggle { border:1px solid var(--rule); border-radius:5px; overflow:hidden; }
 .chart-group.cat-toggle button { border:none; background:#fff; color:var(--grey); font-size:10px; font-weight:700; padding:3px 8px; cursor:pointer; text-transform:uppercase; letter-spacing:.03em; }
 .chart-group.cat-toggle button + button { border-left:1px solid var(--rule); }
-.chart-group.cat-toggle button.active { background:var(--cyan); color:#fff; }
+.chart-group.cat-toggle button.active { background:#0369a1; color:#fff; }
 .layout.editor-collapsed .editor-expanded { display:none; }
 .layout.editor-collapsed .editor-rail:not(.perf-rail) { display:block; }
 @media (max-width:1600px) and (min-width:901px) {
@@ -246,7 +246,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend .cat-toggle button { border:none; background:#fff; color:var(--grey); font-size:10px; font-weight:700;
   padding:2px 7px; cursor:pointer; text-transform:uppercase; letter-spacing:0.03em; }
 .cat-legend .cat-toggle button + button { border-left:1px solid var(--rule); }
-.cat-legend .cat-toggle button.active { background:var(--cyan); color:#fff; }
+.cat-legend .cat-toggle button.active { background:#0369a1; color:#fff; }
 .donut-period { margin-top:4px; font-size:16px; font-weight:800; color:#2563eb; text-transform:none; letter-spacing:0; }
 .cat-legend .basis-note { margin-top:8px; padding:6px 9px; border-radius:6px; background:#eff6ff; color:#1e3a8a; font-size:10.5px; line-height:1.45; }
 .cat-legend .leg-total { border-top:2px solid var(--rule); margin-top:4px; font-weight:800; }
@@ -495,7 +495,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     <div>
       <div class="card" id="rr-chart-card" style="position:relative;">
         <h2 class="rr-h2"><span>Risk vs Return</span><span class="chart-period" title="Same Period as in Portfolio Past Performance"><label for="win-select-2">Period</label><select id="win-select-2"></select></span><span class="chart-period chart-group cat-toggle" title="Group the donut and dot colours by Asset class or Sub-sector"><button id="grp-main" onclick="setCatView('main')">Asset class</button><button id="grp-sub" onclick="setCatView('sub')">Sub-sector</button></span></h2>
-        <div class="mini-chart-hdr">Each point is a fund <span>· labelled by fund code, sized by weight · dashed lines = weighted average SD / Return</span></div>
+        <div class="mini-chart-hdr">Each point is a fund <span>· labelled by fund code, sized by weight · ◆ = portfolio · dashed = Port SD / Port return</span></div>
         <div class="chart-wrap mini" id="rr-chart-wrap"></div>
         <div class="rr-tip" id="rr-tooltip"></div>
         <div class="mini-chart" id="mini-chart-card">
@@ -615,8 +615,6 @@ function navIssue(code, startIdx, endIdx){
   const step = NAV_SERIES[code];
   if (!step) return 'No NAV history';
   const start = NAV_GRID[startIdx], end = NAV_GRID[endIdx];
-  const last = NAV_GRID[step[0][step[0].length-1]];
-  if ((Date.parse(end)-Date.parse(last))/86400000 > MAX_NAV_AGE) return `Stale NAV · ${last}`;
   let previous = null;
   for (let i=0; i<step[0].length; i++) {
     const d = NAV_GRID[step[0][i]];
@@ -628,6 +626,9 @@ function navIssue(code, startIdx, endIdx){
     }
   }
   if (!previous || navAtIdx(step,startIdx) == null) return 'Insufficient history';
+  // `previous` is now the last NAV on/before the window end (not the last NAV in the whole
+  // dataset), so a back-dated AS OF is checked against the data that actually existed then.
+  if ((Date.parse(end)-Date.parse(previous))/86400000 > MAX_NAV_AGE) return `Stale NAV · ${previous}`;
   return null;
 }
 
@@ -1236,7 +1237,8 @@ function renderStats(){
   const $lbl = document.getElementById("big-ret-lbl");
   const $v = document.getElementById("big-ret-v");
   const $h = document.getElementById("big-ret-hint");
-  $lbl.textContent = `${state.basis==="fund"?"Covered Fund Sleeve":"Portfolio Model"} Return — ${winLbl}`;
+  const partial = !!(s.real && s.nExcluded);
+  $lbl.textContent = `${partial?"Analysed portion · ":""}${state.basis==="fund"?"Covered Fund Sleeve":"Portfolio Model"} Return — ${winLbl}`;
   $v.className = "v " + pctClass(s.ret);
   $v.textContent = s.ret == null ? "—" : fmtPct(s.ret, 2);
   if (!state.holdings.length) {
@@ -1246,7 +1248,7 @@ function renderStats(){
     const excludedDisplay=state.basis==="fund"&&historicalSumw>0?s.excludedWeight/historicalSumw*100:s.excludedWeight;
     const excNote = s.nExcluded ? ` · ${coveredDisplay.toFixed(0)}% covered; ${excludedDisplay.toFixed(0)}% not analysed and covered portion renormalised` : "";
     const overlayNote = justIncludedWeight > 0.001 ? ` · ${justIncludedWeight.toFixed(2)}% Just Include shown in Allocation only` : "";
-    const basisNote=state.basis==="fund"?"covered mutual-fund investments only":"cash/other assets assumed 0%";
+    const basisNote=(state.basis==="fund"?"covered mutual-fund investments only":"cash/other assets assumed 0%")+" · NAV price return, excl. dividends";
     $h.textContent = `${basisNote} · buy-and-hold, ${s.startDate} → ${s.asofDate}${excNote}${overlayNote}`;
   } else {
     const allocNote = sumw < 100 ? ` · ${(100-sumw).toFixed(0)}% Other Assets / Cash` : "";
@@ -1579,8 +1581,11 @@ function drawRiskReturnDots(curves){
   }
 
   const W = 460, H = 230, PAD_L = 30, PAD_R = 10, PAD_T = 13, PAD_B = 18;
-  let xmin = 0, xmax = Math.max(...pts.map(p => p.sd));
-  let ymin = Math.min(0, ...pts.map(p => p.ret)), ymax = Math.max(0, ...pts.map(p => p.ret));
+  // The portfolio itself (diamond): SD and return both come from the buy-and-hold curve.
+  const ps = portfolioStats(curves);
+  const pp = ps && ps.real && ps.sd != null && ps.ret != null ? { sd: ps.sd, ret: ps.ret } : null;
+  let xmin = 0, xmax = Math.max(...pts.map(p => p.sd), pp ? pp.sd : 0);
+  let ymin = Math.min(0, ...pts.map(p => p.ret), pp ? pp.ret : 0), ymax = Math.max(0, ...pts.map(p => p.ret), pp ? pp.ret : 0);
   xmax += (xmax - xmin) * 0.15 || 1;
   const ypad = (ymax - ymin) * 0.15 || 1;
   ymin -= ypad; ymax += ypad;
@@ -1597,17 +1602,12 @@ function drawRiskReturnDots(curves){
   const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
   const dotBox = d => ({ x0: d.cx - d.r - 1, x1: d.cx + d.r + 1, y0: d.cy - d.r - 1, y1: d.cy + d.r + 1 });
   const crowd = d => dots.reduce((n, o) => n + (o !== d && Math.hypot(o.cx - d.cx, o.cy - d.cy) < 45 ? 1 : 0), 0);
-  // Weighted-AVERAGE SD / Return as dashed lines. Weights are the starting weights the
-  // portfolio curve itself uses in the active basis (Portfolio model: % of the whole
-  // portfolio, cash counts 0; Fund sleeve: rescaled to the included funds), so the
-  // Return line equals the portfolio / fund-sleeve return for the selected period.
-  // The SD line is the weighted average of each fund's SD (it ignores diversification,
-  // so it sits above the portfolio's own StdDev).
-  const wAvg = key => { const t = pts.reduce((a,p)=>a+p.bw,0); return t > 0 ? pts.reduce((a,p)=>a+p.bw*p[key],0) : null; };
-  const medSd = pts.length ? wAvg("sd") : null;
-  const medRet = pts.length ? wAvg("ret") : null;
-  const medSdTxt = medSd == null ? "" : `Wtd avg SD ${medSd.toFixed(1)}%`;
-  const medRetTxt = medRet == null ? "" : `Wtd avg return ${fmtPct(medRet,1)}`;
+  // Dashed hairlines mark the portfolio itself: Port SD (vertical) and Port return (horizontal),
+  // both read from the buy-and-hold portfolio curve, so they cross exactly at the diamond.
+  const medSd = pp ? pp.sd : null;   // Port SD: from the buy-and-hold portfolio curve (includes diversification)
+  const medRet = pp ? pp.ret : null;
+  const medSdTxt = medSd == null ? "" : `Port SD ${medSd.toFixed(1)}%`;
+  const medRetTxt = medRet == null ? "" : `Port return ${fmtPct(medRet,1)}`;
   const medLbl = {};
   const medBoxes = [];
   if (medSd != null) {
@@ -1617,6 +1617,13 @@ function drawRiskReturnDots(curves){
   if (medRet != null) {
     const w = medRetTxt.length * 3.7, tx = W - PAD_R - 2, ty = Y(medRet) - 3;
     medLbl.ret = { tx, ty }; medBoxes.push({ x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 });
+  }
+  let ppLbl = null;
+  if (pp) {
+    const cx = X(pp.sd), cy = Y(pp.ret), w = 8 * 4.6, right = cx + 9 + w <= W - PAD_R;
+    ppLbl = { cx, cy, tx: right ? cx + 9 : cx - 9, ty: cy + 2.8, anchor: right ? "start" : "end" };
+    const x0 = right ? cx + 9 : cx - 9 - w;
+    medBoxes.push({ x0: cx - 7, x1: cx + 7, y0: cy - 7, y1: cy + 7 }, { x0, x1: x0 + w, y0: cy - 5, y1: cy + 4 });
   }
   const placedBoxes = medBoxes.slice();
   const labelByCode = {};
@@ -1645,8 +1652,8 @@ function drawRiskReturnDots(curves){
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" data-w="${W}" data-h="${H}" data-pad-l="${PAD_L}" data-pad-r="${PAD_R}" data-pad-t="${PAD_T}" data-pad-b="${PAD_B}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<line class="czero" x1="${PAD_L}" y1="${Y(0).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(0).toFixed(1)}"/>`;
-  if (medSd != null) svg += `<line class="rr-median" x1="${X(medSd).toFixed(1)}" y1="${PAD_T}" x2="${X(medSd).toFixed(1)}" y2="${H-PAD_B}"><title>${medSdTxt} (weight-averaged with the portfolio's own starting weights)</title></line><text class="rr-median-lbl" x="${medLbl.sd.tx.toFixed(1)}" y="${medLbl.sd.ty.toFixed(1)}" text-anchor="middle">${medSdTxt}</text>`;
-  if (medRet != null) svg += `<line class="rr-median" x1="${PAD_L}" y1="${Y(medRet).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(medRet).toFixed(1)}"><title>${medRetTxt} (weight-averaged with the portfolio's own starting weights)</title></line><text class="rr-median-lbl" x="${medLbl.ret.tx.toFixed(1)}" y="${medLbl.ret.ty.toFixed(1)}" text-anchor="end">${medRetTxt}</text>`;
+  if (medSd != null) svg += `<line class="rr-median" x1="${X(medSd).toFixed(1)}" y1="${PAD_T}" x2="${X(medSd).toFixed(1)}" y2="${H-PAD_B}"><title>${medSdTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.sd.tx.toFixed(1)}" y="${medLbl.sd.ty.toFixed(1)}" text-anchor="middle">${medSdTxt}</text>`;
+  if (medRet != null) svg += `<line class="rr-median" x1="${PAD_L}" y1="${Y(medRet).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(medRet).toFixed(1)}"><title>${medRetTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.ret.tx.toFixed(1)}" y="${medLbl.ret.ty.toFixed(1)}" text-anchor="end">${medRetTxt}</text>`;
   svg += `<g id="rr-hover-guides" style="display:none" aria-hidden="true">` +
     `<line id="rr-guide-x" class="rr-guide"/><line id="rr-guide-y" class="rr-guide"/>` +
     `<rect id="rr-badge-x" class="rr-axis-badge" rx="3" width="48" height="13"/>` +
@@ -1663,6 +1670,7 @@ function drawRiskReturnDots(curves){
            `<title>${p.code} — SD ${p.sd.toFixed(2)}% · Return ${fmtPct(p.ret,2)} · weight ${p.w}%</title></circle>`;
     if (label) svg += `<text class="rr-label" x="${label.tx.toFixed(1)}" y="${label.ty.toFixed(1)}" text-anchor="${label.anchor}">${p.code}</text>`;
   }
+  if (pp) svg += `<g class="rr-portfolio" tabindex="0" role="img" aria-label="Portfolio: SD ${pp.sd.toFixed(2)}%, return ${fmtPct(pp.ret,2)}"><rect x="${(ppLbl.cx-4.5).toFixed(1)}" y="${(ppLbl.cy-4.5).toFixed(1)}" width="9" height="9" transform="rotate(45 ${ppLbl.cx.toFixed(1)} ${ppLbl.cy.toFixed(1)})" fill="#0b1a3a" stroke="#fff" stroke-width="1.2"/><text class="rr-label" x="${ppLbl.tx.toFixed(1)}" y="${ppLbl.ty.toFixed(1)}" text-anchor="${ppLbl.anchor}" style="font-weight:800;fill:#0b1a3a">Portfolio</text><title>Portfolio — SD ${pp.sd.toFixed(2)}% · Return ${fmtPct(pp.ret,2)} (from the buy-and-hold portfolio curve)</title></g>`;
   svg += `<text class="caxis" x="${PAD_L}" y="${H-4}" text-anchor="start">SD ${xmin.toFixed(1)}%</text>`;
   svg += `<text class="caxis" x="${W-PAD_R}" y="${H-4}" text-anchor="end">SD ${xmax.toFixed(1)}%</text>`;
   svg += `<text class="caxis" x="${PAD_L-4}" y="${Y(ymax).toFixed(1)}" text-anchor="end" dy="3">${fmtPct(ymax,0)}</text>`;
