@@ -273,6 +273,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend .leg-columns { color:var(--grey); font-size:9px; font-weight:700;
   text-transform:uppercase; letter-spacing:0.025em; border-bottom:1px solid var(--soft); margin-bottom:2px; }
 .cat-legend .leg-columns span:not(:nth-child(2)) { text-align:right; }
+.cat-legend .leg-group { border-radius:8px; padding:2px 8px 4px; margin:6px 0; }   /* tinted box per Asset class (Sub-sector view); colour set inline */
 .cat-legend .leg-master { margin-top:3px; margin-bottom:1px; padding:4px 0 3px;
   border-bottom:1px solid #dbe2ea; }
 .cat-legend .leg-master .leg-name { font-weight:700; color:var(--scb); }
@@ -306,6 +307,8 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend .leg-detail-exclude.st-exclude { background:#fff7ed; }
 .cat-legend .leg-detail-exclude.st-just { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
 .cat-legend .leg-detail-exclude:hover { background:#ffedd5; border-color:#f97316; }
+/* Fund rows sit inside a tinted Asset-class box (7px details padding + 8px box padding = 15px): keep the status button outside that box. */
+.cat-legend .leg-group .leg-detail-exclude { left:calc(100% + 16px); }
 @media (max-width:900px) {
   .cat-legend .leg-detail-exclude { position:static; transform:none; width:16px; grid-column:1/-1; justify-self:end; }
 }
@@ -442,6 +445,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           <button class="reset" onclick="document.getElementById('load-file').click()" title="Open a saved .json file. This REPLACES the current holdings and weights with the file's (funds not in this dataset are skipped).">Load</button>
           <input type="file" id="load-file" accept="application/json,.json" style="display:none" onchange="loadPortfolioFile(this)">
         </div>
+        <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged).</div>
       </div>
       </div>
       <div class="editor-rail card" aria-label="Fund inputs hidden">
@@ -556,9 +560,11 @@ const state = {
   basis: "portfolio",     // "portfolio" cash model (default) | "fund" sleeve
   catView: "main",        // "main" | "sub" — allocation donut/legend grouping
   highlightSubs: [],       // Sub-categories whose details remain open until toggled closed
-  highlightMain: null,     // clicked Asset class highlighted on Risk vs Return
+  highlightMains: [],      // clicked Asset classes highlighted on Risk vs Return
   editorCollapsed: false,  // hide fund inputs to prioritise the two analysis columns
   hideAttribution: false,  // allocation-only table hides Return and Contribution
+  rowOpen: {},             // per-row override of showFunds (click a row to show/hide just its funds)
+  showFunds: false,        // list the funds under each row (both views); off by default — click a row or the ▾ button
   tableCollapsed: false,   // hide the allocation performance table (header stays)
   perfCollapsed: false,    // hide the whole Portfolio Past Performance column (rail stays)
 };
@@ -610,6 +616,19 @@ function windowStartDate(win, asofIso){
   return d.toISOString().slice(0, 10);
 }
 
+// Display-only: an Include fund whose NAV does not cover the selected window keeps its saved status. A fund that simply
+// did not exist yet at the window start ("Insufficient history") is treated exactly like a newly added fund — not yet
+// bought: shown in Allocation only, 0% Return / Contribution. Real data problems (stale NAV, gaps) stay "Not analysed".
+const isNewIssue = i => i && i.reason === 'Insufficient history';
+function firstNavDate(code){ const st = NAV_SERIES[code]; return st && st[0].length ? NAV_GRID[st[0][0]] : null; }
+function noDataText(code, reason, short){
+  if (reason === 'Insufficient history') {
+    const d = firstNavDate(code);
+    return short ? `New in ${WINDOWS[state.win]} · NAV starts ${d || '?'} — Allocation only`
+                 : `New in ${WINDOWS[state.win]}: NAV starts ${d || 'later'}, so it is treated like a newly added fund (not yet bought) — shown in Allocation only`;
+  }
+  return short ? `Include · no data for ${WINDOWS[state.win]} — Allocation only` : `Include · no data for ${WINDOWS[state.win]} (${reason}) — shown in Allocation only`;
+}
 const MAX_NAV_AGE = 7; // Calendar days; shown explicitly in the methodology.
 function navIssue(code, startIdx, endIdx){
   const step = NAV_SERIES[code];
@@ -997,7 +1016,7 @@ function rearrangeByRisk(){
 
 function setCatView(v){
   state.catView = v;
-  if (v !== "main") state.highlightMain = null;
+  if (v !== "main") state.highlightMains = [];
   syncGroupToggle();
   renderStats();
 }
@@ -1007,6 +1026,11 @@ function setBasis(v){
   render();
 }
 
+function isRowOpen(key){ return Object.prototype.hasOwnProperty.call(state.rowOpen,key) ? state.rowOpen[key] : state.showFunds; }
+function toggleRowOpen(key){ state.rowOpen[key]=!isRowOpen(key); }
+// The ▴/▾ button beside the table title = "click every row at once": hides / shows ONLY the fund rows under
+// every Asset class / Sub-sector (the category rows themselves stay). Clears per-row overrides.
+function toggleFunds(){ state.showFunds=!state.showFunds; state.rowOpen={}; renderStats(); }
 function toggleTable(){ state.tableCollapsed=!state.tableCollapsed; renderStats(); }
 function toggleAttribution(){
   state.hideAttribution=!state.hideAttribution;
@@ -1021,7 +1045,8 @@ function setHighlightSub(key){
 }
 
 function setHighlightMain(name){
-  state.highlightMain = state.highlightMain === name ? null : name;
+  const i = state.highlightMains.indexOf(name);
+  if (i >= 0) state.highlightMains.splice(i,1); else state.highlightMains.push(name);
   renderStats();
 }
 
@@ -1109,14 +1134,15 @@ function renderHoldingsList(){
       const sdReal = leg ? sdFromSeries(leg.series) : null;
       const sdFallback = null;
       const sdVal = sdReal != null ? sdReal : sdFallback;
-      const sdLabel = excluded ? "—" : just ? "Allocation only" : (sdVal != null ? sdVal.toFixed(2) : "—");
+      const issue = (!excluded && !just && !leg && curves) ? curves.issues.find(i => i.code === h.code) : null;
+      const sdLabel = excluded ? "—" : just ? "Allocation only" : issue ? (isNewIssue(issue) ? "New" : "No data") : (sdVal != null ? sdVal.toFixed(2) : "—");
       const sdTitle = sdReal != null
         ? `Annualised SD computed from this fund's own daily NAV over the selected ${WINDOWS[state.win]} period.`
         : (sdFallback != null
             ? `No daily NAV history for this fund over the selected period — showing its naive 1Y/3Y/5Y SD instead.`
-            : `SD not available.`);
+            : (issue ? noDataText(h.code, issue.reason) : `SD not available.`));
       const iwVal = leg ? (state.basis==="fund"?leg.fundStartW:leg.startW) * 100 : null;
-      const iwLabel = excluded ? "—" : just ? "New" : (iwVal != null ? iwVal.toFixed(1) : "—");
+      const iwLabel = excluded ? "—" : (just || isNewIssue(issue)) ? "New" : (iwVal != null ? iwVal.toFixed(1) : "—");
       const iwTitle = excluded
         ? `Excluded: today's ${h.w}% saved weight is omitted from Allocation and Performance.`
         : just
@@ -1202,17 +1228,20 @@ function renderStats(){
   const statusLines = [];
   if (excludedWeight > 0.001) statusLines.push(`<div class="status-line"><b>Excluded ${excludedWeight.toFixed(2)}%</b> · omitted from Allocation and Performance.</div>`);
   if (justIncludedWeight > 0.001) statusLines.push(`<div class="status-line"><b>Just Include ${justIncludedWeight.toFixed(2)}%</b> · Allocation only; Return and Contribution are 0%, historical performance is unchanged.</div>`);
-  if (issues.length && curves && curves.stats.coveredWeight > 0) {
-    const unavailable=issues.reduce((total,issue)=>total+issue.weight,0);
+  const dataIssues = issues.filter(i => !isNewIssue(i)), newIssues = issues.filter(isNewIssue);
+  if (curves && curves.stats.coveredWeight > 0) {
+   if (dataIssues.length) {
+    const unavailable=dataIssues.reduce((total,issue)=>total+issue.weight,0);
     const coverage=state.basis==="fund"&&historicalSumw>0?curves.stats.coveredWeight/historicalSumw*100:curves.stats.coveredWeight;
     const unavailableShown=state.basis==="fund"&&historicalSumw>0?unavailable/historicalSumw*100:unavailable;
     const unit=state.basis==="fund"?"of fund investments":"of portfolio";
     statusLines.unshift(`<div class="status-line"><b>Analysed ${coverage.toFixed(1)}% ${unit}</b> · Not analysed ${unavailableShown.toFixed(1)}%. The covered sleeve is renormalised.</div>`);
+   }
   } else if (issues.length) {
     statusLines.unshift(`<div class="status-line">No weighted holding covers this period.</div>`);
   }
   for (const issue of issues) {
-    statusLines.push(`<div class="status-line status-issue"><span><b>${issue.code}</b> (${issue.weight}%): Not analysed · ${issue.reason}</span><button class="status-exclude" data-code="${encodeURIComponent(issue.code)}" title="Show this weight in Allocation only, at 0% Return and Contribution" onclick="setHoldingStatus(decodeURIComponent(this.dataset.code),'just')">Just Include</button></div>`);
+    statusLines.push(`<div class="status-line status-issue"><span><b>${issue.code}</b> (${issue.weight}%): ${noDataText(issue.code, issue.reason)}</span><button class="status-exclude" data-code="${encodeURIComponent(issue.code)}" title="Show this weight in Allocation only, at 0% Return and Contribution" onclick="setHoldingStatus(decodeURIComponent(this.dataset.code),'just')">Just Include</button></div>`);
   }
   if (state.holdings.length && curves && curves.legs.length && state.win <= 1 && curves.dates.length >= 3) {
     statusLines.push(`<div class="status-line">${WINDOWS[state.win]} SD and Sharpe use only ${curves.dates.length-1} daily returns and can be highly unstable.</div>`);
@@ -1237,7 +1266,7 @@ function renderStats(){
   const $lbl = document.getElementById("big-ret-lbl");
   const $v = document.getElementById("big-ret-v");
   const $h = document.getElementById("big-ret-hint");
-  const partial = !!(s.real && s.nExcluded);
+  const partial = !!(s.real && dataIssues.length);
   $lbl.textContent = `${partial?"Analysed portion · ":""}${state.basis==="fund"?"Covered Fund Sleeve":"Portfolio Model"} Return — ${winLbl}`;
   $v.className = "v " + pctClass(s.ret);
   $v.textContent = s.ret == null ? "—" : fmtPct(s.ret, 2);
@@ -1245,11 +1274,13 @@ function renderStats(){
     $h.textContent = "add a holding to see the weighted estimate";
   } else if (s.real) {
     const coveredDisplay=state.basis==="fund"&&historicalSumw>0?s.coveredWeight/historicalSumw*100:s.coveredWeight;
-    const excludedDisplay=state.basis==="fund"&&historicalSumw>0?s.excludedWeight/historicalSumw*100:s.excludedWeight;
-    const excNote = s.nExcluded ? ` · ${coveredDisplay.toFixed(0)}% covered; ${excludedDisplay.toFixed(0)}% not analysed and covered portion renormalised` : "";
+    const dataW = dataIssues.reduce((t,i)=>t+i.weight,0), newW = newIssues.reduce((t,i)=>t+i.weight,0);
+    const excludedDisplay=state.basis==="fund"&&historicalSumw>0?dataW/historicalSumw*100:dataW;
+    const newNote = newIssues.length ? ` · ${newW.toFixed(0)}% new in this period (not yet bought) shown in Allocation only` : "";
+    const excNote = dataIssues.length ? ` · ${coveredDisplay.toFixed(0)}% covered; ${excludedDisplay.toFixed(0)}% not analysed and covered portion renormalised` : "";
     const overlayNote = justIncludedWeight > 0.001 ? ` · ${justIncludedWeight.toFixed(2)}% Just Include shown in Allocation only` : "";
     const basisNote=(state.basis==="fund"?"covered mutual-fund investments only":"cash/other assets assumed 0%")+" · NAV price return, excl. dividends";
-    $h.textContent = `${basisNote} · buy-and-hold, ${s.startDate} → ${s.asofDate}${excNote}${overlayNote}`;
+    $h.textContent = `${basisNote} · buy-and-hold, ${s.startDate} → ${s.asofDate}${excNote}${newNote}${overlayNote}`;
   } else {
     const allocNote = sumw < 100 ? ` · ${(100-sumw).toFixed(0)}% Other Assets / Cash` : "";
     $h.textContent = `Insufficient NAV history for this period${allocNote}`;
@@ -1512,8 +1543,8 @@ function drawPerfChart(curves){
         if (i.ret!=null && !i.just) { sc += i.w*i.ret; sb += i.w; }
         if (i.contrib!=null) { ct += i.contrib; cd = true; }
       }
-      // Sub-sector view: the slice IS the sub-sector, so its summary is already in the header.
-      if (!(state.catView==="sub" && Object.keys(subs).length===1)) out += row("dt-sub", name, sw, sb>0 ? sc/sb : null, cd ? ct : null);
+      // Asset-class view lists the funds directly (no Sub-sector rows); Sub-sector view only shows a sub row when the slice mixes several.
+      if (state.catView==="sub" && Object.keys(subs).length!==1) out += row("dt-sub", name, sw, sb>0 ? sc/sb : null, cd ? ct : null);
       for (const i of its.sort((a,b)=>b.w-a.w)) out += row("dt-fund", i.code + (i.just?" · Just Include":""), i.w, i.just ? null : i.ret, i.contrib);
     }
     return out;
@@ -1663,7 +1694,7 @@ function drawRiskReturnDots(curves){
   for (const p of pts) {
     const cx = X(p.sd).toFixed(1), cy = Y(p.ret).toFixed(1);
     const label=labelByCode[p.code];
-    const selected=(state.catView==="sub" && state.highlightSubs.includes(`${p.main}\u0000${p.sub}`)) || (state.catView==="main" && state.highlightMain===p.main);
+    const selected=(state.catView==="sub" && state.highlightSubs.includes(`${p.main}\u0000${p.sub}`)) || (state.catView==="main" && state.highlightMains.includes(p.main));
     if (label && label.distance > 17) svg += `<line class="rr-leader" x1="${cx}" y1="${cy}" x2="${label.tx.toFixed(1)}" y2="${(label.ty-3).toFixed(1)}"/>`;
     svg += `<circle class="rr-point" cx="${cx}" cy="${cy}" r="${rOf(p.w).toFixed(1)}" fill="${p.color}" fill-opacity="${selected?'1':'0.75'}" stroke="${selected?'#0b1a3a':'#fff'}" stroke-width="${selected?'2.8':'1'}" data-sd="${p.sd.toFixed(2)}" data-ret="${p.ret.toFixed(2)}" ` +
            `tabindex="0" role="img" aria-label="${p.code}: SD ${p.sd.toFixed(2)}%, return ${fmtPct(p.ret,2)}, weight ${p.w}%" onclick="showRRTip(event,\'${p.code}\')" onmouseenter="showRRTip(event,'${p.code}')" onmousemove="showRRTip(event,'${p.code}')" onfocus="showRRTip(event,'${p.code}')" onmouseleave="hideRRTip()" onblur="hideRRTip()">` +
@@ -1809,11 +1840,11 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       tags += `<text x="${t.x.toFixed(1)}" y="${(t.y + 2.2).toFixed(1)}" text-anchor="${anchor}" pointer-events="none" style="font-size:8px;fill:var(--ink);font-weight:700">${esc(nm)}<title>${esc(t.sl.name)}</title></text>`;
     }
   }
-  // Share printed on the coloured ring itself (grey-white; dark grey on the pale cash slice).
+  // Share printed on the coloured ring itself (white; dark grey on the pale cash slice).
   for (const sl of slices) {
     if (sl.frac < 0.06) continue;
     const am = (sl.a0 + sl.a1) / 2, rm = (R + IR) / 2, cash = sl.color === "#9ca3af";
-    tags += `<text x="${(CX + rm * Math.cos(am)).toFixed(1)}" y="${(CY + rm * Math.sin(am) + 2.6).toFixed(1)}" text-anchor="middle" pointer-events="none" style="font-size:7.5px;font-weight:700;fill:${cash ? "#6b7280" : "#e5e7eb"}">${(sl.frac*100).toFixed(0)}%</text>`;
+    tags += `<text x="${(CX + rm * Math.cos(am)).toFixed(1)}" y="${(CY + rm * Math.sin(am) + 2.6).toFixed(1)}" text-anchor="middle" pointer-events="none" style="font-size:7.5px;font-weight:700;fill:${cash ? "#6b7280" : "#fff"}">${(sl.frac*100).toFixed(0)}%</text>`;
   }
   $d.innerHTML = `<svg viewBox="-130 -10 420 180" xmlns="http://www.w3.org/2000/svg">
     ${segs}
@@ -1832,25 +1863,17 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     if (g.contrib!=null) acc[g.main]=(acc[g.main]||0)+g.contrib;
     return acc;
   },{});
-  const rows = groups.map(g => {
-    const retTxt = `<span class="leg-ret ${pctClass(g.ret)}">${fmtPct(g.ret,2)}</span>`;
-    const contribTxt = `<span class="leg-contrib ${pctClass(g.contrib)}">${fmtPct(g.contrib,2)}</span>`;
-    if (state.catView === "sub") {
-      const masterContrib=Object.prototype.hasOwnProperty.call(mainContrib,g.main)?mainContrib[g.main]:null;
-      const master = g.main !== previousMain
-        ? `<div class="leg-row leg-master"><span class="leg-name">${g.main}</span><span></span><span class="leg-contrib master-contrib ${pctClass(masterContrib)}" title="Total Contribution across all Sub-sectors in ${g.main}">${fmtPct(masterContrib,2)}</span><span class="leg-pct pf" title="Total portfolio weight across all Sub-sectors in ${g.main}">${fmtWeight(mainWeights[g.main])}</span><span class="leg-pct iv" title="Share of included fund investments across all Sub-sectors in ${g.main}">${sumw>0?fmtWeight(mainWeights[g.main]/sumw*100):'—'}</span></div>` : "";
-      previousMain=g.main;
-      const subKey=`${g.main}\u0000${g.name}`;
-      const selected=state.highlightSubs.includes(subKey);
-      const details = selected ? state.holdings.filter(h=>{
-        const f=byCode[h.code]; return isAllocated(h) && f && f.main===g.main && (f.cat || "Uncategorised")===g.name;
-      }).map(h=>{
+  // Fund rows (return / contribution / weights / status button) shown under a category row.
+  const detailHtml = pred => state.holdings.filter(h=>{
+    const f=byCode[h.code]; return isAllocated(h) && f && pred(f);
+  }).map(h=>{
         const leg=legByCode[h.code];
         const just=isJustIncluded(h);
         const ret=just ? 0 : (leg ? (leg.g-1)*100 : null);
         const contrib=just ? 0 : (leg && ret!=null ? (state.basis==="fund"?leg.fundStartW:leg.startW)*ret : null);
         const investWeight=sumw<=0 ? null : h.w/sumw*100;
-        const status=just ? "Just Include · Allocation only" : (!leg ? "Not analysed · insufficient history" : "Include");
+        const issue=(!just && !leg && curves) ? curves.issues.find(i=>i.code===h.code) : null;
+        const status=just ? "Just Include · Allocation only" : (!leg ? (issue ? noDataText(h.code, issue.reason, true) : "Include · no data — Allocation only") : "Include");
         return `<div class="leg-detail-row ${just ? 'just-include' : ''}">
           <span class="leg-detail-code" title="${byCode[h.code].name}">${h.code}${status ? `<small class="leg-detail-status">${status}</small>` : ''}</span>
           <span class="leg-detail-num ${pctClass(ret)}">${fmtPct(ret,2)}</span>
@@ -1859,15 +1882,28 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
           <span class="leg-detail-num iv">${investWeight==null?'—':fmtWeight(investWeight)}</span>
           <button class="leg-detail-exclude st-${holdingStatus(h)}" data-code="${encodeURIComponent(h.code)}" data-tip="${statusTip(h)}" aria-label="${statusLabel(h)} status for ${h.code}; click for next status">${holdingStatus(h)==="exclude"?"Ex":holdingStatus(h)==="just"?"Ju":"I"}</button>
         </div>`;
-      }).join("") : "";
-      return `${master}<div class="leg-row leg-sub-row ${selected?'selected':''}" data-sub="${encodeURIComponent(subKey)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${selected}" title="${selected?'Hide':'Show'} funds in ${g.name} and highlight them on Risk vs Return">
+  }).join("");
+  const rows = groups.map(g => {
+    const retTxt = `<span class="leg-ret ${pctClass(g.ret)}">${fmtPct(g.ret,2)}</span>`;
+    const contribTxt = `<span class="leg-contrib ${pctClass(g.contrib)}">${fmtPct(g.contrib,2)}</span>`;
+    if (state.catView === "sub") {
+      const masterContrib=Object.prototype.hasOwnProperty.call(mainContrib,g.main)?mainContrib[g.main]:null;
+      const master = g.main !== previousMain
+        ? `${previousMain!==null?'</div>':''}<div class="leg-group" style="background:${(CAT_COLOR[g.main]||'#6b7280')}1c"><div class="leg-row leg-master"><span class="leg-name">${g.main}</span><span></span><span class="leg-contrib master-contrib ${pctClass(masterContrib)}" title="Total Contribution across all Sub-sectors in ${g.main}">${fmtPct(masterContrib,2)}</span><span class="leg-pct pf" title="Total portfolio weight across all Sub-sectors in ${g.main}">${fmtWeight(mainWeights[g.main])}</span><span class="leg-pct iv" title="Share of included fund investments across all Sub-sectors in ${g.main}">${sumw>0?fmtWeight(mainWeights[g.main]/sumw*100):'—'}</span></div>` : "";
+      previousMain=g.main;
+      const subKey=`${g.main}\u0000${g.name}`;
+      const selected=state.highlightSubs.includes(subKey);
+      const expanded = isRowOpen(subKey);
+      const details = expanded ? detailHtml(f=>f.main===g.main && (f.cat || "Uncategorised")===g.name) : "";
+      return `${master}<div class="leg-row leg-sub-row ${selected?'selected':''}" data-sub="${encodeURIComponent(subKey)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${expanded}" title="${expanded?'Hide':'Show'} funds in ${g.name} · also highlights it on Risk vs Return">
         <span class="leg-category-cell leg-sub"><span class="leg-dot" style="background:${g.color}"></span><span class="leg-name">${g.name}</span></span>
         ${retTxt}${contribTxt}<span class="leg-pct pf">${fmtWeight(g.w)}</span><span class="leg-pct iv">${sumw>0?fmtWeight(g.w/sumw*100):'—'}</span>
-      </div>${selected ? `<div class="leg-details" aria-label="Funds in ${g.name}">
+      </div>${expanded ? `<div class="leg-details" aria-label="Funds in ${g.name}">
         ${details}</div>` : ""}`;
     }
-    const selected=state.highlightMain===g.main;
-    return `<div class="leg-row leg-main-row ${selected?'selected':''}" data-main="${encodeURIComponent(g.main)}" role="button" tabindex="0" aria-pressed="${selected}" title="Highlight all funds in ${g.main} on Risk vs Return">
+    const selected=state.highlightMains.includes(g.main);
+    const open = isRowOpen(g.main);
+    const row = `<div class="leg-row leg-main-row ${selected?'selected':''}" data-main="${encodeURIComponent(g.main)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${isRowOpen(g.main)}" title="${isRowOpen(g.main)?'Hide':'Show'} funds in ${g.main} · also highlights it on Risk vs Return">
       <span class="leg-dot" style="background:${g.color}"></span>
       <span class="leg-name">${g.name}</span>
       ${retTxt}
@@ -1875,7 +1911,9 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       <span class="leg-pct pf">${fmtWeight(g.w)}</span>
       <span class="leg-pct iv">${sumw>0?fmtWeight(g.w/sumw*100):'—'}</span>
     </div>`;
-  }).join("");
+    // Expanded: the class row + its funds sit in a tinted box (same colour as the class), so the group reads as one block.
+    return open ? `<div class="leg-group" style="background:${(CAT_COLOR[g.main]||'#6b7280')}1c">${row}<div class="leg-details" aria-label="Funds in ${g.name}">${detailHtml(f=>f.main===g.main)}</div></div>` : row;
+  }).join("") + (state.catView==="sub" && groups.length ? "</div>" : "");   // closes the last Asset-class box
   const cashDetail = excludedWeight > .001 ? ` · ${excludedWeight.toFixed(2)}% excluded separately` : "";
   // Fund sleeve is rescaled to 100% of funds, so the cash / other row only belongs to Portfolio model.
   const residual = (sumw < 99.99 && state.basis !== "fund")
@@ -1913,7 +1951,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     ? '<span></span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>'
     : '<span></span><span>Asset class</span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>';
   $l.innerHTML = `<div class="leg-title-row">
-      <span class="leg-title-wrap"><button class="editor-collapse tbl-collapse" onclick="toggleTable()" title="${state.tableCollapsed?'Show table':'Hide table'}" aria-label="${state.tableCollapsed?'Show table':'Hide table'}" aria-expanded="${!state.tableCollapsed}">${state.tableCollapsed?'▾':'▴'}</button><span class="leg-title">${titleTxt}</span></span>
+      <span class="leg-title-wrap"><button class="editor-collapse tbl-collapse" onclick="toggleFunds()" title="${state.showFunds?'Hide the funds under every row (asset classes / sub-sectors stay)':'Show the funds under every row'}" aria-label="${state.showFunds?'Hide funds under every row':'Show funds under every row'}" aria-expanded="${state.showFunds}">${state.showFunds?'▴':'▾'}</button><span class="leg-title">${titleTxt}</span></span>
       <span class="legend-controls">
         <button class="attrib-toggle ${state.hideAttribution?'active':''}" onclick="toggleAttribution()" title="${state.hideAttribution?'Show Return and Contribution columns':'Hide Return and Contribution; show Allocation only'}">${state.hideAttribution?'Show performance':'Allocation only'}</button>
         <span class="cat-toggle">
@@ -1926,12 +1964,12 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       ${columns}
     </div>${rows}${residual}${totalRow}${basisNote}`;
   $l.querySelectorAll(".leg-sub-row").forEach(el=>{
-    const activate=()=>setHighlightSub(decodeURIComponent(el.dataset.sub));
+    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.sub)); setHighlightSub(decodeURIComponent(el.dataset.sub)); };
     el.onclick=activate;
     el.onkeydown=e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); activate(); } };
   });
   $l.querySelectorAll(".leg-main-row").forEach(el=>{
-    const activate=()=>setHighlightMain(decodeURIComponent(el.dataset.main));
+    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.main)); setHighlightMain(decodeURIComponent(el.dataset.main)); };
     el.onclick=activate;
     el.onkeydown=e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); activate(); } };
   });
@@ -1957,7 +1995,7 @@ function applySaved(saved){
     state.basis=saved.basis==="fund"?"fund":"portfolio";
     state.editorCollapsed=saved.editorCollapsed===true;
     state.hideAttribution=saved.hideAttribution===true;
-    state.tableCollapsed=saved.tableCollapsed===true;
+    state.tableCollapsed=false;   // the whole-table hide button was replaced by the funds show/hide button
     state.perfCollapsed=saved.perfCollapsed===true;
     res.loaded=state.holdings.length;
     populateWinSelect();
