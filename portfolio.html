@@ -242,7 +242,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut-tip .dt-fund span:first-child { padding-left:10px; }
 .donut-tip .pos { color:#86efac; } .donut-tip .neg { color:#fca5a5; }
 .donut .center-v { font-size:18px; font-weight:700; fill:var(--ink); }
-.cat-legend { flex:1; min-width:0; font-size:11.5px; line-height:1.4; }
+.cat-legend { flex:1; min-width:0; font-size:13.7px; line-height:1.4; }
 .cat-legend .leg-title-wrap { display:flex; align-items:center; gap:8px; }
 .cat-legend .tbl-collapse { margin-left:0; font-size:13px; }
 .cat-legend.table-collapsed > :not(.leg-title-row) { display:none; }
@@ -266,15 +266,15 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend .leg-total { border-top:2px solid var(--rule); margin-top:4px; font-weight:800; }
 .cat-legend .leg-total .leg-name { font-weight:800; }
 .cat-legend.basis-fund .pf, .cat-legend.basis-portfolio .iv { display:none; }
-.cat-legend.basis-fund .leg-row, .cat-legend.basis-portfolio .leg-row { grid-template-columns:9px minmax(90px,1fr) 58px 70px 46px; }
-.cat-legend.sub-view.basis-fund .leg-row, .cat-legend.sub-view.basis-portfolio .leg-row { grid-template-columns:minmax(130px,1fr) 55px 68px 46px; }
+.cat-legend.basis-fund .leg-row, .cat-legend.basis-portfolio .leg-row { grid-template-columns:9px minmax(90px,1fr) 77px 77px 55px; }
+.cat-legend.sub-view.basis-fund .leg-row, .cat-legend.sub-view.basis-portfolio .leg-row { grid-template-columns:minmax(130px,1fr) 75px 75px 55px; }
 .cat-legend.allocation-only:not(.sub-view).basis-fund .leg-row, .cat-legend.allocation-only:not(.sub-view).basis-portfolio .leg-row { grid-template-columns:9px minmax(120px,1fr) 52px; }
 .cat-legend.allocation-only.sub-view.basis-fund .leg-row, .cat-legend.allocation-only.sub-view.basis-portfolio .leg-row { grid-template-columns:minmax(150px,1fr) 52px; }
 .cat-legend.basis-fund .leg-detail-row, .cat-legend.basis-portfolio .leg-detail-row { grid-template-columns:minmax(90px,1fr) 55px 68px 46px; }
 .cat-legend.allocation-only.basis-fund .leg-detail-row, .cat-legend.allocation-only.basis-portfolio .leg-detail-row { grid-template-columns:minmax(120px,1fr) 52px; }
-.cat-legend .leg-row { display:grid; grid-template-columns:9px minmax(90px,1fr) 58px 70px 46px 46px;
+.cat-legend .leg-row { display:grid; grid-template-columns:9px minmax(90px,1fr) 77px 77px 55px 55px;
   align-items:center; gap:6px; padding:3px 0; min-width:0; }
-.cat-legend.sub-view .leg-row { grid-template-columns:minmax(130px,1fr) 55px 68px 46px 46px; }
+.cat-legend.sub-view .leg-row { grid-template-columns:minmax(130px,1fr) 75px 75px 55px 55px; }
 .cat-legend.allocation-only:not(.sub-view) .leg-row { grid-template-columns:9px minmax(120px,1fr) 52px 52px; }
 .cat-legend.allocation-only:not(.sub-view) .leg-row > :nth-child(3),
 .cat-legend.allocation-only:not(.sub-view) .leg-row > :nth-child(4) { display:none; }
@@ -284,16 +284,16 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend.allocation-only .leg-detail-row { grid-template-columns:minmax(120px,1fr) 52px 52px; }
 .cat-legend.allocation-only .leg-detail-row > :nth-child(2),
 .cat-legend.allocation-only .leg-detail-row > :nth-child(3) { display:none; }
-.cat-legend .leg-columns { color:var(--grey); font-size:9px; font-weight:700;
+.cat-legend .leg-columns { color:var(--grey); font-size:11px; font-weight:700;
   text-transform:uppercase; letter-spacing:0.025em; border-bottom:1px solid var(--soft); margin-bottom:2px; }
 .cat-legend .leg-columns span:not(:nth-child(2)) { text-align:right; }
 .cat-legend .leg-group { border-radius:8px; padding:2px 8px 4px; margin:6px 0; }   /* tinted box per Asset class (Sub-sector view); colour set inline */
 .cat-legend .leg-master { margin-top:3px; margin-bottom:1px; padding:4px 0 3px;
   border-bottom:1px solid #dbe2ea; }
-.cat-legend .leg-master .leg-name { font-weight:700; color:var(--scb); }
-.cat-legend .leg-master .leg-pct { color:var(--ink); font-weight:800; }
+.cat-legend .leg-master .leg-name { font-weight:700; color:var(--scb); font-size:15.5px; }
+.cat-legend .leg-master .leg-pct { color:var(--ink); font-weight:800; font-size:15.5px; }
 .cat-legend.sub-view .leg-sub-row .leg-pct { color:#2563eb; }   /* sub-sector view: blue allocation sits on the sub-sector rows */
-.cat-legend .leg-master .master-contrib { font-size:inherit; font-weight:800; }
+.cat-legend .leg-master .master-contrib { font-size:15.5px; font-weight:800; }
 .cat-legend .leg-category-cell { display:flex; align-items:center; gap:5px; min-width:0; }
 .cat-legend .leg-category-cell.leg-sub { padding-left:12px; }
 .cat-legend .leg-sub-row { cursor:pointer; border-radius:4px; }
@@ -307,7 +307,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend .leg-details { grid-column:1/-1; margin:0 0 4px 12px; padding:5px 7px;
   background:#f8fbfd; border-left:2px solid var(--cyan); border-radius:0 4px 4px 0; }
 .cat-legend .leg-detail-row { position:relative; display:grid; grid-template-columns:minmax(90px,1fr) 55px 68px 46px 46px;
-  gap:6px; align-items:center; padding:3px 0; border-bottom:1px solid var(--soft); font-size:10px; }
+  gap:6px; align-items:center; padding:4px 0; border-bottom:1px solid var(--soft); font-size:12.7px; }
 .cat-legend .leg-detail-row:last-child { border-bottom:none; }
 .cat-legend .leg-detail-code { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; color:var(--scb); }
 .cat-legend .tri { position:absolute; right:0; top:50%; margin-top:-3.5px; width:8px; height:6.93px; }   /* equilateral triangle: height = width x 0.866 */
@@ -332,14 +332,14 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 }
 .cat-legend .leg-dot { flex:0 0 9px; width:9px; height:9px; border-radius:2px; }
 .cat-legend .leg-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
-.cat-legend .leg-ret { font-weight:700; font-variant-numeric:tabular-nums; font-size:10.5px; }
-.cat-legend .leg-ret.pos, .cat-legend .leg-ret.neg, .cat-legend .leg-contrib.pos, .cat-legend .leg-contrib.neg { color:var(--ink); }
-.cat-legend .leg-ret.has-tri, .cat-legend .leg-contrib.has-tri { position:relative; padding-right:12px; }
+.cat-legend .leg-ret { font-weight:700; font-variant-numeric:tabular-nums; font-size:13.2px; }
+.cat-legend .leg-ret.pos, .cat-legend .leg-contrib.pos { color:var(--green); }
+.cat-legend .leg-ret.neg, .cat-legend .leg-contrib.neg { color:var(--red); }
 .cat-legend .leg-ret.zero { color:var(--mute); }
 .cat-legend .leg-ret, .cat-legend .leg-contrib, .cat-legend .leg-pct { text-align:right; }
-.cat-legend .leg-contrib { font-weight:700; font-variant-numeric:tabular-nums; font-size:10.5px; }
+.cat-legend .leg-contrib { font-weight:700; font-variant-numeric:tabular-nums; font-size:13.2px; }
 .cat-legend .leg-contrib.zero { color:var(--mute); }
-.cat-legend .leg-pct { font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+.cat-legend .leg-pct { font-size:13.2px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
 .cat-legend .leg-cash { color:var(--grey); font-style:italic; }
 .cat-legend .leg-empty { color:var(--mute); font-style:italic; font-size:12px; padding:4px 0; }
 
@@ -416,11 +416,12 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
   .iw-val:before { content:'Start '; } .h-row .iw-val,.h-row .sd-val { font-size:11px; }
   .h-row .rm { min-height:32px; } .tray { flex-wrap:wrap; gap:8px; }
   .donut-wrap { flex-wrap:wrap; } .cat-legend { min-width:0; }
-  .cat-legend .leg-row { grid-template-columns:9px minmax(70px,1fr) 48px 58px 40px 40px; gap:3px; }
-  .cat-legend.sub-view .leg-row,.cat-legend .leg-detail-row { grid-template-columns:minmax(88px,1fr) 46px 54px 38px 38px; gap:3px; }
+  .cat-legend .leg-row { grid-template-columns:9px minmax(70px,1fr) 60px 58px 40px 40px; gap:3px; }
+  .cat-legend.sub-view .leg-row,.cat-legend .leg-detail-row { grid-template-columns:minmax(88px,1fr) 58px 54px 38px 38px; gap:3px; }
   .cat-legend .leg-detail-exclude { position:static; transform:none; width:16px; grid-column:1/-1; justify-self:end; }
 }
-.cat-legend .leg-master .master-contrib.pos, .cat-legend .leg-master .master-contrib.neg { color:var(--ink); }   /* sub-sector view: asset-class header stays neutral, colour is on the sub-sector rows */
+/* staircase: each level's numbers sit in their own column band — funds furthest left, then sub-sectors, then asset classes at the right edge */
+.cat-legend .leg-details { margin-right:-7px; }   /* fund numbers share the right edge with the group rows */   /* sub-sector view: asset-class header stays neutral, colour is on the sub-sector rows */
 </style>
 </head>
 <body>
@@ -2056,7 +2057,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
         </div>`;
   }).join("");
   const rows = groups.map(g => {
-    const triOf = v => v>0.005 ? '<i class="tri up" title="Positive"></i>' : v<-0.005 ? '<i class="tri down" title="Negative"></i>' : '';
+    const triOf = () => '';
     const retTxt = `<span class="leg-ret has-tri ${pctClass(g.ret)}">${fmtPct(g.ret,2)}${triOf(g.ret)}</span>`;
     const contribTxt = `<span class="leg-contrib ${pctClass(g.contrib)}">${fmtPct(g.contrib,2)}</span>`;
     if (state.catView === "sub") {
@@ -2068,7 +2069,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       const selected=state.highlightSubs.includes(subKey);
       const expanded = isRowOpen(subKey);
       const details = expanded ? detailHtml(f=>f.main===g.main && (f.cat || "Uncategorised")===g.name) : "";
-      return `${master}<div class="leg-row leg-sub-row ${selected?'selected':''}" data-sub="${encodeURIComponent(subKey)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${expanded}" title="${expanded?'Hide':'Show'} funds in ${g.name} · also highlights it on Risk vs Return">
+      return `${master}<div class="leg-row leg-sub-row ${selected?'selected':''}" data-sub="${encodeURIComponent(subKey)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${expanded}" title="${expanded?'Hide':'Show'} funds in ${g.name}">
         <span class="leg-category-cell leg-sub"><span class="leg-dot" style="background:${g.color}"></span><span class="leg-name">${g.name}</span></span>
         ${retTxt}${contribTxt}<span class="leg-pct pf">${fmtWeight(g.w)}</span><span class="leg-pct iv">${sumw>0?fmtWeight(g.w/sumw*100):'—'}</span>
       </div>${expanded ? `<div class="leg-details" aria-label="Funds in ${g.name}">
@@ -2076,7 +2077,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     }
     const selected=state.highlightMains.includes(g.main);
     const open = isRowOpen(g.main);
-    const row = `<div class="leg-row leg-main-row ${selected?'selected':''}" data-main="${encodeURIComponent(g.main)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${isRowOpen(g.main)}" title="${isRowOpen(g.main)?'Hide':'Show'} funds in ${g.main} · also highlights it on Risk vs Return">
+    const row = `<div class="leg-row leg-main-row ${selected?'selected':''}" data-main="${encodeURIComponent(g.main)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${isRowOpen(g.main)}" title="${isRowOpen(g.main)?'Hide':'Show'} funds in ${g.main}">
       <span class="leg-dot" style="background:${g.color}"></span>
       <span class="leg-name">${g.name}</span>
       ${retTxt}
@@ -2137,12 +2138,12 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       ${columns}
     </div>${rows}${residual}${totalRow}${basisNote}`;
   $l.querySelectorAll(".leg-sub-row").forEach(el=>{
-    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.sub)); setHighlightSub(decodeURIComponent(el.dataset.sub)); };
+    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.sub)); renderStats(); };
     el.onclick=activate;
     el.onkeydown=e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); activate(); } };
   });
   $l.querySelectorAll(".leg-main-row").forEach(el=>{
-    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.main)); setHighlightMain(decodeURIComponent(el.dataset.main)); };
+    const activate=()=>{ toggleRowOpen(decodeURIComponent(el.dataset.main)); renderStats(); };
     el.onclick=activate;
     el.onkeydown=e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); activate(); } };
   });
