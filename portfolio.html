@@ -60,7 +60,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
    two columns (Risk vs Return + Performance stacked | Allocation donut) so they fit the screen
    instead of stretching to a huge, tall single stack. */
 @media (min-width:901px) {
-  .layout.perf-collapsed #rr-chart-card { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); column-gap:18px; align-items:start; }
+  .layout.perf-collapsed #rr-chart-card { display:grid; grid-template-columns:minmax(0,.96fr) minmax(0,1.248fr); column-gap:18px; align-items:start; }
   .layout.perf-collapsed #rr-chart-card > h2 { grid-column:1; grid-row:1; }
   .layout.perf-collapsed #rr-chart-card > .mini-chart-hdr { grid-column:1; grid-row:2; }
   .layout.perf-collapsed #rr-chart-card > #rr-chart-wrap { grid-column:1; grid-row:3; }
@@ -214,6 +214,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 #donut-tip.pinned.dragging { cursor:grabbing; }
 #donut svg.has-sel .donut-seg:not(.sel) { opacity:.22; }   /* a slice was clicked: the other slices drop back */
 #donut svg.has-sel .donut-seg.sel { opacity:1; }
+#donut svg.has-dotsel .donut-seg:not(.dsel) { opacity:.22; }   /* a dot was clicked: slices outside its group drop back */
 #donut .donut-seg.sel { stroke:#0b1a3a; stroke-width:1.6; }   /* clicked slice; the other groups also fade on Risk vs Return (dots) */
 #rr-chart-wrap svg.pie-sel .rr-point:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-label:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-leader:not(.pie-on) { opacity:.13; }
 .donut-tip { position:absolute; display:none; pointer-events:none; z-index:6; background:var(--ink); color:#fff;
@@ -1869,6 +1870,7 @@ function applyRRPin(){
   const $t = document.getElementById("rr-tooltip");
   const svg = document.querySelector("#rr-chart-wrap svg");
   const pin = window._rrPin;
+  applyDotSelToPie();
   if (!pin) { if ($t) $t.classList.remove("pinned", "dragging"); if (svg) { svg.classList.remove("rr-pinned"); svg.querySelectorAll(".pin-on").forEach(el => el.classList.remove("pin-on")); } return; }
   const pt = svg && [...svg.querySelectorAll(".rr-point")].find(c => c.dataset.code === pin.code);
   if (!pt) { window._rrPin = null; hideRRTip(true); applyRRPin(); return; }   // that fund is no longer plotted
@@ -1877,6 +1879,15 @@ function applyRRPin(){
   showRRTip({ currentTarget: pt, _pin: true }, pin.code);
   $t.classList.add("pinned");
   $t.style.display = "block"; rrPlaceBox($t, document.getElementById("rr-chart-card"));
+}
+// A dot is pinned: the pie slices outside that dot's group drop back (no info card on the pie).
+function applyDotSelToPie(){
+  const ds = document.querySelector("#donut svg"); if (!ds) return;
+  const pin = window._rrPin, rr = document.querySelector("#rr-chart-wrap svg");
+  const pt = pin && rr && [...rr.querySelectorAll(".rr-point")].find(c => c.dataset.code === pin.code);
+  const gk = pt ? decodeURIComponent(pt.dataset.gkey) : null;
+  ds.classList.toggle("has-dotsel", !!gk);
+  ds.querySelectorAll(".donut-seg").forEach(sg => sg.classList.toggle("dsel", !!gk && !sg.dataset.cash && decodeURIComponent(sg.dataset.key || "") === gk));
 }
 function pinRRDot(evt, code){
   if (!evt.currentTarget) return;
@@ -1999,6 +2010,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
     <text x="80" y="96" text-anchor="middle" style="font-size:13px">${donutInvest?'invested':'allocated'}</text>
   </svg>`;
   window._donutGroups = groups;
+  if (typeof applyDotSelToPie === "function") applyDotSelToPie();
   if (window._donutApplySel) window._donutApplySel();   // keep a pinned (clicked) slice across re-renders
 
   // Legend: ordered category rows (return-contribution shown per row, so the
