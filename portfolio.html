@@ -113,9 +113,9 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .h-meta { font-size:10.5px; color:var(--grey); white-space:nowrap; }
 .h-title { grid-column:1/-1; display:flex; align-items:baseline; gap:8px; min-width:0; }
 .h-title .h-name { flex:none; overflow:visible; }
-.h-cat-line { grid-column:1/-1; margin-top:-4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.h-cat-line { grid-column:1/-1; margin-top:-4px; font-size:10.5px; color:var(--grey); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .h-fullname { font-size:10.5px; color:var(--grey); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.h-row.excluded .h-fullname { opacity:.55; }
+.h-row.excluded .h-fullname, .h-row.excluded .h-cat-line { opacity:.55; }
 .h-cat { font-size:10px; color:var(--mute); font-style:italic; }
 /* Range slider — explicit track + thumb across browsers, fixed track height
    and thumb margin so two adjacent sliders always render at the same baseline. */
@@ -1174,8 +1174,8 @@ function renderHoldingsList(){
         ? `Implied starting weight on ${curves.dates[0]} — back-solved so that, left untouched (no rebalancing), it drifts into today's ${h.w}% Current Weight.`
         : `Unavailable for the selected period — check NAV coverage.`;
       return `<div class="h-row ${excluded ? 'excluded' : just ? 'just-include' : ''}" data-code="${h.code}">
-        <div class="h-title" title="${f.name}"><span class="h-name">${f.code}${tr}</span><span class="h-fullname">${f.name}</span></div>
-        <div class="h-cat h-cat-line">${f.cat}</div>
+        <div class="h-title" title="${f.name}"><span class="h-name">${f.code}${tr}</span></div>
+        <div class="h-cat-line" title="${f.name} · ${f.cat}">${f.name} · ${f.cat}</div>
         <div>
           <div class="h-meta">NAV ${NAV_SERIES[h.code] ? ddMmmYy(NAV_GRID[NAV_SERIES[h.code][0].at(-1)]) : "unavailable"}</div>
         </div>
