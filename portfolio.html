@@ -95,7 +95,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 
 /* ---------- holdings list ---------- */
 .holdings { margin-top:12px; }
-.h-head, .h-row { display:grid; grid-template-columns:minmax(0,1fr) 34px 82px 58px 58px 48px 16px; gap:6px;
+.h-head, .h-row { display:grid; grid-template-columns:minmax(0,1fr) 66px 82px 58px 58px 48px 16px; gap:6px;
          align-items:center; padding:8px 4px; }
 .h-head { padding:4px 4px 6px; border-bottom:1px solid var(--rule); font-size:10px; font-weight:700;
           text-transform:uppercase; letter-spacing:0.05em; color:var(--grey); }
@@ -103,12 +103,19 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .h-head > div:nth-child(3),
 .h-head > div:nth-child(4),
 .h-head > div:nth-child(5) { text-align:center; }
+.h-head > div { min-width:0; overflow-wrap:normal; word-break:normal; hyphens:none; line-height:1.25; }
+.h-head > #h-head-iw { font-size:9px; }
 .h-row .iw-val { text-align:center; font-size:10px; color:var(--grey); font-variant-numeric:tabular-nums; }
 .h-row .iw-val.naive { color:var(--mute); font-style:italic; }
 .h-row { border-bottom:1px solid var(--soft); }
 .h-row:last-child { border-bottom:none; }
 .h-name { font-weight:600; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.h-meta { font-size:10.5px; color:var(--grey); }
+.h-meta { font-size:10.5px; color:var(--grey); white-space:nowrap; }
+.h-title { grid-column:1/-1; display:flex; align-items:baseline; gap:8px; min-width:0; }
+.h-title .h-name { flex:none; overflow:visible; }
+.h-cat-line { grid-column:1/-1; margin-top:-4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.h-fullname { font-size:10.5px; color:var(--grey); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.h-row.excluded .h-fullname { opacity:.55; }
 .h-cat { font-size:10px; color:var(--mute); font-style:italic; }
 /* Range slider — explicit track + thumb across browsers, fixed track height
    and thumb margin so two adjacent sliders always render at the same baseline. */
@@ -302,7 +309,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   gap:6px; align-items:center; padding:3px 0; border-bottom:1px solid var(--soft); font-size:10px; }
 .cat-legend .leg-detail-row:last-child { border-bottom:none; }
 .cat-legend .leg-detail-code { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; color:var(--scb); }
-.cat-legend .leg-detail-status { display:block; color:var(--amber); font-size:8.5px; font-weight:600; }
+.cat-legend .leg-detail-status { display:none; margin-left:6px; color:var(--amber); font-size:8.5px; font-weight:600; }
 .cat-legend .leg-detail-row.excluded { opacity:.72; background:#fff7ed; }
 .cat-legend .leg-detail-num { text-align:right; font-variant-numeric:tabular-nums; color:var(--grey); }
 .cat-legend .leg-detail-num.pos { color:var(--green); }
@@ -1119,13 +1126,17 @@ function sdForLegGroup(legs){
   return sdFromSeries(series);
 }
 
+function ddMmmYy(iso){   // 2026-10-27 -> 27-Oct-26
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); if (!m) return iso;
+  return `${m[3]}-${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]}-${m[1].slice(2)}`;
+}
 function renderHoldingsList(){
   const $h = document.getElementById("holdings");
   const $head = document.getElementById("h-head");
   const $headRet = document.getElementById("h-head-ret");
   const $headIw = document.getElementById("h-head-iw");
   if ($headRet) $headRet.textContent = `Return / SD, ${WIN_SHORT[state.win]} (%)`;
-  if ($headIw) $headIw.textContent = `Start ${state.basis==="fund"?'% Invest':'% Portfolio'}, ${WIN_SHORT[state.win]}`;
+  if ($headIw) $headIw.textContent = `Initial ${state.basis==="fund"?'% Invest':'% Portfolio'}, ${WIN_SHORT[state.win]}`;
   if (!state.holdings.length) {
     $h.innerHTML = '<div class="h-empty">No funds yet — search above to add one.</div>';
     if ($head) $head.style.display = "none";
@@ -1163,11 +1174,10 @@ function renderHoldingsList(){
         ? `Implied starting weight on ${curves.dates[0]} — back-solved so that, left untouched (no rebalancing), it drifts into today's ${h.w}% Current Weight.`
         : `Unavailable for the selected period — check NAV coverage.`;
       return `<div class="h-row ${excluded ? 'excluded' : just ? 'just-include' : ''}" data-code="${h.code}">
+        <div class="h-title" title="${f.name}"><span class="h-name">${f.code}${tr}</span><span class="h-fullname">${f.name}</span></div>
+        <div class="h-cat h-cat-line">${f.cat}</div>
         <div>
-          <div class="h-name" title="${f.name}">${f.code}${tr}</div>
-          <div class="h-meta">${f.name.length>54 ? f.name.slice(0,52)+"…" : f.name}</div>
-          <div class="h-cat">${f.cat}</div>
-          <div class="h-meta">NAV ${NAV_SERIES[h.code] ? NAV_GRID[NAV_SERIES[h.code][0].at(-1)] : "unavailable"}</div>
+          <div class="h-meta">NAV ${NAV_SERIES[h.code] ? ddMmmYy(NAV_GRID[NAV_SERIES[h.code][0].at(-1)]) : "unavailable"}</div>
         </div>
         <div class="iw-val ${leg ? '' : 'naive'}" title="${iwTitle}">${iwLabel}</div>
         <input aria-label="Current weight for ${f.code}" type="range" min="0" max="100" step="1" value="${h.w}" onchange="render()" oninput="setWeight('${h.code}', this.value, 'range')">
