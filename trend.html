@@ -328,7 +328,7 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
     <b>Implication —</b> a category <b>above</b> the dashed line is drawing <b>net inflows</b> (new money chasing the theme — momentum / investor conviction); <b>below</b> it is seeing <b>net outflows</b> (redemptions or rotation out) even when returns are positive; sitting <b>on</b> the line means AUM simply tracked performance with flat flows. The farther a bubble sits from the line, the stronger the flow signal — and a category that is both high-return <i>and</i> well above the line is where performance and demand reinforce each other.
   </div>
   <div id="bubble" style="width:100%;height:600px;"></div>
-  <div style="margin:6px 0 2px;text-align:center;font-size:12.5px;color:var(--mute);"><b>Implied flow = AUM change + (−Weighted return)</b> &nbsp;— the sum of the two terms (X axis reversed: + left, − right)</div>
+  <div style="margin:6px 0 2px;text-align:center;font-size:12.5px;color:var(--mute);"><b>Implied flow = AUM change − Weighted return</b></div>
   <details class="method">
     <summary>Methodology</summary>
     <div class="body">
@@ -359,8 +359,8 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
 
 <div class="foot">
   Source: SEC Thailand Open API weekly build (sec_data.sqlite + Thailand_Fund_SEC). Category returns are
-  start-AUM-weighted and NAV-computed; AUM from daily fund NAV reports. Implied flow = AUM change + (−weighted
-  return) (approximation; ignores intra-category dispersion and timing of flows); Flow (M THB) =
+  start-AUM-weighted and NAV-computed; AUM from daily fund NAV reports. Implied flow = AUM change − weighted
+  return (approximation; ignores intra-category dispersion and timing of flows); Flow (M THB) =
   start-of-window AUM × implied flow. Generated 2026-11-03.
   Not investment advice.
 </div>
@@ -945,19 +945,16 @@ function placeLabels(){
     text:a.d.cat, showarrow:true, arrowhead:0, arrowwidth:0.7, arrowcolor:"#c8ccd2",
     font:{size:9.5, color:"#3a3a3a"}, bgcolor:"rgba(255,255,255,0.72)", borderpad:1 }));
   // Name tag sitting ON the zero-flow line, rotated to follow its on-screen slope.
-  // X axis is reversed (positive on the left), so take min/max of the ranges.
-  const xlo = Math.min(xa.range[0], xa.range[1]), xhi = Math.max(xa.range[0], xa.range[1]);
-  const ylo = Math.min(ya.range[0], ya.range[1]), yhi = Math.max(ya.range[0], ya.range[1]);
-  const m = Math.min(xhi - 0.12*(xhi-xlo), yhi - 0.12*(yhi-ylo)), mn = Math.max(xlo, ylo);
-  let ang = Math.atan2(ya.d2p(m) - ya.d2p(m-1), xa.d2p(m) - xa.d2p(m-1)) * 180/Math.PI;
-  if (ang > 90) ang -= 180; else if (ang < -90) ang += 180;   // keep text upright
+  const xs_ = xa.range[1]-xa.range[0], ys_ = ya.range[1]-ya.range[0];
+  const m = Math.min(xa.range[1] - 0.12*xs_, ya.range[1] - 0.12*ys_), mn = Math.max(xa.range[0], ya.range[0]);
+  const ang = Math.atan2(ya.d2p(m) - ya.d2p(m-1), xa.d2p(m) - xa.d2p(m-1)) * 180/Math.PI;
   const lineAnn = (m > mn) ? [{ x:m, y:m, xref:"x", yref:"y", xanchor:"center", yanchor:"middle",
     showarrow:false, text:"Zero-flow line", textangle:ang, bgcolor:"#ffffff", borderpad:2,
     font:{size:11.5, color:"#6b7280"} }] : [];
   const yAxisAnn = [{ x:0, y:1, xref:"x", yref:"paper", xanchor:"left", yanchor:"top", xshift:5, yshift:-4,
     showarrow:false, text:"Y′ = Implied flow (pp)", font:{size:11, color:"#2563eb"} }];
   _placing = true;
-  const e0 = Math.min(xlo, ylo), e1 = Math.max(xhi, yhi), ep = 0.5*(e1-e0);
+  const e0 = Math.min(xa.range[0], ya.range[0]), e1 = Math.max(xa.range[1], ya.range[1]), ep = 0.5*(e1-e0);
   Plotly.relayout(gd, {annotations: ann.concat(lineAnn, yAxisAnn, CORNER_ANN),
     "shapes[0].x0":e0-ep, "shapes[0].y0":e0-ep, "shapes[0].x1":e1+ep, "shapes[0].y1":e1+ep}).then(()=>{ _placing=false; });
 }
@@ -1021,11 +1018,11 @@ function drawBubble() {
   // Default view = fit every bubble (explicit range, because the zero-flow line
   // shape would otherwise stretch autorange). 9% padding keeps edge bubbles whole.
   const fit = v => { const a=Math.min(...v), b=Math.max(...v), p=Math.max(b-a, 1)*0.09; return [a-p, b+p]; };
-  const xFit = fit(xs).reverse(), yFit = fit(ys);   // X reversed: + on the left, − on the right
+  const xFit = fit(xs), yFit = fit(ys);
   Plotly.react("bubble", [
     { x:xs, y:ys,
       customdata:R.map(d=>[d.cat, d.aum, d.n, sgn(d.flow," pp"), sgn(d.a,"%"), sgn(d.r,"%"),
-                           d.flowM==null?"–":fmtM(d.flowM)+" M THB"]),
+                           d.flowM==null?"–":`<span style="color:${d.flowM>=0?"#15803d":"#b91c1c"}">${fmtM(d.flowM)} M THB</span>`]),
       mode:"markers",
       marker:{ size:flowAbs, sizemode:"area",
                sizeref: 2*maxFlow/(46*46), sizemin:5,
@@ -1048,7 +1045,7 @@ function drawBubble() {
             // dashed blue Y' axis at x = 0: implied flow measured from the zero-flow line (replaces the solid x zero line)
             { type:"line", xref:"x", yref:"paper", x0:0, x1:0, y0:0, y1:1, layer:"below",
               line:{color:"#2563eb", width:1.5, dash:"dash"} }],
-    xaxis:{ title:{text:"<b>"+currentWindowLabel()+" AUM-weighted return (%) — axis reversed (+ left, − right)</b>", font:{size:12,color:"#4d4d4d"}},
+    xaxis:{ title:{text:"<b>"+currentWindowLabel()+" AUM-weighted return (%)</b>", font:{size:12,color:"#4d4d4d"}},
             gridcolor:"#eceff1", zeroline:false, ticksuffix:"%",
             autorange:false, range:xFit },
     yaxis:{ title:{text:"<b>"+currentWindowLabel()+" AUM change (%)</b>", font:{size:12,color:"#4d4d4d"}},
