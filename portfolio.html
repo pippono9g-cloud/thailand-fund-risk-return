@@ -224,6 +224,13 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 #donut svg.has-dotsel .donut-seg:not(.dsel) { opacity:.22; }   /* a dot was clicked: slices outside its group drop back */
 #donut .donut-seg.sel { stroke:#0b1a3a; stroke-width:1.6; }   /* clicked slice; the other groups also fade on Risk vs Return (dots) */
 #rr-chart-wrap svg.pie-sel .rr-point:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-label:not(.pie-on), #rr-chart-wrap svg.pie-sel .rr-leader:not(.pie-on) { opacity:.13; }
+#model-card { margin-top:10px; padding-top:8px; border-top:1px dashed var(--rule); }
+.model-btns { display:flex; gap:4px; margin:4px 0 2px; }
+.model-btns button { flex:1; border:1px solid var(--rule); background:#fff; color:var(--grey); font-size:11px; font-weight:700; padding:4px 0; border-radius:6px; cursor:pointer; }
+.model-btns button:hover { border-color:var(--cyan); color:var(--ink); }
+.model-btns button.active { background:#5b2a86; border-color:#5b2a86; color:#fff; }
+.model-sub { text-align:center; font-size:11px; color:var(--grey); font-weight:600; }
+.model-note { font-size:10.5px; color:var(--grey); text-align:center; }
 .donut-tip { position:absolute; display:none; pointer-events:none; z-index:6; background:var(--ink); color:#fff;
   font-size:11px; padding:7px 10px; border-radius:6px; min-width:240px; max-width:340px; box-shadow:0 4px 14px rgba(0,0,0,.25); }
 .donut-tip .dt-head { font-weight:700; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,.25); }
@@ -284,6 +291,19 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend.allocation-only .leg-detail-row { grid-template-columns:minmax(120px,1fr) 52px 52px; }
 .cat-legend.allocation-only .leg-detail-row > :nth-child(2),
 .cat-legend.allocation-only .leg-detail-row > :nth-child(3) { display:none; }
+/* "vs Model" column (Asset-class view only): one extra 66px track on every main-view row variant */
+.cat-legend:not(.sub-view) .leg-row { grid-template-columns:9px minmax(90px,1fr) 77px 77px 55px 55px 66px; }
+.cat-legend:not(.sub-view).basis-fund .leg-row, .cat-legend:not(.sub-view).basis-portfolio .leg-row { grid-template-columns:9px minmax(90px,1fr) 77px 77px 55px 66px; }
+.cat-legend.allocation-only:not(.sub-view) .leg-row { grid-template-columns:9px minmax(120px,1fr) 52px 52px 66px; }
+.cat-legend.allocation-only:not(.sub-view).basis-fund .leg-row, .cat-legend.allocation-only:not(.sub-view).basis-portfolio .leg-row { grid-template-columns:9px minmax(120px,1fr) 52px 66px; }
+.cat-legend:not(.sub-view) .leg-details { padding-right:72px; }
+.cat-legend .leg-vs { display:flex; justify-content:flex-end; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.cat-legend .leg-vs.pos { color:var(--green); } .cat-legend .leg-vs.neg { color:var(--red); }
+.cat-legend .leg-vs .vtri { width:9px; height:7.79px; display:block; }   /* equilateral: height = width x 0.866 */
+.cat-legend .leg-vs .vtri.up { background:var(--green); clip-path:polygon(50% 0,0 100%,100% 100%); }
+.cat-legend .leg-vs .vtri.down { background:var(--red); clip-path:polygon(0 0,100% 0,50% 100%); }
+.cat-legend .leg-columns .leg-vs-h { text-align:right; }
+.cat-legend .leg-model-only .leg-name, .cat-legend .leg-model-only .leg-pct { color:var(--grey); font-weight:500; }
 .cat-legend .leg-columns { color:var(--grey); font-size:11px; font-weight:700;
   text-transform:uppercase; letter-spacing:0.025em; border-bottom:1px solid var(--soft); margin-bottom:2px; }
 .cat-legend .leg-columns span:not(:nth-child(2)) { text-align:right; }
@@ -536,6 +556,13 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           <div class="mini-chart-hdr" id="donut-hdr">Allocation <span>· share by group</span></div>
           <div class="donut donut-big" id="donut"></div>
           <div class="donut-tip" id="donut-tip"></div>
+          <div id="model-card">
+            <div class="mini-chart-hdr">SCB FIRST Model <span>· compare with your allocation</span></div>
+            <div class="model-btns" id="model-btns"></div>
+            <div class="model-sub" id="model-sub"></div>
+            <div class="donut donut-big" id="model-pie"></div>
+            <div class="model-note" id="model-note"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1326,6 +1353,7 @@ function renderStats(){
 
   // donut chart of allocation
   drawDonut(allocatedSumw, curves, excludedWeight, justIncludedWeight);
+  if (typeof renderModel === "function") renderModel();
 }
 
 function syncGroupToggle(){ const m=document.getElementById('grp-main'), u=document.getElementById('grp-sub'); if(m&&u){ m.classList.toggle('active',state.catView==='main'); u.classList.toggle('active',state.catView==='sub'); } }
@@ -1931,6 +1959,80 @@ function pinRRDot(evt, code){
   });
 })();
 
+// Each model line is a fund from the SCB FIRST table (one representative code where the table lists several);
+// its Asset class / Sub-sector come from the same AIMC data (byCode) as the portfolio's holdings, so both pies group and colour alike.
+const MODEL = {
+  names:["Conservative Fixed Income","Conservative","Moderate","Moderate to Aggressive","Aggressive"],
+  risk:["Below 15","15-21","22-29","30-36","Above 36"],
+  funds:[
+    {code:"SCBMONEY(A)",  w:[20,3,3,2,0]},
+    {name:"SCB-distributed corporate bonds", main:"Fixed Income", cat:"Corporate Bond", w:[45,40,29.5,18,2.5]},
+    {code:"SCBRF",        w:[35,0,0,0,0]},
+    {code:"SCBFIXEDA",    w:[0,9,0,0,0]},
+    {code:"SCBGOFIX(A)",  w:[0,13,12.5,5,1]},
+    {code:"UGISFX-N",     w:[0,3,5,5,1.5]},
+    {code:"SCBGMCORE(A)", w:[0,11.5,13.5,15,16.5]},
+    {code:"SCBSET",       w:[0,10,1.5,3,5]},
+    {code:"SCBWORLD(A)",  w:[0,8,13.5,19.5,24.5]},
+    {code:"SCBS&P500A",   w:[0,0,11.5,17,22.5]},
+    {code:"SCBNDQ(A)",    w:[0,0,2,2.5,4.5]},
+    {code:"SCBEUEQA",     w:[0,0,0.5,1,2]},
+    {code:"SCBNK225",     w:[0,0,2,2.5,3.5]},
+    {code:"SCBAXJ(A)",    w:[0,1,2,3.5,7.5]},
+    {code:"SCBKEQTG",     w:[0,0,1,1.5,2.5]},
+    {code:"UOBSGC",       w:[0,0,0.5,1,1.5]},
+    {code:"SCBGOLD",      w:[0,1.5,2,3,4]},
+    {code:"SCBCOMP",      w:[0,0,0,0.5,1]},
+    {code:"SCBSEMI(A)",   w:[0,0,15,20,25], note:"Opportunistic: SCBSEMI(A), ES-GTECH, ES-GRID, SCBKEQTG"},
+  ],
+};
+let _modelLevel = 1;
+function modelMainShares(){
+  const agg={}; let sum=0;
+  for (const m of MODEL.funds){
+    const w=m.w[_modelLevel]; if(!(w>0)) continue;
+    const f=m.code?(byCode[m.code]||{}):{main:m.main}, k=f.main||"Other";
+    agg[k]=(agg[k]||0)+w; sum+=w;
+  }
+  for (const k in agg) agg[k]=agg[k]/sum*100;
+  return agg;
+}
+function renderModel(){
+  const $b=document.getElementById("model-btns"); if(!$b) return;
+  $b.innerHTML = MODEL.names.map((_,i)=>`<button class="${i===_modelLevel?'active':''}" onclick="_modelLevel=${i};render()">Level ${i+1}</button>`).join("");
+  document.getElementById("model-sub").textContent = `${MODEL.names[_modelLevel]} · Risk score ${MODEL.risk[_modelLevel]}`;
+  const useSub = false, agg = {};   // model always groups by Asset class, even when the portfolio is in Sub-sector view
+  for (const m of MODEL.funds){
+    const w = m.w[_modelLevel]; if (!(w > 0)) continue;
+    const f = m.code ? (byCode[m.code] || {}) : {main:m.main, cat:m.cat}, main = f.main || "Other", sub = f.cat || "Uncategorised", k = useSub ? sub : main;
+    (agg[k] ||= {k, main, c:colorForKey(k, useSub), w:0}).w += w;
+  }
+  const order = n => { const i = CAT_ORDER.indexOf(n); return i < 0 ? CAT_ORDER.length : i; };
+  const items = Object.values(agg).sort((a,b)=>order(a.main)-order(b.main) || a.k.localeCompare(b.k));
+  const sum = items.reduce((a,x)=>a+x.w,0);
+  const CX=80, CY=80, R=70, IR=47, LBL_GAP=11, RL=R+4;
+  let a0=-Math.PI/2, segs="", sides={L:[],R:[]};
+  for (const x of items){
+    const fr=x.w/sum, a1=a0+fr*2*Math.PI, am=(a0+a1)/2;
+    segs+=`<path class="donut-seg" d="${arcPath(CX,CY,R,IR,a0,a1)}" fill="${x.c}" stroke="#fff" stroke-width="0.8"><title>${x.k} ${x.w}%</title></path>`;
+    if (fr>=0.06) segs+=`<text x="${(CX+58.5*Math.cos(am)).toFixed(1)}" y="${(CY+58.5*Math.sin(am)+2.6).toFixed(1)}" text-anchor="middle" pointer-events="none" style="font-size:7.5px;font-weight:700;fill:#fff">${(fr*100).toFixed(0)}%</text>`;
+    if (fr>=0.02) sides[Math.cos(am)>=0?"R":"L"].push({x,fr,px:CX+RL*Math.cos(am),py:CY+RL*Math.sin(am)});
+    a0=a1;
+  }
+  let tags="";
+  for (const side of ["L","R"]){
+    const arr=sides[side].sort((a,b)=>a.py-b.py);
+    for (let i=1;i<arr.length;i++) if (arr[i].py<arr[i-1].py+LBL_GAP) arr[i].py=arr[i-1].py+LBL_GAP;
+    for (let i=arr.length-1;i>=0;i--){ const m=166-(arr.length-1-i)*LBL_GAP; if(arr[i].py>m) arr[i].py=m; }
+    for (const t of arr) tags+=`<text x="${t.px.toFixed(1)}" y="${(t.py+2.2).toFixed(1)}" text-anchor="${side==="R"?"start":"end"}" pointer-events="none" style="font-size:8px;fill:var(--ink);font-weight:700">${t.x.k.length>26?t.x.k.slice(0,25)+"…":t.x.k} ${+t.x.w.toFixed(1)}%</text>`;
+  }
+  document.getElementById("model-pie").innerHTML=`<svg viewBox="-130 -10 420 180" xmlns="http://www.w3.org/2000/svg">${segs}${tags}
+    <text x="80" y="79" text-anchor="middle" class="center-v" style="font-size:18px">Level ${_modelLevel+1}</text>
+    <text x="80" y="96" text-anchor="middle" style="font-size:11px">model</text></svg>`;
+  document.getElementById("model-note").textContent = Math.abs(sum-100)>0.6 ? `Source table sums to ${sum.toFixed(1)}% · slices scaled to 100%` : "";
+}
+renderModel();
+
 function arcPath(CX, CY, R, IR, a0, a1){
   const x0 = CX + R*Math.cos(a0), y0 = CY + R*Math.sin(a0);
   const x1 = CX + R*Math.cos(a1), y1 = CY + R*Math.sin(a1);
@@ -2053,6 +2155,17 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
           <button class="leg-detail-exclude st-${holdingStatus(h)}" data-code="${encodeURIComponent(h.code)}" data-tip="${statusTip(h)}" aria-label="${statusLabel(h)} status for ${h.code}; click for next status">${holdingStatus(h)==="exclude"?"Ex":holdingStatus(h)==="just"?"Ju":"I"}</button>
         </div>`;
   }).join("");
+  const mShares = modelMainShares();
+  const vsCell = (main, pct) => {
+    const m = mShares[main] || 0, d = pct - m;
+    const tip = `Portfolio ${pct.toFixed(1)}% vs Model Level ${_modelLevel+1} ${m.toFixed(1)}% (${d>=0?'+':''}${d.toFixed(1)} pp)`;
+    const up = d>=0.5, dn = d<=-0.5;
+    return `<span class="leg-vs ${up?'pos':dn?'neg':''}" title="${tip}">${up||dn?`${d>0?'+':''}${d.toFixed(1)}%<i class="vtri ${up?'up':'down'}"></i>`:''}</span>`;
+  };
+  const modelOnly = state.catView==="sub" ? "" : Object.keys(mShares).filter(k=>!groups.some(g=>g.main===k && g.w>0))
+    .sort((a,b)=>CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b)).map(k=>`<div class="leg-row leg-model-only" title="In Model Level ${_modelLevel+1} (${mShares[k].toFixed(1)}%) but not in your portfolio">
+      <span class="leg-dot" style="background:${CAT_COLOR[k]||'#6b7280'}"></span><span class="leg-name">${k}</span><span class="leg-ret"></span><span class="leg-contrib"></span>
+      <span class="leg-pct pf">${fmtWeight(0)}</span><span class="leg-pct iv">${fmtWeight(0)}</span>${vsCell(k,0)}</div>`).join("");
   const rows = groups.map(g => {
     const triOf = () => '';
     const retTxt = `<span class="leg-ret has-tri ${pctClass(g.ret)}">${fmtPct(g.ret,2)}${triOf(g.ret)}</span>`;
@@ -2081,10 +2194,11 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       ${contribTxt}
       <span class="leg-pct pf">${fmtWeight(g.w)}</span>
       <span class="leg-pct iv">${sumw>0?fmtWeight(g.w/sumw*100):'—'}</span>
+      ${vsCell(g.main, state.basis==="fund" ? (sumw>0?g.w/sumw*100:0) : g.w)}
     </div>`;
     // Expanded: the class row + its funds sit in a tinted box (same colour as the class), so the group reads as one block.
     return open ? `<div class="leg-group" style="background:${(CAT_COLOR[g.main]||'#6b7280')}1c">${row}<div class="leg-details" aria-label="Funds in ${g.name}">${detailHtml(f=>f.main===g.main)}</div></div>` : row;
-  }).join("") + (state.catView==="sub" && groups.length ? "</div>" : "");   // closes the last Asset-class box
+  }).join("") + (state.catView==="sub" && groups.length ? "</div>" : "") + modelOnly;   // closes the last Asset-class box
   const cashDetail = excludedWeight > .001 ? ` · ${excludedWeight.toFixed(2)}% excluded separately` : "";
   // Fund sleeve is rescaled to 100% of funds, so the cash / other row only belongs to Portfolio model.
   const residual = (sumw < 99.99 && state.basis !== "fund")
@@ -2120,7 +2234,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   $l.classList.toggle("basis-portfolio",state.basis!=="fund");
   const columns = state.catView === "sub"
     ? '<span></span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>'
-    : '<span></span><span>Asset class</span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span>';
+    : '<span></span><span>Asset class</span><span>Return</span><span>Contribution (pp)</span><span class="pf" title="Weights you entered, as % of the whole portfolio including cash / other assets.">% Portfolio</span><span class="iv" title="Share of the funds shown in Allocation (Include + Just Include), rescaled to 100%.">% Invest</span><span class="leg-vs-h" title="Green = you hold more than the SCB model, red = less (selected Level)">vs L'+(_modelLevel+1)+'</span>';
   $l.innerHTML = `<div class="leg-title-row">
       <span class="leg-title-wrap"><button class="editor-collapse tbl-collapse" onclick="toggleFunds()" title="${state.showFunds?'Hide the funds under every row (asset classes / sub-sectors stay)':'Show the funds under every row'}" aria-label="${state.showFunds?'Hide funds under every row':'Show funds under every row'}" aria-expanded="${state.showFunds}">${state.showFunds?'▴':'▾'}</button><span class="leg-title">${titleTxt}</span></span>
       <span class="legend-controls">
