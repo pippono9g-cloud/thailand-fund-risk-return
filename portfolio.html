@@ -1999,6 +1999,8 @@ function modelMainShares(){
 }
 function renderModel(){
   const $b=document.getElementById("model-btns"); if(!$b) return;
+  const $mc=document.getElementById("model-card"); if($mc) $mc.style.display = state.catView==="sub" ? "none" : "";   // model compares by Asset class only
+  if (state.catView==="sub") return;
   $b.innerHTML = MODEL.names.map((_,i)=>`<button class="${i===_modelLevel?'active':''}" onclick="_modelLevel=${i};render()">Level ${i+1}</button>`).join("");
   document.getElementById("model-sub").textContent = `${MODEL.names[_modelLevel]} · Risk score ${MODEL.risk[_modelLevel]}`;
   const useSub = false, agg = {};   // model always groups by Asset class, even when the portfolio is in Sub-sector view
