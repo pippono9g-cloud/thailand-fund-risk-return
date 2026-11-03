@@ -248,6 +248,8 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut-tip .dt-fund { opacity:.85; }
 .donut-tip .dt-fund span:first-child { padding-left:10px; }
 .donut-tip .pos { color:#86efac; } .donut-tip .neg { color:#fca5a5; }
+.donut-tip .dt-vs { margin-left:6px; font-weight:700; }
+.donut-tip .vtri { vertical-align:baseline; margin-right:3px; } .donut-tip .vtri.up { background:#86efac; } .donut-tip .vtri.down { background:#fca5a5; }
 .donut .center-v { font-size:18px; font-weight:700; fill:var(--ink); }
 .cat-legend { flex:1; min-width:0; font-size:13.7px; line-height:1.4; }
 .cat-legend .leg-title-wrap { display:flex; align-items:center; gap:8px; }
@@ -299,9 +301,9 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .cat-legend:not(.sub-view) .leg-details { padding-right:72px; }
 .cat-legend .leg-vs { display:flex; justify-content:flex-end; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
 .cat-legend .leg-vs.pos { color:var(--green); } .cat-legend .leg-vs.neg { color:var(--red); }
-.cat-legend .leg-vs .vtri { width:9px; height:7.79px; display:block; }   /* equilateral: height = width x 0.866 */
-.cat-legend .leg-vs .vtri.up { background:var(--green); clip-path:polygon(50% 0,0 100%,100% 100%); }
-.cat-legend .leg-vs .vtri.down { background:var(--red); clip-path:polygon(0 0,100% 0,50% 100%); }
+.vtri { width:9px; height:7.79px; display:inline-block; flex:none; }   /* equilateral: height = width x 0.866 */
+.vtri.up { background:var(--green); clip-path:polygon(50% 0,0 100%,100% 100%); }
+.vtri.down { background:var(--red); clip-path:polygon(0 0,100% 0,50% 100%); }
 .cat-legend .leg-columns .leg-vs-h { text-align:right; }
 .cat-legend .leg-model-only .leg-name, .cat-legend .leg-model-only .leg-pct { color:var(--grey); font-weight:500; }
 .cat-legend .leg-columns { color:var(--grey); font-size:11px; font-weight:700;
@@ -1590,7 +1592,8 @@ function drawPerfChart(curves){
     const stats = [hv('Weight', (g.w*(window._donutScale||1)).toFixed(1)+'%'),
       g.ret==null ? '' : hv('Return', fmtPct(g.ret,2), pctClass(g.ret)),
       g.contrib==null ? '' : hv('Contrib.', fmtPct(g.contrib,2), pctClass(g.contrib))].filter(Boolean).join('<span class="dt-sep"> · </span>');
-    let out = `<div class="dt-head"><div>${esc(g.name)}</div><div class="dt-hl">${stats}</div></div>`;
+    const vsTag = state.catView==='sub' ? '' : (()=>{ const d=vsModelDelta(g.main, g.w*(window._donutScale||1)), t=vsModelInner(d); return t ? ` <span class="dt-vs ${d>0?'pos':'neg'}" title="vs SCB model Level ${_modelLevel+1}">${t}</span>` : ''; })();
+    let out = `<div class="dt-head"><div>${esc(g.name)}${vsTag}</div><div class="dt-hl">${stats}</div></div>`;
     out += `<div class="dt-row dt-cols"><span></span><span>Weight</span><span>Return</span><span title="Contribution to portfolio return = starting weight × return">Contrib.</span></div>`;
     for (const name of Object.keys(subs).sort()) {
       const its = subs[name], sw = its.reduce((a,i)=>a+i.w,0);
@@ -1987,6 +1990,12 @@ const MODEL = {
   ],
 };
 let _modelLevel = 1;
+// Difference vs the selected SCB model Level: triangle first, then the pp difference (green up = more than model, red down = less).
+function vsModelDelta(main, pct){ return pct - (modelMainShares()[main] || 0); }
+function vsModelInner(d){
+  const up = d>=0.5, dn = d<=-0.5;
+  return up||dn ? `<i class="vtri ${up?'up':'down'}"></i>${d>0?'+':''}${d.toFixed(1)}%` : '';
+}
 function modelMainShares(){
   const agg={}; let sum=0;
   for (const m of MODEL.funds){
@@ -2161,8 +2170,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   const vsCell = (main, pct) => {
     const m = mShares[main] || 0, d = pct - m;
     const tip = `Portfolio ${pct.toFixed(1)}% vs Model Level ${_modelLevel+1} ${m.toFixed(1)}% (${d>=0?'+':''}${d.toFixed(1)} pp)`;
-    const up = d>=0.5, dn = d<=-0.5;
-    return `<span class="leg-vs ${up?'pos':dn?'neg':''}" title="${tip}">${up||dn?`${d>0?'+':''}${d.toFixed(1)}%<i class="vtri ${up?'up':'down'}"></i>`:''}</span>`;
+    return `<span class="leg-vs ${d>=0.5?'pos':d<=-0.5?'neg':''}" title="${tip}">${vsModelInner(d)}</span>`;
   };
   const modelOnly = state.catView==="sub" ? "" : Object.keys(mShares).filter(k=>!groups.some(g=>g.main===k && g.w>0))
     .sort((a,b)=>CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b)).map(k=>`<div class="leg-row leg-model-only" title="In Model Level ${_modelLevel+1} (${mShares[k].toFixed(1)}%) but not in your portfolio">
