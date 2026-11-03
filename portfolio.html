@@ -246,6 +246,8 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 #model-card { margin-top:10px; padding-top:8px; border-top:1px dashed var(--rule); }
 .model-btns { display:flex; gap:4px; margin:4px 0 2px; }
 .model-btns button { flex:1; border:1px solid var(--rule); background:#fff; color:var(--grey); font-size:11px; font-weight:700; padding:4px 0; border-radius:6px; cursor:pointer; }
+.model-btns button.model-opp { flex:0 0 auto; padding:4px 10px; margin-left:6px; border-left:3px solid #db2777; }
+.model-btns button.model-opp:disabled { opacity:.45; cursor:not-allowed; }
 .model-btns button:hover { border-color:var(--cyan); color:var(--ink); }
 .model-btns button.active { background:#5b2a86; border-color:#5b2a86; color:#fff; }
 .model-sub { text-align:center; font-size:11px; color:var(--grey); font-weight:600; }
@@ -647,6 +649,7 @@ const perfShown = new Set();   // fund codes toggled on in the Performance chart
 const state = {
   efSel: null,          // portfolio selected on the embedded Efficient Frontier page: {label, ret, sd, sharpe, main:{asset class:%}}
   showEF: false,        // "vs Efficient Frontier" column on/off
+  showOpp: false,       // model only: add the SCB Opportunistic slice (scales the Core classes down)
   showModel: false,     // SCB model comparison (pie, vs column, tooltip tag): off until the "vs Model" button is pressed
   asof: null,           // ISO date, or null = latest data
   holdings: [],          // [{code, w, status}] status: include | exclude | just; w in 0..100
@@ -1152,6 +1155,10 @@ function toggleRowOpen(key){ state.rowOpen[key]=!isRowOpen(key); }
 // every Asset class / Sub-sector (the category rows themselves stay). Clears per-row overrides.
 function toggleFunds(){ state.showFunds=!state.showFunds; state.rowOpen={}; renderStats(); }
 function toggleTable(){ state.tableCollapsed=!state.tableCollapsed; renderStats(); }
+function toggleOpp(){
+  state.showOpp = !state.showOpp;
+  renderStats();
+}
 function toggleModel(){
   state.showModel=!state.showModel;
   if (state.showModel) state.showEF=false;   // one comparison at a time
@@ -1450,8 +1457,15 @@ const CAT_COLOR = {
   "Commodities":               "#dc2626",   // red
   "Alternatives / Private":    "#9333ea",   // violet
   "Other":                     "#6b7280",   // grey
+  "Opportunistic":             "#db2777",   // pink (SCB FIRST opportunistic sleeve; only used when the Opportunistic switch is on)
 };
 const CAT_ORDER = Object.keys(CAT_COLOR);
+// SCB FIRST "Opportunistic" applies to the MODEL only: with the switch on, the model pie adds an Opportunistic slice that scales its Core classes down.
+// The user's portfolio is never regrouped by it.
+const OPP_W = [0,0,15,20,25];   // Opportunistic % of the model by Level (Core = 100 - this)
+const oppOn = () => state.showOpp && state.catView === "main";   // Opportunistic applies to the Asset-class view only
+const effMain = f => f.main || "Other";
+const effCat  = f => f.cat || "Uncategorised";
 
 // Colour for a category key, following the current Main/Sub toggle (shared
 // by the allocation donut/legend AND the Risk-vs-Return dot plot, so both
@@ -1504,7 +1518,7 @@ function groupByCat(curves){
     if (!h.w) continue;
     if (!isAllocated(h)) continue;
     const f = byCode[h.code]; if (!f) continue;
-    const main=f.main || "Other", sub=f.cat || "Uncategorised";
+    const main=effMain(f), sub=effCat(f);
     const key = useSub ? `${main}\u0000${sub}` : main;
     const leg = legByCode[h.code];
     const r = leg ? (leg.g - 1) * 100 : null;
@@ -1787,9 +1801,9 @@ function drawRiskReturnDots(curves){
     const sd = leg ? sdFromSeries(leg.series) : null;
     const ret = leg ? (leg.g - 1) * 100 : null;
     if (sd == null || ret == null) continue;
-    const key = useSub ? (f.cat || "Uncategorised") : (f.main || "Other");
+    const key = useSub ? effCat(f) : effMain(f);
     const bw = state.basis === "fund" ? leg.fundStartW : leg.startW;
-    pts.push({ code: h.code, sd, ret, w: h.w, bw, main:f.main || "Other", sub:f.cat || "Uncategorised", color: colorForKey(key, useSub) });
+    pts.push({ code: h.code, sd, ret, w: h.w, bw, main:effMain(f), sub:effCat(f), color: colorForKey(key, useSub) });
   }
   if (!pts.length) {
     $w.innerHTML = '<div class="chart-empty mini">No SD/return data available to plot for the selected period.</div>';
@@ -2082,7 +2096,9 @@ function modelMainShares(level=_modelLevel){
     const f=m.code?(byCode[m.code]||{}):{main:m.main}, k=f.main||"Other";
     agg[k]=(agg[k]||0)+w; sum+=w;
   }
-  for (const k in agg) agg[k]=agg[k]/sum*100;
+  const opp = oppOn() ? OPP_W[level] : 0;     // Opportunistic slice shrinks every Core class proportionally (Core = 100 - opp)
+  for (const k in agg) agg[k]=agg[k]/sum*(100-opp);
+  if (opp > 0) agg["Opportunistic"] = opp;
   return agg;
 }
 // "Active share" as shown = the part of the portfolio that sits in the same Asset classes as the model: sum over classes of min(portfolio %, model %).
@@ -2104,7 +2120,8 @@ function renderModel(){
   const ef = state.showEF, efName = state.efSel ? state.efSel.label.replace(/ portfolio$/i,"") : "";
   const fmtP = v => (v*100).toFixed(1)+"%";
   document.getElementById("model-hdr").innerHTML = ef ? 'Efficient Frontier <span>· portfolio selected on that page</span>' : 'SCB FIRST Model <span>· compare with your allocation</span>';
-  $b.innerHTML = ef ? "" : MODEL.names.map((_,i)=>`<button class="${i===_modelLevel?'active':''}" onclick="_modelLevel=${i};render()">Level ${i+1}</button>`).join("");
+  $b.innerHTML = ef ? "" : MODEL.names.map((_,i)=>`<button class="${i===_modelLevel?'active':''}" onclick="_modelLevel=${i};render()">Level ${i+1}</button>`).join("") +
+    `<button class="model-opp ${state.showOpp?'active':''}" ${_modelLevel<2?'disabled':''} onclick="toggleOpp()" title="${_modelLevel<2?'Levels 1-2 have no Opportunistic slice':'Add the Opportunistic slice ('+OPP_W[_modelLevel]+'% at this Level); it scales the Core classes down. Same switch as the one beside Allocation only'}">Opportunistic</button>`;
   document.getElementById("model-sub").textContent = ef ? (state.efSel ? `${state.efSel.label} · Return ${fmtP(state.efSel.ret)} · SD ${fmtP(state.efSel.sd)}${state.efSel.sharpe==null?"":" · Sharpe "+state.efSel.sharpe.toFixed(2)}` : "Waiting for the Efficient Frontier page…") : `${MODEL.names[_modelLevel]} · Risk score ${MODEL.risk[_modelLevel]}`;
   const cur = ef ? (state.efSel ? overlapShare(state.efSel.main) : null) : modelActiveShare(_modelLevel);   // shown in the pie centre
   const order = n => { const i = CAT_ORDER.indexOf(n); return i < 0 ? CAT_ORDER.length : i; };
@@ -2113,13 +2130,8 @@ function renderModel(){
     items = Object.entries(state.efSel ? state.efSel.main : {}).filter(([,w])=>w>=0.05).map(([k,w])=>({k, main:k, c:colorForKey(k,false), w}))
       .sort((a,b)=>order(a.main)-order(b.main) || a.k.localeCompare(b.k));
   } else {
-    const agg = {};   // the model always groups by Asset class, even when the portfolio is in Sub-sector view
-    for (const m of MODEL.funds){
-      const w = m.w[_modelLevel]; if (!(w > 0)) continue;
-      const f = m.code ? (byCode[m.code] || {}) : {main:m.main, cat:m.cat}, main = f.main || "Other";
-      (agg[main] ||= {k:main, main, c:colorForKey(main, false), w:0}).w += w;
-    }
-    items = Object.values(agg).sort((a,b)=>order(a.main)-order(b.main) || a.k.localeCompare(b.k));
+    items = Object.entries(modelMainShares(_modelLevel)).map(([k,w])=>({k, main:k, c:colorForKey(k,false), w}))   // Opportunistic (when on) is one slice, not split by Asset class
+      .sort((a,b)=>order(a.main)-order(b.main) || a.k.localeCompare(b.k));
   }
   const sum = items.reduce((a,x)=>a+x.w,0);
   const CX=80, CY=80, R=70, IR=47, LBL_GAP=11, RL=R+4;
@@ -2141,7 +2153,7 @@ function renderModel(){
   document.getElementById("model-pie").innerHTML=`<svg viewBox="-130 -10 420 180" xmlns="http://www.w3.org/2000/svg">${segs}${tags}
     <text x="80" y="${cur==null?79:72}" text-anchor="middle" class="center-v" style="font-size:${ef?14:18}px">${ef?(efName||"Efficient"):"Level "+(_modelLevel+1)}</text>
     ${cur==null ? `<text x="80" y="96" text-anchor="middle" style="font-size:11px">${ef?"loading":"model"}</text>` : `<text x="80" y="87" text-anchor="middle" style="font-size:9px"><title>Share of your portfolio that sits in the same Asset classes as this ${ef?"Efficient Frontier portfolio":"model Level"} (sum of the smaller of your % and its % per class). 100% = identical mix, 0% = nothing in common.</title>Active share</text><text x="80" y="102" text-anchor="middle" class="center-v" style="font-size:15px">${cur.toFixed(0)}%</text>`}</svg>`;
-  document.getElementById("model-note").textContent = ef ? (state.efSel ? "" : "Open the Efficient Frontier page (‹ on Risk vs Return) and pick a portfolio") : Math.abs(sum-100)>0.6 ? `Source table sums to ${sum.toFixed(1)}% · slices scaled to 100%` : "";
+  document.getElementById("model-note").textContent = ef ? (state.efSel ? "" : "Open the Efficient Frontier page (‹ on Risk vs Return) and pick a portfolio") : Math.abs(MODEL.funds.reduce((a,m)=>a+m.w[_modelLevel],0)-100)>0.6 ? `Source table sums to ${MODEL.funds.reduce((a,m)=>a+m.w[_modelLevel],0).toFixed(1)}% · slices scaled to 100%` : "";
 }
 renderModel();
 
@@ -2297,7 +2309,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       const subKey=`${g.main}\u0000${g.name}`;
       const selected=state.highlightSubs.includes(subKey);
       const expanded = isRowOpen(subKey);
-      const details = expanded ? detailHtml(f=>f.main===g.main && (f.cat || "Uncategorised")===g.name) : "";
+      const details = expanded ? detailHtml(f=>effMain(f)===g.main && effCat(f)===g.name) : "";
       return `${master}<div class="leg-row leg-sub-row ${selected?'selected':''}" data-sub="${encodeURIComponent(subKey)}" role="button" tabindex="0" aria-pressed="${selected}" aria-expanded="${expanded}" title="${expanded?'Hide':'Show'} funds in ${g.name}">
         <span class="leg-category-cell leg-sub"><span class="leg-dot" style="background:${g.color}"></span><span class="leg-name">${g.name}</span></span>
         <span class="leg-ret"></span>${contribTxt}<span class="leg-pct pf">${fmtWeight(g.w)}</span><span class="leg-pct iv">${sumw>0?fmtWeight(g.w/sumw*100):'—'}</span>
@@ -2316,7 +2328,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
       ${anyVs ? vsCell(g.main, state.basis==="fund" ? (sumw>0?g.w/sumw*100:0) : g.w) : ""}
     </div>`;
     // Expanded: the class row + its funds sit in a tinted box (same colour as the class), so the group reads as one block.
-    return open ? `<div class="leg-group" style="background:${(CAT_COLOR[g.main]||'#6b7280')}1c">${row}<div class="leg-details" aria-label="Funds in ${g.name}">${detailHtml(f=>f.main===g.main)}</div></div>` : row;
+    return open ? `<div class="leg-group" style="background:${(CAT_COLOR[g.main]||'#6b7280')}1c">${row}<div class="leg-details" aria-label="Funds in ${g.name}">${detailHtml(f=>effMain(f)===g.main)}</div></div>` : row;
   }).join("") + (state.catView==="sub" && groups.length ? "</div>" : "") + modelOnly;   // closes the last Asset-class box
   const cashDetail = excludedWeight > .001 ? ` · ${excludedWeight.toFixed(2)}% excluded separately` : "";
   // Fund sleeve is rescaled to 100% of funds, so the cash / other row only belongs to Portfolio model.
@@ -2363,6 +2375,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
         <button class="attrib-toggle ${state.hideAttribution?'active':''}" onclick="toggleAttribution()" title="${state.hideAttribution?'Show Return and Contribution columns':'Hide Return and Contribution; show Allocation only'}">${state.hideAttribution?'Show performance':'Allocation only'}</button>
         <button class="attrib-toggle ${state.showModel?'active':''}" onclick="toggleModel()" title="${state.showModel?'Hide the SCB model comparison (pie, vs column)':'Compare with the SCB FIRST model (pie, vs column)'}">vs Model${state.showModel?` · L${_modelLevel+1}`:''}</button>
         <button class="attrib-toggle ${state.showEF?'active':''}" onclick="toggleEF()" title="Compare Asset classes with the portfolio selected on the Efficient Frontier page (the ‹ on Risk vs Return opens it)">vs Efficient Frontier${state.showEF&&state.efSel?` · ${state.efSel.label.replace(/ portfolio$/i,'')}`:''}</button>
+        ${state.catView==='sub' ? '' : `<button class="attrib-toggle ${state.showOpp?'active':''}" onclick="toggleOpp()" title="Add the SCB model's Opportunistic slice (L3 15%, L4 20%, L5 25%); it scales the model's other Core classes down. Your own portfolio is not regrouped">Opportunistic</button>`}
         <span class="cat-ctl">
         <span class="cat-toggle">
           <button class="${state.catView==='main'?'active':''}" onclick="setCatView('main')">Asset class</button>
