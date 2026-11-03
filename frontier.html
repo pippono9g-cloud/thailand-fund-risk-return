@@ -81,7 +81,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   font-size:12.5px; padding:5px 8px; border:1px solid var(--rule); border-radius:7px; background:#fff; color:var(--ink);
 }
 .ctl-row input[type=number] { width:64px; }
-.ctl-row #cap-input, .ctl-row #maxfunds-input, .ctl-row #minw-input { width:78px; }
+.ctl-row #cap-input, .ctl-row #gcap-input, .ctl-row #maxfunds-input, .ctl-row #minw-input { width:78px; }
 .bl-panel { margin:10px 0 2px; padding:10px 12px; border:1px solid var(--scb-l); border-radius:10px; background:#faf8fd; font-size:12.5px; }
 .bl-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
 .bl-title { font-weight:700; color:var(--scb); }
@@ -302,7 +302,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <div class="help-pop" id="help-pop">
           <h4>How to use</h4>
           <ul>
-            <li><b>Build the universe</b> with the filters (Main / Shelf / AMC / Risk; combined with AND). <b>Sub-category</b> and <b>Risk</b> are tick lists: unticked items are left out (money market and short-term bond start unticked), or list funds in <b>Input</b>. Once Input has funds, the frontier uses only those funds and the filters pause until you clear Input. With every filter on All and Input empty, the universe is all funds.</li>
+            <li><b>Build the universe</b> with the filters (Main / Shelf / AMC / Risk; combined with AND). <b>Sub-category</b> and <b>Risk</b> are tick lists: unticked items are left out (money market, short-term bond and Miscellaneous start unticked), or list funds in <b>Input</b>. Once Input has funds, the frontier uses only those funds and the filters pause until you clear Input. With every filter on All and Input empty, the universe is all funds.</li>
             <li><b>Input</b> takes one fund at a time from the suggestion list, or a pasted list of fund codes separated by commas or new lines.</li>
             <li><b>Pick the data window</b> — 1Y, 3Y or 5Y of weekly returns. Funds without that much history drop out (listed in the Universe table).</li>
             <li><b>Hover</b> any point on the purple frontier line to see its fund weights. <b>Click</b> to lock it into the Selected portfolio table.</li>
@@ -342,6 +342,8 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <span><input id="minw-input" type="number" min="0.5" max="100" step="0.5" placeholder="No min" title="Smallest weight a fund may have if it is held (funds below it are dropped to 0%). Leave empty for no minimum." aria-label="Min weight per held fund (%)"> %</span>
       <span class="ctl-label">Max weight / fund</span>
       <span><input id="cap-input" type="number" min="1" max="100" step="1" placeholder="No cap" title="Largest weight any one fund may take. Leave empty for no cap." aria-label="Max weight per fund (%)"> %</span>
+      <span class="ctl-label">Max asset class</span>
+      <span><input id="gcap-input" type="number" min="1" max="100" step="1" placeholder="No cap" title="Largest total weight one asset class (main category, e.g. Fixed Income or Equity — Country / Region) may take in a portfolio. Leave empty for no cap." aria-label="Max weight per asset class (%)"> %</span>
       <span class="ctl-label">Max funds</span>
       <span><input id="maxfunds-input" type="number" min="1" max="120" step="1" placeholder="No limit" title="Most funds any one portfolio on the frontier may hold. Leave empty for no limit." aria-label="Max funds per portfolio"></span>
       <span class="ctl-label">Risk-free</span>
@@ -377,7 +379,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
         <div class="ms-wrap" id="cat-ms">
           <button type="button" class="ms-btn" id="cat-ms-btn">All sub-categories</button>
           <div class="ms-panel" id="cat-ms-panel">
-            <div class="ms-hint">Ticked sub-categories are in the universe; untick one to leave it out. Money market and short-term bond start unticked.</div>
+            <div class="ms-hint">Ticked sub-categories are in the universe; untick one to leave it out. Money market, short-term bond and Miscellaneous start unticked.</div>
             <div class="ms-list" id="cat-ms-list"></div>
             <div class="ms-actions">
               <button type="button" id="cat-ms-clear">Select all</button>
@@ -486,15 +488,15 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const pct = (x, d=2) => x == null || !isFinite(x) ? "–" : (x*100).toFixed(d) + "%";
 const sgn = x => x > 0 ? "pos" : x < 0 ? "neg" : "";
 
-// Near-cash funds (money market, short-term bond) are excluded by default: their ~0% SD
+// Near-cash funds (money market, short-term bond) and Miscellaneous are excluded by default: their ~0% SD
 // with returns just above the risk-free rate pins the Max Sharpe point and the Capital
 // Market Line to the bottom-left corner. Tick them in "Sub-category" to add them back.
 const ALL_RISKS = [...new Set(FUNDS.map(f => f.risk == null || f.risk === "" ? "none" : String(f.risk)))]
   .sort((a, b) => a === "none" ? 1 : b === "none" ? -1 : (+a) - (+b));
-const DEFAULT_EXCL = [...new Set(FUNDS.filter(f => f.main === "Money Market" || /^Short Term/i.test(f.cat)).map(f => f.cat))].sort();
+const DEFAULT_EXCL = [...new Set(FUNDS.filter(f => f.main === "Money Market" || /^Short Term/i.test(f.cat) || f.cat === "Miscellaneous").map(f => f.cat))].sort();
 const isDefaultExcl = cats => cats.length === DEFAULT_EXCL.length && DEFAULT_EXCL.every(c => cats.includes(c));
 const state = {
-  years: 3, cap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
+  years: 3, cap: 1, gcap: 1, rf: +(DATA.rf*100).toFixed(2), oneClass: true,
   main: "All", cats: DEFAULT_EXCL.slice(), shelf: "All", amc: "All", risks: ALL_RISKS.slice(),
   picks: [], excluded: new Set(), included: new Set(), sel: "sharpe", maxFunds: null, minW: 0,
   model: "hist", views: [], blSharpe: 0.4,     // return model: "hist" | "bl"
@@ -568,7 +570,7 @@ function rebuildCatList(){
     || '<div class="find-empty">No sub-categories for this selection</div>';
   const b = $("cat-ms-btn");
   b.textContent = state.cats.length === 0 ? "All sub-categories" :
-    isDefaultExcl(state.cats) ? "All except money market & short-term (default)" :
+    isDefaultExcl(state.cats) ? "All except money market, short-term & miscellaneous (default)" :
     state.cats.length === 1 ? `All except ${state.cats[0]}` : `All except ${state.cats.length} sub-categories`;
   b.classList.toggle("has-sel", state.cats.length > 0);
   if (!$("risk-ms-panel").classList.contains("open")) rebuildRiskList();   // keep risk counts in step with the other filters
@@ -638,7 +640,39 @@ function matvec(S, w, out){
   for (let i=0;i<N;i++){ const Si = S[i]; let s = 0; for (let j=0;j<N;j++) s += Si[j]*w[j]; out[i] = s; }
   return out;
 }
-function project(v, cap, out, floor = 0){
+// Asset-class (main category) cap: lim = est carrying grp (group id per fund), G (max total weight per group), ng.
+function assetGroupMembers(lim){
+  if (!lim._gm){ const gm = Array.from({length: lim.ng}, () => []); lim.grp.forEach((g, i) => gm[g].push(i)); lim._gm = gm.filter(a => a.length); }
+  return lim._gm;
+}
+// Projection onto {floor <= w <= cap, sum w = 1, sum of w inside each group <= G}. KKT form: w_i = clip(v_i - tau - mu_g),
+// mu_g >= 0 only for groups at their cap; tau found by bisection on the total, mu_g by bisection inside each capped group.
+function projectG(v, cap, out, floor, lim){
+  const gm = assetGroupMembers(lim), G = lim.G;
+  const A = (m, tau) => { let s = 0; for (const i of m){ const d = v[i] - tau; s += d <= floor ? floor : d >= cap ? cap : d; } return s; };
+  const total = tau => { let s = 0; for (const m of gm){ const a = A(m, tau); s += a > G ? G : a; } return s; };
+  let lo = Infinity, hi = -Infinity;
+  for (const x of v){ if (x < lo) lo = x; if (x > hi) hi = x; }
+  const vmax = hi; lo -= cap; hi -= floor;
+  for (let it=0; it<60; it++){
+    const tau = (lo+hi)/2, s = total(tau);
+    if (Math.abs(s - 1) < 1e-13){ lo = hi = tau; break; }
+    if (s > 1) lo = tau; else hi = tau;
+  }
+  const tau = (lo+hi)/2;
+  for (const m of gm){
+    let mu = 0;
+    if (A(m, tau) > G){
+      let a = 0, b = vmax - tau + cap;
+      for (let it=0; it<60; it++){ const mid = (a+b)/2; if (A(m, tau+mid) > G) a = mid; else b = mid; }
+      mu = (a+b)/2;
+    }
+    for (const i of m) out[i] = Math.min(cap, Math.max(floor, v[i] - tau - mu));
+  }
+  return out;
+}
+function project(v, cap, out, floor = 0, lim = null){
+  if (lim && lim.grp && lim.G < 1 - 1e-9) return projectG(v, cap, out, floor, lim);
   // Euclidean projection onto {floor <= w <= cap, sum w = 1} (floor = 0 unless a min weight applies)
   let lo = Infinity, hi = -Infinity;
   for (const x of v){ if (x < lo) lo = x; if (x > hi) hi = x; }
@@ -672,7 +706,7 @@ function makeSolver(est, cap, floor = 0){
     for (let it=0; it<3000; it++){
       matvec(S, y, Sy);
       for (let i=0;i<N;i++){ g[i] = 2*Sy[i] - t*mu[i]; z[i] = y[i] - g[i]/L; }
-      project(z, cap, wn, floor);
+      project(z, cap, wn, floor, est);
       let dot = 0, diff = 0;
       for (let i=0;i<N;i++){ const d = wn[i]-w[i]; dot += g[i]*d; diff = Math.max(diff, Math.abs(d)); }
       const an = (1 + Math.sqrt(1 + 4*a*a)) / 2;
@@ -683,6 +717,18 @@ function makeSolver(est, cap, floor = 0){
     }
     return w;
   };
+}
+// Greedy fill by descending expected return: each fund takes min(fund cap, what is left, room in its asset class).
+function greedyFill(order, cap, est, N, maxCount = Infinity){
+  const w = new Float64Array(N), useG = est.grp && est.G < 1 - 1e-9, used = new Float64Array(est.ng || 1);
+  let left = 1, cnt = 0;
+  for (const i of order){
+    let x = Math.min(cap, left); if (useG) x = Math.min(x, est.G - used[est.grp[i]]);
+    if (x <= 1e-12) continue;
+    w[i] = x; left -= x; if (useG) used[est.grp[i]] += x;
+    if (++cnt >= maxCount || left <= 1e-12) break;
+  }
+  return w;
 }
 function stats(est, w, rf){
   const {mu, S} = est; let r = 0;
@@ -696,10 +742,9 @@ function frontier(est, cap, rf, coarse){       // coarse: fewer points, for scre
   const N = est.mu.length, solve = makeSolver(est, cap);
   // feasible start + max-return portfolio (greedy fill of the cap by expected return)
   const order = [...est.mu.keys()].sort((a,b) => est.mu[b]-est.mu[a]);
-  const wMax = new Float64Array(N); let left = 1;
-  for (const i of order){ const x = Math.min(cap, left); wMax[i] = x; left -= x; if (left <= 1e-12) break; }
+  const wMax = greedyFill(order, cap, est, N);
   const maxRet = stats(est, wMax, rf).ret;
-  const start = project(new Float64Array(N).fill(1/N), cap, new Float64Array(N));
+  const start = project(new Float64Array(N).fill(1/N), cap, new Float64Array(N), 0, est);
   const pts = new Map();          // t -> portfolio
   const at = (t, w0) => { if (!pts.has(t)) pts.set(t, {t, ...stats(est, solve(t, w0), rf)}); return pts.get(t); };
   const p0 = at(0, start);
@@ -781,6 +826,8 @@ function screenOutside(work, est, fr, outside, cap){
   const gain = new Float64Array(outside.length);
   for (const p of fr.pts){
     const t = p.t ?? 0, Sw = matvec(est.S, p.w, new Float64Array(p.w.length));
+    const gsum = new Float64Array(est.ng || 1), useG = est.grp && est.G < 1 - 1e-9;
+    if (useG) for (let i=0;i<p.w.length;i++) gsum[est.grp[i]] += p.w[i];
     for (let j=0;j<outside.length;j++){
       let cw = 0; for (let a=0;a<held.length;a++) cw += C[j][a]*p.w[held[a]];
       const gj = 2*cw - t*outs[j].mu;
@@ -789,7 +836,9 @@ function screenOutside(work, est, fr, outside, cap){
         const slack = gj - (2*Sw[i] - t*est.mu[i]);
         if (slack >= 0) continue;
         const curvature = Math.max(0, outs[j].variance + est.S[i][i] - 2*C[j][a]);
-        const amount = Math.min(cap, p.w[i], curvature > 1e-14 ? -slack/(2*curvature) : Infinity);
+        let amount = Math.min(cap, p.w[i], curvature > 1e-14 ? -slack/(2*curvature) : Infinity);
+        if (useG && outside[j].gid !== est.grp[i]) amount = Math.min(amount, Math.max(0, est.G - gsum[outside[j].gid]));   // room left in the outsider's asset class
+        if (amount <= 0) continue;
         const improvement = -amount*slack - amount*amount*curvature;
         const cut = improvement/(2*Math.max(p.sd, 1e-4));
         if (cut > MIN_GAIN && cut > gain[j]) gain[j] = cut;
@@ -802,10 +851,27 @@ function screenOutside(work, est, fr, outside, cap){
 // Reuse a single universe-wide covariance model throughout screening and solving.
 function subsetEstimate(full, indices){
   return {mu:Float64Array.from(indices, i=>full.mu[i]), sd:Float64Array.from(indices, i=>full.sd[i]),
-    S:indices.map(i=>Float64Array.from(indices, j=>full.S[i][j])), lam:full.lam};
+    S:indices.map(i=>Float64Array.from(indices, j=>full.S[i][j])), lam:full.lam,
+    grp: full.grp ? Int32Array.from(indices, i=>full.grp[i]) : null, G: full.G ?? 1, ng: full.ng || 0};
 }
-function maxReturnSeeds(pool, cap){
-  return pool.slice().sort((a,b)=>b.mu-a.mu).slice(0, Math.min(pool.length, Math.ceil(1/cap - 1e-10)));
+function maxReturnSeeds(pool, cap, gcap = 1){
+  const sorted = pool.slice().sort((a,b)=>b.mu-a.mu);
+  if (gcap >= 1 - 1e-9) return sorted.slice(0, Math.min(pool.length, Math.ceil(1/cap - 1e-10)));
+  const used = {}, out = []; let left = 1;        // fill by return, respecting the asset-class cap
+  for (const r of sorted){
+    const x = Math.min(cap, left, gcap - (used[r.gid] || 0)); if (x <= 1e-12) continue;
+    out.push(r); used[r.gid] = (used[r.gid] || 0) + x; left -= x; if (left <= 1e-12) break;
+  }
+  return out;
+}
+// Smallest asset-class cap >= G for which the working set can still be fully invested (capacity = sum over groups of min(G, cap x funds)).
+function feasibleG(G, cap, grp, ng){
+  if (!grp || G >= 1 - 1e-9) return {G: 1, raised: false};
+  const cnt = new Float64Array(ng); for (const g of grp) cnt[g]++;
+  const capac = x => { let s = 0; for (let g=0; g<ng; g++) if (cnt[g]) s += Math.min(x, cap*cnt[g]); return s; };
+  if (capac(G) >= 1 - 1e-9) return {G, raised: false};
+  let lo = G, hi = 1; for (let it=0; it<40; it++){ const m = (lo+hi)/2; if (capac(m) >= 1 - 1e-9) hi = m; else lo = m; }
+  return {G: hi, raised: true};
 }
 
 /* ---------- Black-Litterman expected returns ----------
@@ -898,7 +964,7 @@ function limitFunds(est, fr, K, cap, rf, minW = 0){
   };
   const solveOn = (idx, t, wPrev, floor = 0) => {
     const sub = subsetEstimate(est, idx);
-    const w0 = project(Float64Array.from(idx, i => wPrev[i] || 1/idx.length), capK, new Float64Array(idx.length), floor);
+    const w0 = project(Float64Array.from(idx, i => wPrev[i] || 1/idx.length), capK, new Float64Array(idx.length), floor, sub);
     const ws = makeSolver(sub, capK, floor)(t, w0);
     const w = new Float64Array(N); idx.forEach((i, k) => { w[i] = ws[k] < 1e-9 ? 0 : ws[k]; });
     return w;
@@ -942,12 +1008,11 @@ function limitFunds(est, fr, K, cap, rf, minW = 0){
   const order = [...est.mu.keys()].sort((a, b) => est.mu[b] - est.mu[a]), wm = new Float64Array(N);
   if (minW > 0){
     const top = order.slice(0, Math.min(N, isFinite(kMax) ? kMax : N, Math.ceil(1/capK - 1e-9) + 1));
-    let left = 1; for (const i of top){ const x = Math.min(capK, left); wm[i] = x; left -= x; if (left <= 1e-12) break; }
+    wm.set(greedyFill(top, capK, est, N));
     const mr = enforceMin(top.filter(i => wm[i] > 0), 1e4, wm);
     pts.push({t: Infinity, ...stats(est, mr.w, rf)});
   } else {
-    let left = 1;
-    for (const i of order.slice(0, kMax)){ const x = Math.min(capK, left); wm[i] = x; left -= x; if (left <= 1e-12) break; }
+    wm.set(greedyFill(order, capK, est, N, kMax));
     pts.push({t: Infinity, ...stats(est, wm, rf)});
   }
   // keep the efficient part: rising return with rising risk
@@ -1004,19 +1069,32 @@ function recomputeNow(){
     pool.forEach((r, i) => { r.histMu = r.mu; r.mu = bl.mu[i]; r.sharpe = r.sd > 0 ? (r.mu - rf)/r.sd : null; });
   }
   if (bl) rows.filter(r => !r.rets).forEach(r => { r.mu = null; r.sharpe = null; });
-  const endpoints = new Set(maxReturnSeeds(pool, state.cap));
+  const gids = new Map();                      // asset class (AIMC main category) -> group id
+  pool.forEach(r => { const k = r.f.main || "Other"; if (!gids.has(k)) gids.set(k, gids.size); r.gid = gids.get(k); });
+  if (fullEst){ fullEst.grp = Int32Array.from(pool, r => r.gid); fullEst.ng = gids.size; fullEst.G = state.gcap; }
+  const endpoints = new Set(maxReturnSeeds(pool, state.cap, state.gcap));
   const keep = new Set([...state.picks, ...state.included, ...[...endpoints].map(r=>r.f.code)]);
+  if (state.gcap < 1 - 1e-9){                  // with an asset-class cap, make sure every class has its best funds in the working set
+    const byG = new Map();
+    pool.slice().sort((a,b) => (b.sharpe ?? -9) - (a.sharpe ?? -9)).forEach(r => { const a = byG.get(r.gid) || []; if (a.length < 8){ a.push(r); byG.set(r.gid, a); } });
+    byG.forEach(a => a.forEach(r => keep.add(r.f.code)));
+  }
   pool.sort((a,b) => (endpoints.has(b) - endpoints.has(a)) || (keep.has(b.f.code) - keep.has(a.f.code)) || ((b.sharpe ?? -9) - (a.sharpe ?? -9)));
   // working-set size: 80 normally; more when the max weight needs more funds to reach 100%
   // (with 20% to spare), or when Input / ticked funds alone exceed 80
   let limit = Math.min(HARD_MAX_N, Math.max(MAX_N, Math.ceil(1.2 / Math.max(state.cap, 1e-3)), keep.size));
-  const estimateWork = work => subsetEstimate(fullEst, work.map(r=>poolIndex.get(r)));
+  const estimateWork = work => {
+    const e = subsetEstimate(fullEst, work.map(r=>poolIndex.get(r)));
+    if (e.grp){ const f = feasibleG(state.gcap, cap, e.grp, e.ng); e.G = f.G; e.gRaised = f.raised; }
+    return e;
+  };
+  const gNote = e => e.gRaised ? ` · asset-class cap raised to ${pct(e.G,0)} (too few funds / classes to be fully invested)` : "";
   let ok = pool.slice(0, limit), est = null, fr = null, cap = state.cap, capNote = "";
   const scr = {checked: pool.length - ok.length, added: 0, rounds: 0, open: 0};
   for (let round = 0; round < 8 && ok.length >= 2; round++){
     cap = state.cap; capNote = "";
     if (cap * ok.length < 1){ cap = 1/ok.length; capNote = ` · cap raised to ${pct(cap,1)} (too few funds for the chosen cap)`; }
-    est = estimateWork(ok);
+    est = estimateWork(ok); capNote += gNote(est);
     fr = frontier(est, cap, rf, ok.length < pool.length);     // coarse while screening
     if (ok.length === pool.length) break;
     const inSet = new Set(ok), outside = pool.filter(r => !inSet.has(r));
@@ -1037,7 +1115,7 @@ function recomputeNow(){
   if (ok.length < pool.length && ok.length >= 2){             // final, full-detail solve on the settled set
     cap = state.cap; capNote = "";
     if (cap * ok.length < 1){ cap = 1/ok.length; capNote = ` · cap raised to ${pct(cap,1)} (too few funds for the chosen cap)`; }
-    est = estimateWork(ok); fr = frontier(est, cap, rf);
+    est = estimateWork(ok); capNote += gNote(est); fr = frontier(est, cap, rf);
     const finalSet = new Set(ok);
     scr.open = screenOutside(ok, est, fr, pool.filter(r=>!finalSet.has(r)), cap).length;
   }
@@ -1085,7 +1163,7 @@ function renderStatus(){
   }
   const noHist = m.rows.filter(r => r.reason && r.reason.startsWith("No full")).length;
   const onlyDefault = state.main === "All" && state.shelf === "All" && state.amc === "All" && state.risks.length === ALL_RISKS.length && isDefaultExcl(state.cats);
-  const scope = state.picks.length ? "Input funds · " : onlyDefault ? "All funds except money market &amp; short-term bond · " : hasFilter() ? "" : "All funds · ";
+  const scope = state.picks.length ? "Input funds · " : onlyDefault ? "All funds except money market, short-term bond &amp; miscellaneous · " : hasFilter() ? "" : "All funds · ";
   let s = `${scope}Universe: <b>${n.toLocaleString()}</b> share classes · <b>${m.ok.length}</b> optimised over ${state.years}Y (${m.W} weekly returns, ${DATA.dates[NW-m.W]} → ${DATA.dates[NW]})`;
   if (noHist) s += ` · ${noHist} lack ${state.years}Y history`;
   const other = n - m.ok.length - noHist - m.trimmed;
@@ -1100,6 +1178,7 @@ function renderStatus(){
     (m.bl.skipped ? ` · <span class="warn">${m.bl.skipped} view(s) ignored: ${esc(m.bl.warnings.join("; "))}</span>` : "") + " · grey dashed line = historical returns";
   if (m.frFull) s += ` · ` + [state.maxFunds ? `<b>max ${state.maxFunds} funds</b>` : "", state.minW ? `<b>min ${pct(state.minW,1)}</b> per held fund` : ""]
     .filter(Boolean).join(", ") + ` per portfolio (approximate; dashed line = without these limits)`;
+  if (state.gcap < 1 - 1e-9) s += ` · <b>max ${pct(state.gcap,0)} per asset class</b>`;
   s += m.capNote;
   if (m.ok.length < 2) s += ` · <span class="warn">need at least 2 funds with ${state.years}Y history</span>`;
   $("status").innerHTML = s;
@@ -1308,7 +1387,7 @@ function mainMix(pf){
 }
 function cardHTML(pf){
   const n = pf.w.filter(w => w >= 0.005).length;
-  return `<div class="pf-head"><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.fr.capK ?? MODEL.cap,0)}</div>
+  return `<div class="pf-head"><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.fr.capK ?? MODEL.cap,0)}${state.gcap < 1 - 1e-9 ? ` · asset class ≤ ${pct(state.gcap,0)}` : ""}</div>
     <div class="kpis"><div><div class="h">${MODEL.bl ? "Exp. return" : "Return"}</div><div class="v ${sgn(pf.ret)}">${pct(pf.ret)}</div></div>
     <div><div class="h">StdDev</div><div class="v">${pct(pf.sd)}</div></div>
     <div><div class="h">Sharpe</div><div class="v">${pf.sharpe == null ? "–" : pf.sharpe.toFixed(2)}</div></div></div></div>
@@ -1372,12 +1451,21 @@ function clearHover(){
   $("pf-card").style.display = "none";
   $("hv-dot").hidden = true; $("hv-line").hidden = true;
 }
+// When embedded in Portfolio Analysts, tell the parent which portfolio is selected (weights grouped by AIMC main category) so it can compare against it.
+function publishSelected(){
+  if (window.parent === window || !MODEL || !MODEL.fr) return;
+  const pf = selectedPortfolio(), main = {};
+  pf.w.forEach((w, i) => { if (w >= 0.0005){ const k = MODEL.ok[i].f.main || "Other"; main[k] = (main[k] || 0) + w * 100; } });
+  try { parent.postMessage({type:"ef-selected", label:pfLabel(pf), ret:pf.ret, sd:pf.sd, sharpe:pf.sharpe, main}, location.origin); } catch (e) {}
+}
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data && e.data.type === "ef-request") publishSelected(); });
 function renderSelected(){
   const m = MODEL;
   document.querySelectorAll("#pf-pick button").forEach(b => b.classList.toggle("active", b.dataset.k === state.sel));
   if (!m.fr){ $("sel-wrap").innerHTML = '<div class="find-empty" style="padding:14px">No frontier yet.</div>'; $("sel-title").textContent = "Selected portfolio"; return; }
   const pf = selectedPortfolio();
   $("sel-title").textContent = pfLabel(pf);
+  publishSelected();
   const idx = [...pf.w.keys()].filter(i => pf.w[i] >= 0.0005).sort((a,b) => pf.w[b]-pf.w[a]);
   $("sel-wrap").innerHTML = `<div style="padding:10px 14px 4px;font-size:12px;color:var(--grey)">
       Return <b class="${sgn(pf.ret)}">${pct(pf.ret)}</b> · StdDev <b>${pct(pf.sd)}</b> · Sharpe <b>${pf.sharpe == null ? "–" : pf.sharpe.toFixed(2)}</b> · ${idx.length} funds
@@ -1507,6 +1595,15 @@ $("cap-input").onchange = e => {
   recompute();
 };
 $("cap-input").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+// Max asset class (main category) weight: empty (default) or >= 100 = no cap; otherwise the typed % (1-100)
+$("gcap-input").onchange = e => {
+  const v = parseFloat(e.target.value);
+  if (!isFinite(v) || v >= 100){ state.gcap = 1; e.target.value = ""; }
+  else { const c = Math.max(1, v); state.gcap = c/100; e.target.value = c; }
+  if (typeof state.sel === "object") state.sel = "sharpe";
+  recompute();
+};
+$("gcap-input").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
 // Max funds: empty (default) = no limit; otherwise a whole number 1-120
 $("maxfunds-input").onchange = e => {
   const v = parseInt(e.target.value, 10);
