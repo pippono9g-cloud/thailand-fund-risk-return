@@ -556,7 +556,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     <b>Disclaimer:</b> Portfolio return, risk, Sharpe Ratio and Maximum Drawdown shown above assume a buy-and-hold portfolio whose starting allocation, left untouched over the selected historical period, would have organically drifted into the CURRENT weights you set today — they are not a record of what you actually earned, and do not reflect any rebalancing or weight changes you may have made in the past. Figures are statistical estimates derived from historical fund performance for illustrative purposes only. Past performance and historical statistics are not indicative of future results and should not be construed as a guarantee, commitment, or prediction of future returns.
   </div>
 
-  <footer>Generated 2 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
+  <footer>Generated 3 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
 </div>
 
 <script>
@@ -1687,7 +1687,7 @@ function drawRiskReturnDots(curves){
     return;
   }
 
-  const W = 460, H = 230, PAD_L = 30, PAD_R = 10, PAD_T = 13, PAD_B = 18;
+  const W = 460, H = 236, PAD_L = 30, PAD_R = 50, PAD_T = 15, PAD_B = 24;
   // The portfolio itself (diamond): SD and return both come from the buy-and-hold curve.
   const ps = portfolioStats(curves);
   const pp = ps && ps.real && ps.sd != null && ps.ret != null ? { sd: ps.sd, ret: ps.ret } : null;
@@ -1729,39 +1729,21 @@ function drawRiskReturnDots(curves){
   // Port SD: top first, then stepping down the line).
   const boxClear = b => b.x0 >= PAD_L && b.x1 <= W - PAD_R && b.y0 >= 1 && b.y1 <= H - PAD_B + 1 &&
     !medBoxes.some(o => hit(b, o)) && !dots.some(o => hit(b, dotBox(o)));
-  if (medRet != null) {
-    const w = medRetTxt.length * 3.7, yl = Y(medRet);
-    let pick = null;
-    search: for (let dx = 0; dx <= W - PAD_L - PAD_R - w; dx += 12) {
-      for (const dy of [-3, 9]) {
-        const tx = W - PAD_R - 2 - dx, ty = yl + dy, box = { x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 };
-        if (boxClear(box)) { pick = { tx, ty, box }; break search; }
-      }
-    }
-    if (!pick) { const tx = W - PAD_R - 2, ty = yl - 3; pick = { tx, ty, box: { x0: tx - w, x1: tx, y0: ty - 6, y1: ty + 2 } }; }
-    medLbl.ret = { tx: pick.tx, ty: pick.ty }; medBoxes.push(pick.box);
+  if (medRet != null) {   // labels sit outside the plot background: Port return in the right margin
+    medLbl.ret = { tx: W - PAD_R + 4, ty: Y(medRet) - 1 };
   }
-  if (medSd != null) {
-    const w = medSdTxt.length * 3.7, tx = Math.min(Math.max(X(medSd), PAD_L + w/2 + 2), W - PAD_R - w/2 - 2);
-    let pick = null;
-    for (let ty = PAD_T + 4; ty <= H - PAD_B - 3; ty += 9) {
-      const box = { x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 };
-      if (boxClear(box)) { pick = { ty, box }; break; }
-    }
-    if (!pick) { const ty = PAD_T + 4; pick = { ty, box: { x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 } }; }
-    medLbl.sd = { tx, ty: pick.ty }; medBoxes.push(pick.box);
+  if (medSd != null) {   // Port SD above the plot
+    const w = medSdTxt.length * 3.7, tx = Math.min(Math.max(X(medSd), PAD_L + w/2 + 2), W - 2 - w/2);
+    medLbl.sd = { tx, ty: PAD_T - 4 };
   }
   // Avg SD: weight-average of the funds' own SDs (no diversification), faint grey, label from the bottom up.
   const wSum = pts.reduce((n, p) => n + p.w, 0);
   const avgSd = wSum > 0 ? pts.reduce((n, p) => n + p.sd * p.w, 0) / wSum : null;
   const avgSdTxt = avgSd == null ? "" : `Weighted SD ${avgSd.toFixed(1)}%`;
   let avgLbl = null;
-  if (avgSd != null) {
-    const w = avgSdTxt.length * 3.7, tx = Math.min(Math.max(X(avgSd), PAD_L + w/2 + 2), W - PAD_R - w/2 - 2);
-    for (let ty = H - PAD_B - 4; ty >= PAD_T + 6; ty -= 9) {
-      const box = { x0: tx - w/2, x1: tx + w/2, y0: ty - 6, y1: ty + 2 };
-      if (boxClear(box)) { avgLbl = { tx, ty }; medBoxes.push(box); break; }
-    }
+  if (avgSd != null) {   // Weighted SD below the plot (above the axis end labels)
+    const w = avgSdTxt.length * 3.7;
+    avgLbl = { tx: Math.min(Math.max(X(avgSd), PAD_L + w/2 + 2), W - 2 - w/2), ty: H - PAD_B + 8 };
   }
   const placedBoxes = medBoxes.slice();
   const labelByCode = {};
@@ -1793,10 +1775,10 @@ function drawRiskReturnDots(curves){
   const y0 = Math.min(Math.max(Y(0), PAD_T), H - PAD_B);
   svg += `<rect class="rr-zone-pos" x="${PAD_L}" y="${PAD_T}" width="${W-PAD_L-PAD_R}" height="${(y0-PAD_T).toFixed(1)}" fill="#16a34a" fill-opacity=".07" pointer-events="none"/>`;
   svg += `<rect class="rr-zone-neg" x="${PAD_L}" y="${y0.toFixed(1)}" width="${W-PAD_L-PAD_R}" height="${(H-PAD_B-y0).toFixed(1)}" fill="#dc2626" fill-opacity=".07" pointer-events="none"/>`;
-  svg += `<line class="czero" x1="${PAD_L}" y1="${Y(0).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(0).toFixed(1)}"/>`;
+  // (no dashed 0% line here: the green / red zone shading already marks where Return crosses 0)
   if (medSd != null) svg += `<line class="rr-median" x1="${X(medSd).toFixed(1)}" y1="${PAD_T}" x2="${X(medSd).toFixed(1)}" y2="${H-PAD_B}"><title>${medSdTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.sd.tx.toFixed(1)}" y="${medLbl.sd.ty.toFixed(1)}" text-anchor="middle">${medSdTxt}</text>`;
   if (avgSd != null) svg += `<line class="rr-avg" x1="${X(avgSd).toFixed(1)}" y1="${PAD_T}" x2="${X(avgSd).toFixed(1)}" y2="${H-PAD_B}"><title>${avgSdTxt} (weight-average of the funds' own SDs; no diversification)</title></line>` + (avgLbl ? `<text class="rr-avg-lbl" x="${avgLbl.tx.toFixed(1)}" y="${avgLbl.ty.toFixed(1)}" text-anchor="middle">${avgSdTxt}</text>` : "");
-  if (medRet != null) svg += `<line class="rr-median" x1="${PAD_L}" y1="${Y(medRet).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(medRet).toFixed(1)}"><title>${medRetTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.ret.tx.toFixed(1)}" y="${medLbl.ret.ty.toFixed(1)}" text-anchor="end">${medRetTxt}</text>`;
+  if (medRet != null) svg += `<line class="rr-median" x1="${PAD_L}" y1="${Y(medRet).toFixed(1)}" x2="${W-PAD_R}" y2="${Y(medRet).toFixed(1)}"><title>${medRetTxt} (from the buy-and-hold portfolio curve; includes diversification)</title></line><text class="rr-median-lbl" x="${medLbl.ret.tx.toFixed(1)}" y="${medLbl.ret.ty.toFixed(1)}" text-anchor="start">Port return<tspan x="${medLbl.ret.tx.toFixed(1)}" dy="7.5">${fmtPct(medRet,1)}</tspan></text>`;
   svg += `<g id="rr-hover-guides" style="display:none" aria-hidden="true">` +
     `<line id="rr-guide-x" class="rr-guide"/><line id="rr-guide-y" class="rr-guide"/>` +
     `<rect id="rr-badge-x" class="rr-axis-badge" rx="3" width="48" height="13"/>` +
