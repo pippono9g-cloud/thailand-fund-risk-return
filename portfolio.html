@@ -731,7 +731,8 @@ function noDataText(code, reason, short){
   }
   return short ? `Include · no data for ${WINDOWS[state.win]} — Allocation only` : `Include · no data for ${WINDOWS[state.win]} (${reason}) — shown in Allocation only`;
 }
-const MAX_NAV_AGE = 7; // Calendar days; shown explicitly in the methodology.
+const MAX_NAV_AGE = 7;   // Calendar days a window-end NAV may be stale.
+const MAX_NAV_GAP = 14;  // Calendar days allowed between two NAVs inside the window: long market closures (Vietnam Tet, China Golden Week) carry the last NAV forward.
 function navIssue(code, startIdx, endIdx){
   const step = NAV_SERIES[code];
   if (!step) return 'No NAV history';
@@ -742,7 +743,7 @@ function navIssue(code, startIdx, endIdx){
     if (d <= start) previous = d;
     else if (d <= end) {
       if (!previous) return 'Insufficient history';
-      if ((Date.parse(d)-Date.parse(previous))/86400000 > MAX_NAV_AGE) return 'NAV history gap > 7 days';
+      if ((Date.parse(d)-Date.parse(previous))/86400000 > MAX_NAV_GAP) return 'NAV history gap > 14 days';
       previous = d;
     }
   }
