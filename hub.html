@@ -69,7 +69,8 @@
     <nav class="nav" aria-label="Dashboard menu">
       <button type="button" data-panel="risk" class="active">Risk vs Return</button>
       <button type="button" data-panel="frontier">Efficient Frontier</button>
-      <button type="button" data-panel="trend">Trend</button>
+      <button type="button" data-panel="trend">Flow</button>
+      <button type="button" data-panel="matrend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
       <button type="button" data-panel="longterm">Long-term Markets</button>
       <select class="signal-select" aria-label="เลือก Market Signals">
@@ -81,7 +82,8 @@
     <select class="mobile-select" aria-label="เลือก Dashboard">
       <option value="risk">Risk vs Return</option>
       <option value="frontier">Efficient Frontier</option>
-      <option value="trend">Trend</option>
+      <option value="trend">Flow</option>
+      <option value="matrend">Trend</option>
       <option value="growth">Growth Comparison</option>
       <option value="longterm">Long-term Markets</option>
       <option value="signals">Market Signals</option>
@@ -99,9 +101,13 @@
     <div class="loading">กำลังโหลด Efficient Frontier…</div>
     <iframe data-src="frontier.html" title="Thailand Fund Efficient Frontier"></iframe>
   </section>
-  <section id="panel-trend" class="panel" aria-label="Trend dashboard">
+  <section id="panel-trend" class="panel" aria-label="Flow dashboard">
+    <div class="loading">กำลังโหลด Flow…</div>
+    <iframe data-src="trend.html" title="Thailand Fund Flow"></iframe>
+  </section>
+  <section id="panel-matrend" class="panel" aria-label="Trend dashboard (MA Quadrant)">
     <div class="loading">กำลังโหลด Trend…</div>
-    <iframe data-src="trend.html" title="Thailand Fund Trend"></iframe>
+    <iframe data-src="ma-quadrant.html" title="Thailand Fund Trend (MA Quadrant)"></iframe>
   </section>
   <section id="panel-growth" class="panel" aria-label="Growth Comparison dashboard">
     <div class="loading">กำลังโหลด Growth Comparison…</div>
@@ -123,7 +129,7 @@
 <script>
 (function(){
   "use strict";
-  var valid={risk:1,frontier:1,trend:1,growth:1,longterm:1,signals:1,set100:1};
+  var valid={risk:1,frontier:1,trend:1,matrend:1,growth:1,longterm:1,signals:1,set100:1};
   var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
   var select=document.querySelector(".mobile-select");
   var signalSelect=document.querySelector(".signal-select"),loaded={};
