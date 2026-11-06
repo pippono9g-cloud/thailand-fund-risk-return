@@ -136,12 +136,13 @@ table.trend tr.dim td { opacity:.42; }
 <div class="card">
   <div class="panel-row">
     <div class="seg" role="group" aria-label="View"><button type="button" class="on" data-m="cat">AIMC Sub-Category</button><button type="button" data-m="fund">Fund</button></div><div class="spacer"></div>
-    <span style="font-size:11.5px;color:var(--mute)">hover a dot or its name tag: it is highlighted, all others drop back</span>
+    <span style="font-size:11.5px;color:var(--mute)">hover a dot or its name tag: highlighted, others drop back, and its tail shows where it was</span>
   </div>
   <div class="ctl" id="ctl" style="display:none">
     <div class="it"><label>Fast MA <b id="vF">30</b> days</label><input type="range" id="rF" min="5" max="100" step="1" value="30"></div>
     <div class="it"><label>Slow MA <b id="vS">200</b> days</label><input type="range" id="rS" min="50" max="250" step="5" value="200"></div>
-    <div class="it"><label>Zone-change lookback <b id="vK">10</b> trading days</label><input type="range" id="rK" min="0" max="30" step="1" value="10"></div>
+    <div class="it"><label>Zone-change lookback <b id="vK">0</b> trading days</label><input type="range" id="rK" min="0" max="30" step="1" value="0"></div>
+    <div class="it"><label>Tail length <b id="vT">0</b> trading days (on hover)</label><input type="range" id="rT" min="0" max="60" step="5" value="0"></div>
     <button id="bReset" type="button">Reset MA</button>
   </div>
   <div class="find-status" id="cat-status" style="margin:8px 0 0"></div>
@@ -196,6 +197,7 @@ table.trend tr.dim td { opacity:.42; }
         <li><b>X</b> = latest NAV ÷ MA200 − 1; <b>Y</b> = latest NAV ÷ MA30 − 1. MA = simple mean of the last 30 / 200 NAV observations (trading days).</li>
         <li><b>Strong</b> above both; <b>Pullback</b> above MA200, below MA30; <b>Recovery</b> below MA200, above MA30; <b>Weak</b> below both.</li>
         <li>Normal moves follow the clockwise cycle Recovery → Strong → Pullback → Weak → Recovery, so the previous zone is implied. A small white <b>V</b> on a dot marks a category that jumped or moved against that cycle (counter-clockwise or across the diagonal) within the lookback period. The open side of the V faces the quadrant it came from (e.g. opening downward = it came from the zone below); the table also lists the previous zone. With lookback above 0, categories that stayed in the same zone are removed from the chart (shown greyed in the table); at 0 every category is shown.</li>
+        <li><b>Tail</b> (on hover only): the hovered dot\'s historical position as a fading line, from a hollow start dot (Tail length trading days ago) to today. Category view uses the median of its funds on each date; Fund view the fund itself. Length is limited by the NAV history left after the Slow MA window.</li>
         <li>Funds with stale NAV (&gt;7 days) or fewer NAV observations than the Slow MA window are excluded (young funds appear when Slow MA is set shorter, minimum 50); categories with fewer than 3 funds are not shown. Raw NAV, not dividend-adjusted.</li>
       </ul>
     </div>
@@ -214,7 +216,7 @@ const D={"cats":["Equity General","Equity Large Cap","Short Term General Bond","
 const COL={strong:"#047857",pullback:"#c2410c",recovery:"#007BB0",weak:"#b91c1c"};
 const BG={strong:"#f1f8f4",pullback:"#fdf6f0",recovery:"#f0f7fb",weak:"#fcf3f3"};
 const LBL={strong:"Strong",pullback:"Pullback",recovery:"Recovery",weak:"Weak"};
-const DEF={F:30,S:200,K:10};
+const DEF={F:30,S:200,K:0,T:0};   // zone-change lookback and tail length are off by default; the user turns them on
 const $=id=>document.getElementById(id);
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const NEXT={recovery:"strong",strong:"pullback",pullback:"weak",weak:"recovery"};   // normal clockwise cycle
@@ -387,12 +389,41 @@ function render(){
   const vr=r.rows.filter(vis), nF=MODE==="fund"?vr.length:vr.reduce((a,e)=>a+e.n,0);
   const msg=nF.toLocaleString()+" of "+D.f.length.toLocaleString()+" funds shown"+(MODE==="fund"?"":" · "+vr.length+" categories")+(K>0?" (changed zone)":"")+(window.__hiddenLabels?" · "+window.__hiddenLabels+" name tags hidden where dots overlap (hover the dot to reveal)":"");
   $("find-status").textContent=msg; $("cat-status").textContent=msg;
-  window.__rows=r.rows;
+  window.__rows=r.rows; window.__FS={F,S};
   renderChips(); updateZoomUI();
 }
 // ---- hover: enlarge + navy name tag, drop the other dots back (event delegation) ----
 const box=$("chartbox");
+// ---- Tail: historical position of the hovered dot, drawn as a fading line (only while hovering) ----
+const TAILIDX=new Map();
+function tailPts(e,F,S,L){
+  const out=[], step=Math.max(1,Math.round(L/12)), ks=[];
+  for(let k=0;k<=L;k+=step) ks.push(k);
+  if(ks[ks.length-1]!==L&&L>0) ks.push(L);
+  ks.reverse();   // oldest first
+  if(MODE==="fund"){
+    if(!TAILIDX.size) D.f.forEach(fe=>TAILIDX.set(fe[2],fe));
+    const fe=TAILIDX.get(e.name); if(!fe) return out; const a=fe[1];
+    for(const k of ks){ const end=a.length-k; if(end>=S) out.push([gap(a,end,S),gap(a,end,F)]); }
+  } else {
+    const ci=D.cats.indexOf(e.name), fs=D.f.filter(fe=>fe[0]===ci&&fe[1].length>=S);
+    for(const k of ks){ const xs=[],ys=[]; for(const fe of fs){ const a=fe[1], end=a.length-k; if(end>=S){ xs.push(gap(a,end,S)); ys.push(gap(a,end,F)); } } if(xs.length>=3) out.push([med(xs),med(ys)]); }
+  }
+  return out;
+}
+function clearTail(){ const g=box.querySelector("#tail"); if(g) g.remove(); }
+function drawTail(i){
+  clearTail(); const L=+$("rT").value; if(!L) return;
+  const e=(window.__rows||[])[i], sv=box.querySelector("svg"), c=window.__cur, fs=window.__FS; if(!e||!sv||!c||!fs) return;
+  const pts=tailPts(e,fs.F,fs.S,L); if(pts.length<2) return;
+  const X=v=>70+(v-c.x0)/(c.x1-c.x0)*900, Y=v=>700-(v-c.y0)/(c.y1-c.y0)*670, col=COL[e.q];
+  let g='<g id="tail" clip-path="url(#pc)" style="pointer-events:none">';
+  for(let j=1;j<pts.length;j++) g+='<line x1="'+X(pts[j-1][0]).toFixed(1)+'" y1="'+Y(pts[j-1][1]).toFixed(1)+'" x2="'+X(pts[j][0]).toFixed(1)+'" y2="'+Y(pts[j][1]).toFixed(1)+'" stroke="'+col+'" stroke-width="2.4" stroke-linecap="round" stroke-opacity="'+(0.15+0.75*j/(pts.length-1)).toFixed(2)+'"/>';
+  g+='<circle cx="'+X(pts[0][0]).toFixed(1)+'" cy="'+Y(pts[0][1]).toFixed(1)+'" r="3.2" fill="#fff" stroke="'+col+'" stroke-width="1.5"/></g>';   // hollow dot = where it was L trading days ago
+  sv.insertAdjacentHTML("beforeend",g);
+}
 function hov(i,on){
+  if(on) drawTail(i); else clearTail();
   const x=box.querySelector('.tag[data-i="'+i+'"]'), g=box.querySelector('.pt[data-i="'+i+'"]'), sv=box.querySelector("svg");
   if(x){ x.classList.toggle("on",on);  }
   if(g) g.classList.toggle("sel",on); if(sv) sv.classList.toggle("focus",on);
@@ -559,8 +590,9 @@ $("filters-toggle").addEventListener("click",()=>{ const c=$("filters-body").cla
 buildSelects(); rebuildCats(); rebuildRisk();
 $("ctl").style.display="flex"; $("zoomrow").style.display=""; $("nojs").style.display="none";
 ["rF","rS"].forEach(i=>$(i).addEventListener("input",()=>{ VIEW=null; render(); }));
+$("rT").addEventListener("input",()=>{ $("vT").textContent=$("rT").value; });
 $("rK").addEventListener("input",render);
-$("bReset").addEventListener("click",()=>{$("rF").value=DEF.F;$("rS").value=DEF.S;$("rK").value=DEF.K;render();});
+$("bReset").addEventListener("click",()=>{$("rF").value=DEF.F;$("rS").value=DEF.S;$("rK").value=DEF.K;$("rT").value=DEF.T;$("vT").textContent=DEF.T;render();});
 document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{
   MODE=b.dataset.m; VIEW=null; st.picks=[]; fi.value=""; fd.classList.remove("open");   // picks are categories in one view and funds in the other
   document.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x===b));
