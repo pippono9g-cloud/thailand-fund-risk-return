@@ -11,6 +11,7 @@ Bangkok time.
 | **[Growth Comparison](./growth.html)** | Cumulative growth overlay — pick funds to compare price performance over 1W → Max. Raw NAV per class (ex-dividend dips visible). |
 | **[Flow](./trend.html)** | Sub-category return vs AUM-change bubble chart with drill-down per category (menu name "Flow"; file stays `trend.html`). |
 | **[Trend](./ma-quadrant.html)** | MA-Quadrant: AIMC sub-category position vs fast (default 30d) and slow (default 200d) moving averages, with sliders for the MA windows and zone-change lookback. |
+| **[Portfolio Analysts](./portfolio.html)** | Build a portfolio from the fund universe: allocation by asset class / sub-sector, buy-and-hold NAV performance, risk vs return and comparison with the SCB model and Efficient Frontier. |
 | **[Long-term Markets](https://pippono9g-cloud.github.io/longterm-markets-chart/)** | Stocks, bonds and cash with historical event context and post-event market performance. |
 
 The signal panels load Arnupap's published JSON feeds directly inside our themed hub and retain a visible source credit: [Market Signals by Arnupap](https://arnupapchomsri-cloud.github.io/market-signal/hub.html).

@@ -73,6 +73,7 @@
       <button type="button" data-panel="matrend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
       <button type="button" data-panel="longterm">Long-term Markets</button>
+      <button type="button" data-panel="portfolio">Portfolio Analysts</button>
       <select class="signal-select" aria-label="เลือก Market Signals">
         <option value="">Market Signals ▾</option>
         <option value="signals">Market Signals</option>
@@ -86,6 +87,7 @@
       <option value="matrend">Trend</option>
       <option value="growth">Growth Comparison</option>
       <option value="longterm">Long-term Markets</option>
+      <option value="portfolio">Portfolio Analysts</option>
       <option value="signals">Market Signals</option>
       <option value="set100">SET100 Signals</option>
     </select>
@@ -117,6 +119,10 @@
     <div class="loading">กำลังโหลด Long-term Markets…</div>
     <iframe data-src="https://pippono9g-cloud.github.io/longterm-markets-chart/" title="Long-term Markets"></iframe>
   </section>
+  <section id="panel-portfolio" class="panel" aria-label="Portfolio Analysts dashboard">
+    <div class="loading">กำลังโหลด Portfolio Analysts…</div>
+    <iframe data-src="portfolio.html" title="Thailand Fund Portfolio Analysts"></iframe>
+  </section>
   <section id="panel-signals" class="panel signals-panel" aria-label="Market Signals">
     <div class="signals-wrap"><div class="signals-head"><div><h1>Market Signals</h1><p id="signals-method">กำลังโหลดข้อมูล…</p><p id="signals-updated"></p></div><a class="source-credit" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Data by Arnupap ↗</a></div><div id="signals-body"><div class="signal-error">กำลังโหลดข้อมูล…</div></div></div>
   </section>
@@ -129,7 +135,7 @@
 <script>
 (function(){
   "use strict";
-  var valid={risk:1,frontier:1,trend:1,matrend:1,growth:1,longterm:1,signals:1,set100:1};
+  var valid={risk:1,frontier:1,trend:1,matrend:1,growth:1,longterm:1,portfolio:1,signals:1,set100:1};
   var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
   var select=document.querySelector(".mobile-select");
   var signalSelect=document.querySelector(".signal-select"),loaded={};
