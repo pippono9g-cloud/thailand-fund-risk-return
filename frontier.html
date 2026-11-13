@@ -2038,7 +2038,17 @@ function printName(){
   // "/" cannot be used in a file name, so the date is written DD-MMM-YY
   return `Efficient Frontier-${String(d.getDate()).padStart(2, "0")}-${M[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
 }
+const IS_TOUCH_APPLE = navigator.maxTouchPoints > 1 && /iPad|iPhone|Macintosh/.test(navigator.userAgent);
+function inFrame(){ try { return window.parent !== window; } catch (e) { return true; } }
 function printPage(){
+  // iPad / iPhone Safari cannot print from inside a frame (the hub): hand the settings to a full-page tab that prints.
+  if (inFrame() && IS_TOUCH_APPLE){
+    try {
+      localStorage.setItem("ef-print", JSON.stringify(snapshot()));
+      const u = new URL(location.href); u.search = "?print=1"; u.hash = "";
+      if (window.open(u.href, "_blank")) { fileMsg("Opened in a new tab — tap Print there"); return; }
+    } catch (e) {}
+  }
   unpinCard(); printMeta();
   // the browser proposes the title of the top window as the PDF name; inside the hub that is the hub's title
   const docs = [document]; try { if (parent !== window && parent.document) docs.push(parent.document); } catch (e) {}
@@ -2076,6 +2086,21 @@ window.addEventListener("afterprint", () => { sizeChartsForPrint(false); render(
 initFilters();
 DEFAULT_SNAP = snapshot();
 recompute();
+// opened by the Print button inside the hub on an iPad: restore the settings, then wait for a tap on Print
+if (/[?&]print=1/.test(location.search)){
+  setTimeout(() => {
+    try {
+      const raw = localStorage.getItem("ef-print"); localStorage.removeItem("ef-print");
+      if (raw) applySnapshot(JSON.parse(raw));
+    } catch (e) {}
+    const bar = document.createElement("div");
+    bar.className = "no-print";
+    bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:300;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px;background:#4F2D7F;color:#fff;font-size:14px";
+    bar.innerHTML = '<span>Ready to print — tap Print, then Share / Save to Files for a PDF</span><button type="button" style="font:inherit;font-weight:700;padding:6px 16px;border:0;border-radius:8px;background:#fff;color:#4F2D7F">Print</button>';
+    bar.querySelector("button").onclick = () => { bar.style.display = "none"; printPage(); setTimeout(() => { bar.style.display = "flex"; }, 1500); };
+    document.body.appendChild(bar);
+  }, 800);
+}
 </script>
 </body>
 </html>
