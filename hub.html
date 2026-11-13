@@ -150,6 +150,17 @@
     body.innerHTML='<div class="signal-grid">'+keys.map(function(key){var s=data.signals[key];if(s.error)return '<article class="signal-card"><strong class="signal-ticker">'+esc(key)+'</strong><div class="signal-error">'+esc(s.error)+'</div></article>';var chg=Number(s.chg1d_pct||0);return '<article class="signal-card"><div class="signal-card-head"><span class="signal-ticker">'+esc(key)+'</span><span class="signal-price">'+esc(s.price)+' <span style="color:'+(chg>=0?'#087447':'#c62828')+'">'+(chg>=0?'+':'')+esc(s.chg1d_pct)+'%</span></span></div><div class="signal-label">'+esc(s.label)+'</div><span class="signal-status '+statusClass(s.status)+'">'+esc(s.status)+'</span><div class="signal-row">EMA20: '+(Number(s.ema20_pct)>=0?'+':'')+esc(s.ema20_pct)+'% · EMA50: '+(Number(s.ema50_pct)>=0?'+':'')+esc(s.ema50_pct)+'%</div><div class="signal-row">52w High: '+esc(s.high_52w)+' (เหลือ +'+esc(s.up_pct_to_high)+'%)</div><div class="signal-row">52w Low: '+esc(s.low_52w)+' (เหลือ −'+esc(s.down_pct_to_low)+'%)</div><div class="signal-row">R:R: '+esc(s.rr==null?'—':s.rr)+'</div></article>';}).join('')+'</div>';
   }
   function loadSignals(name){if(loaded[name])return;loaded[name]=true;var config=feeds[name];fetch(config.url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(function(data){renderSignals(data,config);}).catch(function(err){loaded[name]=false;document.getElementById(config.body).innerHTML='<div class="signal-error">โหลดข้อมูลไม่สำเร็จ: '+esc(err.message)+'</div>';});}
+  function versionFor(target,done){
+    var fallback=String(Date.now()),settled=false;
+    function finish(v){if(!settled){settled=true;done(v);}}
+    setTimeout(function(){finish(fallback);},4000);
+    try{
+      fetch(target,{method:"HEAD",cache:"no-store"}).then(function(r){
+        var stamp=r.ok?Date.parse(r.headers.get("last-modified")||""):NaN;
+        finish(isNaN(stamp)?fallback:String(stamp));
+      }).catch(function(){finish(fallback);});
+    }catch(e){finish(fallback);}
+  }
   function show(name,writeHash){
     if(!valid[name])name="risk";
     document.querySelectorAll(".panel").forEach(function(panel){panel.classList.toggle("active",panel.id==="panel-"+name);});
@@ -159,10 +170,18 @@
       var target=frame.getAttribute("data-src");
       // Refresh our own dashboards and the separately deployed Long-term Markets
       // page when the Hub loads, so an iframe cannot retain an older release.
+      // The version is the file's Last-Modified stamp, so a new release is always
+      // picked up while an unchanged file comes from the browser cache. If the
+      // stamp cannot be read we fall back to Date.now() (always fresh, as before).
+      if(frame.getAttribute("data-pending"))return finishShow(name,writeHash);
+      frame.setAttribute("data-pending","1");
       if(target&&(!/^https?:\/\//.test(target)||/^https:\/\/pippono9g-cloud\.github\.io\/longterm-markets-chart\//.test(target)))
-        target+=(target.indexOf("?")===-1?"?":"&")+"v="+Date.now();
-      frame.setAttribute("src",target);
+        versionFor(target,function(v){frame.setAttribute("src",target+(target.indexOf("?")===-1?"?":"&")+"v="+v);});
+      else frame.setAttribute("src",target);
     }
+    finishShow(name,writeHash);
+  }
+  function finishShow(name,writeHash){
     if(feeds[name])loadSignals(name);
     select.value=name;
     signalSelect.value=feeds[name]?name:"";
