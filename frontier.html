@@ -260,6 +260,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .wt tr.gb td:last-child, table.dt tr.gb td:last-child { border-bottom-right-radius:7px; }
 .wt tr.gb td, table.dt tr.gb td { border-bottom:0; }
 .gh .gname { display:inline-flex; align-items:center; gap:6px; }
+.gh .gtot { margin-left:8px; font-weight:800; color:var(--scb); }
 .gh .gn { font-weight:500; color:var(--mute); font-size:10px; margin-left:4px; }
 table.dt tr.gh td { font-weight:700; color:var(--ink); }
 table.dt tr.gs td { height:6px; padding:0; border:0; background:none; }
@@ -1457,7 +1458,7 @@ function weightRows(pf, limit){
   const top = pf.w[shown[0]] || 1;
   let h = groupIdx(pf, shown).map((g, gi) => {
     let r = (gi ? '<tr class="gs"><td colspan="4"></td></tr>' : "") +
-      `<tr class="gh" style="--g:${g.color}"><td colspan="3"><span class="gname">${esc(g.name)}<span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td><td class="pct">${pct(g.total,1)}</td></tr>`;
+      `<tr class="gh" style="--g:${g.color}"><td colspan="4"><span class="gname">${esc(g.name)}<span class="gtot">${pct(g.total,1)}</span><span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td></tr>`;
     g.idx.forEach((i, k) => {
       const f = m.ok[i].f;
       r += `<tr class="gr${k === g.idx.length-1 ? " gb" : ""}" style="--g:${g.color}"><td><span class="sw" style="background:${m.color[i]}"></span></td>
@@ -1599,7 +1600,7 @@ function renderSelected(){
       <div class="mains">${mainMix(pf)}</div></div>
     <table class="dt"><thead><tr><th class="l">Fund</th><th class="l">Sub-category</th><th>Weight</th><th>${m.bl ? "Exp. return" : "Return"}</th><th>SD</th><th>Sharpe</th></tr></thead><tbody>
     ${groupIdx(pf, idx).map((g, gi) => (gi ? '<tr class="gs"><td colspan="6"></td></tr>' : "") +
-      `<tr class="gh" style="--g:${g.color}"><td class="l" colspan="2"><span class="gname">${esc(g.name)}<span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td><td><b>${pct(g.total,1)}</b></td><td></td><td></td><td></td></tr>` +
+      `<tr class="gh" style="--g:${g.color}"><td class="l" colspan="6"><span class="gname">${esc(g.name)}<span class="gtot">${pct(g.total,1)}</span><span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td></tr>` +
       g.idx.map((i, k) => { const r = m.ok[i];
       return `<tr class="gr${k === g.idx.length-1 ? " gb" : ""}" style="--g:${g.color}"><td class="fund"><div class="fc"><span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:${m.color[i]}"></span>${esc(r.f.code)}</div><div class="fn">${esc(r.f.name)}</div></td>
         <td class="l">${esc(r.f.cat)}</td><td><b>${pct(pf.w[i],1)}</b></td><td class="${sgn(r.mu)}">${pct(r.mu,1)}</td><td>${pct(r.sd,1)}</td><td>${r.sharpe == null ? "–" : r.sharpe.toFixed(2)}</td></tr>`; }).join("")).join("")}
