@@ -247,6 +247,22 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .wt td.bar span { display:block; height:7px; border-radius:4px; background:var(--scb); opacity:.75; }
 .wt td.pct { text-align:right; font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .wt tr.rest td { color:var(--mute); font-style:italic; }
+/* funds grouped by asset class (main category): one small tinted box per group */
+.wt { border-collapse:separate; border-spacing:0; }
+.wt tr.gs td { height:6px; padding:0; border:0; background:none; }
+.wt tr.gh td, .wt tr.gr td, table.dt tr.gh td, table.dt tr.gr td { background:color-mix(in srgb, var(--g) 9%, #fff); border-bottom-color:color-mix(in srgb, var(--g) 18%, #fff); }
+.wt tr.gh td { padding-top:4px; padding-bottom:4px; font-weight:700; color:var(--ink); }
+.wt tr.gh td:first-child, .wt tr.gr td:first-child, table.dt tr.gh td:first-child, table.dt tr.gr td:first-child { box-shadow:inset 3px 0 0 var(--g); padding-left:8px; }
+.wt tr.gr td:last-child, .wt tr.gh td:last-child { padding-right:8px; }
+.wt tr.gh td:first-child, table.dt tr.gh td:first-child { border-top-left-radius:7px; }
+.wt tr.gh td:last-child, table.dt tr.gh td:last-child { border-top-right-radius:7px; }
+.wt tr.gb td:first-child, table.dt tr.gb td:first-child { border-bottom-left-radius:7px; }
+.wt tr.gb td:last-child, table.dt tr.gb td:last-child { border-bottom-right-radius:7px; }
+.wt tr.gb td, table.dt tr.gb td { border-bottom:0; }
+.gh .gname { display:inline-flex; align-items:center; gap:6px; }
+.gh .gn { font-weight:500; color:var(--mute); font-size:10px; margin-left:4px; }
+table.dt tr.gh td { font-weight:700; color:var(--ink); }
+table.dt tr.gs td { height:6px; padding:0; border:0; background:none; }
 .mains { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:7px; font-size:10.5px; color:var(--grey); }
 .mains b { color:var(--ink); }
 .pf-foot { font-size:10px; color:var(--mute); margin-top:6px; }
@@ -257,7 +273,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .table-wrap header { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; background:var(--soft); font-weight:700; font-size:13px; }
 .table-wrap header .hint { font-weight:400; font-size:12px; color:var(--mute); }
 .table-scroll { overflow:auto; max-height:520px; }
-table.dt { width:100%; border-collapse:collapse; font-size:11px; }
+table.dt { width:100%; border-collapse:separate; border-spacing:0; font-size:11px; }
 table.dt th { position:sticky; top:0; background:#fff; text-align:right; padding:5px 6px; border-bottom:1px solid var(--rule); color:var(--mute); font-size:10px; white-space:nowrap; }
 table.dt th.l, table.dt td.l { text-align:left; }
 table.dt td { text-align:right; padding:4px 6px; border-bottom:1px solid var(--grid); white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -313,6 +329,11 @@ table.dt .note { font-size:10px; color:var(--amber); }
   .table-wrap { box-shadow:none !important; break-inside:auto; }
   .table-scroll { max-height:none !important; overflow:visible !important; }
   table.dt th, table.dt td { padding-top:2px !important; padding-bottom:2px !important; font-size:10.5px; }
+  table.dt tr.gs td { height:2px; }
+  table.dt th, table.dt td { padding-top:1px !important; padding-bottom:1px !important; }
+  table.dt tr.gh td { font-size:10px; }
+  #sel-wrap > div:first-child { padding-top:4px !important; padding-bottom:2px !important; }
+  .footer { margin-top:4px; }
   table.dt td.fund > div { display:inline; }
   table.dt .fn { font-size:9px; margin-left:6px; }
   table.dt td.fund .fc { font-size:10.5px; }
@@ -1420,19 +1441,33 @@ function pfLabel(pf){
   return pf === fr.maxSharpe ? "Max Sharpe portfolio" : pf === fr.minVar ? "Min variance portfolio" :
          pf === fr.maxRet ? "Max return portfolio" : "Frontier portfolio";
 }
+const GROUP_PALETTE = ["#4F2D7F","#00A3D9","#B45309","#16A34A","#DC2626","#0891B2","#CA8A04","#DB2777","#64748B","#7C3AED"];
+const GROUP_NAMES = [...new Set(FUNDS.map(f => f.main || "Other"))].sort();
+const groupColor = n => GROUP_PALETTE[GROUP_NAMES.indexOf(n || "Other") % GROUP_PALETTE.length];
+// split fund indices into asset-class groups, biggest group first, biggest fund first inside each
+function groupIdx(pf, idx){
+  const tot = {}; pf.w.forEach((w, i) => { if (w > 0){ const k = MODEL.ok[i].f.main || "Other"; tot[k] = (tot[k]||0) + w; } });
+  const g = {}; idx.forEach(i => { const k = MODEL.ok[i].f.main || "Other"; (g[k] = g[k] || []).push(i); });
+  return Object.keys(g).sort((x, y) => tot[y] - tot[x]).map(k => ({name:k, total:tot[k], idx:g[k].sort((a,b) => pf.w[b]-pf.w[a]), color:groupColor(k)}));
+}
 function weightRows(pf, limit){
   const m = MODEL, idx = [...pf.w.keys()].filter(i => pf.w[i] >= 0.005).sort((a,b) => pf.w[b]-pf.w[a]);
   const shown = limit ? idx.slice(0, limit) : idx;
   const rest = 1 - shown.reduce((s,i) => s + pf.w[i], 0);
   const top = pf.w[shown[0]] || 1;
-  let h = shown.map(i => {
-    const f = m.ok[i].f;
-    return `<tr><td><span class="sw" style="background:${m.color[i]}"></span></td>
+  let h = groupIdx(pf, shown).map((g, gi) => {
+    let r = (gi ? '<tr class="gs"><td colspan="4"></td></tr>' : "") +
+      `<tr class="gh" style="--g:${g.color}"><td colspan="3"><span class="gname">${esc(g.name)}<span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td><td class="pct">${pct(g.total,1)}</td></tr>`;
+    g.idx.forEach((i, k) => {
+      const f = m.ok[i].f;
+      r += `<tr class="gr${k === g.idx.length-1 ? " gb" : ""}" style="--g:${g.color}"><td><span class="sw" style="background:${m.color[i]}"></span></td>
       <td class="nm"><span class="c">${esc(f.code)}</span><span class="n">${esc(f.name)} · ${esc(f.cat)}</span></td>
       <td class="bar"><span style="width:${(pf.w[i]/top*100).toFixed(1)}%;background:${m.color[i]}"></span></td>
       <td class="pct">${pct(pf.w[i],1)}</td></tr>`;
+    });
+    return r;
   }).join("");
-  if (rest > 0.0005) h += `<tr class="rest"><td></td><td class="nm">${idx.length - shown.length > 0 ? (idx.length - shown.length) + " more funds" : "Funds below 0.5%"}</td><td></td><td class="pct">${pct(rest,1)}</td></tr>`;
+  if (rest > 0.0005) h += `<tr class="gs"><td colspan="4"></td></tr><tr class="rest"><td></td><td class="nm">${idx.length - shown.length > 0 ? (idx.length - shown.length) + " more funds" : "Funds below 0.5%"}</td><td></td><td class="pct">${pct(rest,1)}</td></tr>`;
   return h;
 }
 function mainMix(pf){
@@ -1563,9 +1598,11 @@ function renderSelected(){
       Return <b class="${sgn(pf.ret)}">${pct(pf.ret)}</b> · StdDev <b>${pct(pf.sd)}</b> · Sharpe <b>${pf.sharpe == null ? "–" : pf.sharpe.toFixed(2)}</b> · ${idx.length} funds
       <div class="mains">${mainMix(pf)}</div></div>
     <table class="dt"><thead><tr><th class="l">Fund</th><th class="l">Sub-category</th><th>Weight</th><th>${m.bl ? "Exp. return" : "Return"}</th><th>SD</th><th>Sharpe</th></tr></thead><tbody>
-    ${idx.map(i => { const r = m.ok[i];
-      return `<tr><td class="fund"><div class="fc"><span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:${m.color[i]}"></span>${esc(r.f.code)}</div><div class="fn">${esc(r.f.name)}</div></td>
-        <td class="l">${esc(r.f.cat)}</td><td><b>${pct(pf.w[i],1)}</b></td><td class="${sgn(r.mu)}">${pct(r.mu,1)}</td><td>${pct(r.sd,1)}</td><td>${r.sharpe == null ? "–" : r.sharpe.toFixed(2)}</td></tr>`; }).join("")}
+    ${groupIdx(pf, idx).map((g, gi) => (gi ? '<tr class="gs"><td colspan="6"></td></tr>' : "") +
+      `<tr class="gh" style="--g:${g.color}"><td class="l" colspan="2"><span class="gname">${esc(g.name)}<span class="gn">${g.idx.length} fund${g.idx.length===1?"":"s"}</span></span></td><td><b>${pct(g.total,1)}</b></td><td></td><td></td><td></td></tr>` +
+      g.idx.map((i, k) => { const r = m.ok[i];
+      return `<tr class="gr${k === g.idx.length-1 ? " gb" : ""}" style="--g:${g.color}"><td class="fund"><div class="fc"><span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:${m.color[i]}"></span>${esc(r.f.code)}</div><div class="fn">${esc(r.f.name)}</div></td>
+        <td class="l">${esc(r.f.cat)}</td><td><b>${pct(pf.w[i],1)}</b></td><td class="${sgn(r.mu)}">${pct(r.mu,1)}</td><td>${pct(r.sd,1)}</td><td>${r.sharpe == null ? "–" : r.sharpe.toFixed(2)}</td></tr>`; }).join("")).join("")}
     </tbody></table>`;
 }
 let UNI_ORDER = null, UNI_HITS = [];
