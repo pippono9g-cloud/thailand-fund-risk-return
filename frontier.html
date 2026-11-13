@@ -1982,10 +1982,18 @@ function printMeta(){
     : `Universe: ${hasFilter() ? "filtered" : "all funds"}${st.main !== "All" ? " · " + st.main : ""}${st.shelf !== "All" ? " · shelf " + st.shelf : ""}${st.amc !== "All" ? " · " + st.amc : ""}`;
   $("print-meta").textContent = p.join(" · ") + " — " + uni + " — Printed " + new Date().toLocaleString();
 }
+function printName(){
+  const d = new Date(), M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  // "/" cannot be used in a file name, so the date is written DD-MMM-YY
+  return `Efficient Frontier-${String(d.getDate()).padStart(2, "0")}-${M[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
+}
 function printPage(){
   unpinCard(); printMeta();
-  const t = document.title; document.title = "Efficient Frontier " + stamp();
-  const back = () => { document.title = t; window.removeEventListener("afterprint", back); };
+  // the browser proposes the title of the top window as the PDF name; inside the hub that is the hub's title
+  const docs = [document]; try { if (parent !== window && parent.document) docs.push(parent.document); } catch (e) {}
+  const old = docs.map(d => d.title), name = printName();
+  docs.forEach(d => { d.title = name; });
+  const back = () => { docs.forEach((d, i) => { d.title = old[i]; }); window.removeEventListener("afterprint", back); };
   window.addEventListener("afterprint", back);
   sizeChartsForPrint(true);
   setTimeout(() => window.print(), 250);
