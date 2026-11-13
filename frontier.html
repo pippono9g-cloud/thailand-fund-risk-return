@@ -32,6 +32,14 @@ html, body {
 }
 .page { max-width:1240px; margin:0 auto; padding:24px 24px 56px; }
 .title-bar { padding:2px 0 12px; margin-bottom:16px; border-bottom:1px solid var(--rule); }
+.title-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; }
+.title-bar h1 { margin-right:auto; }
+.file-tools { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.file-tools button { font:inherit; font-size:12px; font-weight:600; padding:5px 12px; border:1px solid var(--rule); border-radius:8px; background:#fff; color:var(--grey); cursor:pointer; }
+.file-tools button:hover { border-color:var(--scb); color:var(--scb); }
+.file-msg { font-size:12px; color:var(--mute); }
+.file-msg.err { color:var(--red); }
+.print-only { display:none; }
 h1 { margin:0; font-size:32px; font-weight:700; letter-spacing:-0.005em; }
 .card { border:1px solid var(--rule); border-radius:12px; padding:16px 18px; margin-top:18px;
   box-shadow:0 1px 3px rgba(79,45,127,0.06); }
@@ -212,6 +220,14 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   background:#fff; border:1px solid #cbd5e1; border-radius:14px;
   box-shadow:0 12px 40px rgba(79,45,127,0.18); font-size:12px; overflow:hidden;
 }
+/* pinned (clicked) card: stays open, can be read and scrolled, closed with x / Esc / click elsewhere */
+#pf-card.pinned { pointer-events:auto; border-color:var(--scb); max-height:calc(100vh - 16px); overflow-y:auto; }
+#pf-card .pf-close { display:none; position:absolute; top:6px; right:8px; width:24px; height:24px; border:0; border-radius:50%;
+  background:#fff; color:var(--grey); font-size:15px; line-height:24px; cursor:pointer; padding:0; z-index:2; }
+#pf-card .pf-close:hover { color:var(--red); }
+#pf-card.pinned .pf-close { display:block; }
+#pf-card.pinned .pf-head { cursor:grab; touch-action:none; user-select:none; }
+#pf-card.dragging, #pf-card.dragging .pf-head { cursor:grabbing; }
 .pf-head { padding:11px 14px 9px; background:linear-gradient(180deg, var(--scb-l) 0%, #fff 100%); border-bottom:1px solid var(--grid); }
 .pf-head h3 { margin:0; font-size:13px; color:var(--scb); }
 .pf-head .sub { font-size:11px; color:var(--mute); margin-top:1px; }
@@ -274,6 +290,17 @@ table.dt .note { font-size:10px; color:var(--amber); }
 
 .footer { margin-top:22px; font-size:12px; color:var(--mute); border-top:1px solid var(--rule); padding-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 
+@media print {
+  @page { size:A4 landscape; margin:10mm; }
+  html, body { background:#fff !important; }
+  .no-print, .help-wrap, .modebar-container, #pf-card, .filters-toggle, #zoom-slider, .zoom-row, .pf-pick, .hv-dot, .hv-line { display:none !important; }
+  .print-only { display:block; flex:1 1 100%; font-size:11px; color:#444; line-height:1.5; }
+  .page { max-width:none; padding:0; }
+  .card, .comp-wrap, .table-scroll { break-inside:avoid; box-shadow:none !important; }
+  .table-scroll { max-height:none !important; overflow:visible !important; }
+  #filters-body.collapsed { display:block !important; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
 @media (max-width: 900px) {
   .page { padding:16px 16px 40px; }
   h1 { font-size:24px; }
@@ -288,6 +315,14 @@ table.dt .note { font-size:10px; color:var(--amber); }
 
   <div class="title-bar">
     <h1>Thailand Fund Efficient Frontier</h1>
+    <div class="file-tools no-print" role="group" aria-label="Save, load or print this page">
+      <button type="button" id="save-btn" title="Download the current settings (universe, filters, parameters, selected portfolio) as a .json file">Save</button>
+      <button type="button" id="load-btn" title="Restore a file saved earlier">Load</button>
+      <button type="button" id="print-btn" title="Print this page or save it as a PDF">Print / PDF</button>
+      <input type="file" id="load-file" accept=".json,application/json" hidden>
+      <span class="file-msg" id="file-msg" role="status"></span>
+    </div>
+    <div class="print-only" id="print-meta"></div>
   </div>
 
   <div class="card">
@@ -1267,7 +1302,7 @@ function renderChart(){
   el.on("plotly_unhover", clearHover);
   el.on("plotly_click", ev => {
     const pf = pfFromPoint(ev.points[0]);
-    if (pf){ state.sel = pf; render(); }
+    if (pf){ PINNED = null; $("pf-card").classList.remove("pinned"); state.sel = pf; render(); pinCard(pf, ev.event); }
   });
 }
 /* Fund labels: top-centre above the point, as Plotly would place them. A label moves only
@@ -1387,14 +1422,49 @@ function mainMix(pf){
 }
 function cardHTML(pf){
   const n = pf.w.filter(w => w >= 0.005).length;
-  return `<div class="pf-head"><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.fr.capK ?? MODEL.cap,0)}${state.gcap < 1 - 1e-9 ? ` · asset class ≤ ${pct(state.gcap,0)}` : ""}</div>
+  return `<div class="pf-head"><button type="button" class="pf-close" aria-label="Close card">✕</button><h3>${pfLabel(pf)}</h3><div class="sub">${n} fund${n===1?"":"s"} · ${state.years}Y window · cap ${pct(MODEL.fr.capK ?? MODEL.cap,0)}${state.gcap < 1 - 1e-9 ? ` · asset class ≤ ${pct(state.gcap,0)}` : ""}</div>
     <div class="kpis"><div><div class="h">${MODEL.bl ? "Exp. return" : "Return"}</div><div class="v ${sgn(pf.ret)}">${pct(pf.ret)}</div></div>
     <div><div class="h">StdDev</div><div class="v">${pct(pf.sd)}</div></div>
     <div><div class="h">Sharpe</div><div class="v">${pf.sharpe == null ? "–" : pf.sharpe.toFixed(2)}</div></div></div></div>
     <div class="pf-body"><p class="sec-title">Weights</p><table class="wt">${weightRows(pf, 12)}</table>
-    <div class="mains">${mainMix(pf)}</div><div class="pf-foot">Click to select this portfolio</div></div>`;
+    <div class="mains">${mainMix(pf)}</div><div class="pf-foot">${PINNED ? "Pinned — drag the header to move · ✕, Esc or click elsewhere to close" : "Click to select and pin this card"}</div></div>`;
 }
-function showCard(pf, e){
+let PINNED = null;   // {pf, model} while a clicked card is held open
+function unpinCard(){
+  if (!PINNED) return;
+  PINNED = null; $("pf-card").classList.remove("pinned"); clearHover();
+}
+function pinCard(pf, e){
+  PINNED = {pf, model: MODEL};
+  const c = $("pf-card"); c.classList.add("pinned");
+  showCard(pf, e, true);
+  syncHover(pf, e, true);
+}
+// drag a pinned card by its header to move it anywhere on screen
+(function(){
+  const c = $("pf-card"); let d = null;
+  c.addEventListener("pointerdown", e => {
+    if (!PINNED || e.button > 0 || !e.target.closest(".pf-head") || e.target.closest(".pf-close")) return;
+    const r = c.getBoundingClientRect();
+    d = {dx:e.clientX - r.left, dy:e.clientY - r.top, id:e.pointerId};
+    c.setPointerCapture(e.pointerId); c.classList.add("dragging"); e.preventDefault();
+  });
+  c.addEventListener("pointermove", e => {
+    if (!d || e.pointerId !== d.id) return;
+    const x = Math.max(8 - c.offsetWidth + 80, Math.min(e.clientX - d.dx, innerWidth - 80));
+    const y = Math.max(0, Math.min(e.clientY - d.dy, innerHeight - 40));
+    c.style.left = x + "px"; c.style.top = y + "px";
+  });
+  const end = e => { if (d && e.pointerId === d.id){ d = null; c.classList.remove("dragging"); } };
+  c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
+})();
+$("pf-card").addEventListener("click", e => { if (e.target.closest(".pf-close")) unpinCard(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") unpinCard(); });
+document.addEventListener("mousedown", e => {
+  if (PINNED && !e.target.closest("#pf-card") && !e.target.closest("#chart") && !e.target.closest("#comp-chart")) unpinCard();
+});
+function showCard(pf, e, force){
+  if (PINNED && !force) return;
   const c = $("pf-card"); c.innerHTML = cardHTML(pf); c.style.display = "block";
   const gap = 28, cw = c.offsetWidth, ch = c.offsetHeight, vw = innerWidth, vh = innerHeight;
   let x = e.clientX + gap; if (x + cw > vw - 8) x = e.clientX - gap - cw; x = Math.max(8, x);
@@ -1424,7 +1494,7 @@ function renderComp(){
   if (el.removeAllListeners) ["plotly_hover","plotly_unhover","plotly_click"].forEach(n => el.removeAllListeners(n));
   el.on("plotly_hover", ev => { const pf = pts[ev.points[0].pointIndex]; if (pf) syncHover(pf, ev.event); });
   el.on("plotly_unhover", clearHover);
-  el.on("plotly_click", ev => { const pf = pts[ev.points[0].pointIndex]; if (pf){ state.sel = pf; render(); } });
+  el.on("plotly_click", ev => { const pf = pts[ev.points[0].pointIndex]; if (pf){ PINNED = null; $("pf-card").classList.remove("pinned"); state.sel = pf; render(); pinCard(pf, ev.event); } });
 }
 // Hovering either chart shows the weights card and marks the same portfolio (same SD) on both charts.
 function placeOverlay(chartId, fn){
@@ -1434,7 +1504,8 @@ function placeOverlay(chartId, fn){
   fn(fl, off.left - wrap.left, off.top - wrap.top);
   return true;
 }
-function syncHover(pf, e){
+function syncHover(pf, e, force){
+  if (PINNED && !force) return;
   showCard(pf, e);
   const dot = $("hv-dot"), line = $("hv-line");
   dot.hidden = !placeOverlay("chart", (fl, dx, dy) => {
@@ -1448,6 +1519,7 @@ function syncHover(pf, e){
   });
 }
 function clearHover(){
+  if (PINNED) return;
   $("pf-card").style.display = "none";
   $("hv-dot").hidden = true; $("hv-line").hidden = true;
 }
@@ -1537,7 +1609,7 @@ function renderBLResults(){
   $("bl-results").innerHTML = !bl ? "" : (bl.warnings.length ? `<p class="bl-msg">${bl.warnings.map(esc).join(" · ")}</p>` : "") +
     (bl.details.length ? `<table class="dt"><thead><tr><th class="l">Applied view</th><th>Funds</th><th>Prior</th><th>View</th><th>Posterior</th></tr></thead><tbody>${bl.details.map(d=>`<tr><td class="l">${esc(d.label)}</td><td>${d.members}</td><td>${pct(d.prior)}</td><td>${pct(d.target)}</td><td>${pct(d.posterior)}</td></tr>`).join("")}</tbody></table><div class="bl-sub">Annual returns; relative views show percentage-point differences. Groups use AUM weights. Other views can also affect each posterior.</div>` : "");
 }
-function render(){ renderBLResults(); $("lg-unlimited").hidden = !(MODEL && MODEL.frFull); $("lg-hist").hidden = !(MODEL && MODEL.frHist); renderInputState(); renderStatus(); renderChart(); renderComp(); syncSlider(); renderSelected(); renderUniverse(); renderChips(); }
+function render(){ if (PINNED && PINNED.model !== MODEL){ PINNED = null; $("pf-card").classList.remove("pinned"); $("pf-card").style.display = "none"; } renderBLResults(); $("lg-unlimited").hidden = !(MODEL && MODEL.frFull); $("lg-hist").hidden = !(MODEL && MODEL.frHist); renderInputState(); renderStatus(); renderChart(); renderComp(); syncSlider(); renderSelected(); renderUniverse(); renderChips(); }
 
 /* ---------- find ---------- */
 let findActive = -1, findList = [];
@@ -1788,6 +1860,121 @@ document.addEventListener("click", e => {
   if (!e.target.closest("#cat-ms")){ if ($("cat-ms-panel").classList.contains("open")) { $("cat-ms-panel").classList.remove("open"); rebuildCatList(); } }
   if (!e.target.closest(".find-wrap")) $("find-dd").classList.remove("open");
 });
+
+/* ---------- Save / Load / Print ---------- */
+const FILE_KIND = "thailand-fund-efficient-frontier";
+function fileMsg(t, err){ const m = $("file-msg"); m.textContent = t; m.classList.toggle("err", !!err); clearTimeout(fileMsg._t); if (t) fileMsg._t = setTimeout(() => { m.textContent = ""; }, 8000); }
+function selKey(){
+  const pf = MODEL && MODEL.fr ? selectedPortfolio() : null, fr = MODEL && MODEL.fr;
+  if (!pf || !fr) return {kind:"sharpe"};
+  if (pf === fr.minVar) return {kind:"min"};
+  if (pf === fr.maxSharpe) return {kind:"sharpe"};
+  if (pf === fr.maxRet) return {kind:"max"};
+  return {kind:"point", sd:pf.sd, ret:pf.ret};
+}
+function snapshot(){
+  const st = state;
+  return {kind:FILE_KIND, version:1, savedAt:new Date().toISOString(), dataAsOf:"12 Nov 2026",
+    state:{years:st.years, cap:st.cap, gcap:st.gcap, rf:st.rf, oneClass:st.oneClass, main:st.main, cats:st.cats.slice(),
+      shelf:st.shelf, amc:st.amc, risks:st.risks.slice(), picks:st.picks.slice(), excluded:[...st.excluded], included:[...st.included],
+      maxFunds:st.maxFunds, minW:st.minW, model:st.model, views:st.views.map(v => ({...v})), blSharpe:st.blSharpe, sdRange:st.sdRange ? st.sdRange.slice() : null},
+    selected:selKey()};
+}
+function stamp(){ const d = new Date(), z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
+function saveFile(){
+  const blob = new Blob([JSON.stringify(snapshot(), null, 2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `efficient-frontier-${stamp()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  fileMsg("Saved " + a.download);
+}
+function applySnapshot(o){
+  if (!o || o.kind !== FILE_KIND || !o.state) throw new Error("This is not a saved Efficient Frontier file.");
+  const s = o.state, codes = new Set(FUNDS.map(f => f.code)), notes = [];
+  const num = (v, d) => typeof v === "number" && isFinite(v) ? v : d;
+  state.years = [1,3,5].includes(s.years) ? s.years : 3;
+  state.cap = Math.min(1, Math.max(0.01, num(s.cap, 1)));
+  state.gcap = Math.min(1, Math.max(0.01, num(s.gcap, 1)));
+  state.rf = num(s.rf, state.rf);
+  state.oneClass = s.oneClass !== false;
+  const lists = k => Array.isArray(s[k]) ? s[k].map(String) : [];
+  state.main = typeof s.main === "string" ? s.main : "All";
+  state.shelf = typeof s.shelf === "string" ? s.shelf : "All";
+  state.amc = typeof s.amc === "string" ? s.amc : "All";
+  state.cats = lists("cats").filter(c => FUNDS.some(f => f.cat === c));
+  state.risks = lists("risks").filter(k => ALL_RISKS.includes(k));
+  const miss = [];
+  const keep = a => a.filter(c => codes.has(c) || (miss.push(c), false));
+  state.picks = keep(lists("picks")); state.excluded = new Set(keep(lists("excluded"))); state.included = new Set(keep(lists("included")));
+  if (miss.length) notes.push(`${new Set(miss).size} fund code(s) no longer exist and were skipped`);
+  state.maxFunds = Number.isInteger(s.maxFunds) && s.maxFunds > 0 ? Math.min(HARD_MAX_N, s.maxFunds) : null;
+  state.minW = Math.min(1, Math.max(0, num(s.minW, 0)));
+  state.model = s.model === "bl" ? "bl" : "hist";
+  state.views = Array.isArray(s.views) ? s.views.filter(v => v && typeof v === "object").map(v => ({...v})) : [];
+  state.blSharpe = num(s.blSharpe, 0.4) > 0 ? num(s.blSharpe, 0.4) : 0.4;
+  state.sdRange = Array.isArray(s.sdRange) && s.sdRange.length === 2 && s.sdRange.every(isFinite) ? s.sdRange.slice() : null;
+  state.sel = "sharpe"; state.uniQuery = ""; state.uniHit = 0; PINNED = null;
+  // bring every control in line with the restored state
+  fillSelect($("main-select"), [...new Set(FUNDS.map(f => f.main).filter(Boolean))].sort(), state.main, "All main categories");
+  $("main-select").value = state.main;
+  $("shelf-select").value = state.shelf; $("amc-select").value = state.amc;
+  rebuildCatList(); rebuildRiskList();
+  document.querySelectorAll("#win-seg button").forEach(b => b.classList.toggle("active", +b.dataset.y === state.years));
+  document.querySelectorAll("#model-seg button").forEach(b => b.classList.toggle("active", b.dataset.m === state.model));
+  $("bl-panel").hidden = state.model !== "bl";
+  if (state.model === "bl"){ blDraft = state.views.map(v => ({...v})); renderViews(); }
+  $("bl-sharpe").value = state.blSharpe;
+  $("cap-input").value = state.cap < 1 ? +(state.cap*100).toFixed(2) : "";
+  $("gcap-input").value = state.gcap < 1 ? +(state.gcap*100).toFixed(2) : "";
+  $("maxfunds-input").value = state.maxFunds || "";
+  $("minw-input").value = state.minW ? +(state.minW*100).toFixed(2) : "";
+  $("rf-input").value = state.rf; $("oneclass-chk").checked = state.oneClass;
+  $("uni-find").value = ""; $("find-input").value = "";
+  recomputeNow();
+  const k = o.selected || {}, fr = MODEL && MODEL.fr;
+  if (fr){
+    if (k.kind === "min") state.sel = "min"; else if (k.kind === "max") state.sel = "max";
+    else if (k.kind === "point" && isFinite(k.sd)){
+      let best = null; fr.pts.forEach(p => { if (!best || Math.abs(p.sd - k.sd) < Math.abs(best.sd - k.sd)) best = p; });
+      if (best) state.sel = best;
+    }
+    render();
+  }
+  if (o.dataAsOf && o.dataAsOf !== "12 Nov 2026") notes.push(`saved with data as of ${o.dataAsOf}; results use today's data (${"12 Nov 2026"})`);
+  return notes;
+}
+function loadFile(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try { const notes = applySnapshot(JSON.parse(r.result)); fileMsg("Loaded " + file.name + (notes.length ? " — " + notes.join("; ") : ""), false); }
+    catch (err) { fileMsg("Could not load: " + (err && err.message || err), true); }
+  };
+  r.onerror = () => fileMsg("Could not read the file.", true);
+  r.readAsText(file);
+}
+function printMeta(){
+  const m = MODEL, st = state, p = [];
+  p.push(`Data as of 12 Nov 2026`, `Window ${st.years}Y`, st.model === "bl" ? "Black-Litterman" : "Historical", `Risk-free ${st.rf}%`);
+  if (st.cap < 1) p.push(`Max weight/fund ${+(st.cap*100).toFixed(2)}%`);
+  if (st.gcap < 1) p.push(`Max/asset class ${+(st.gcap*100).toFixed(2)}%`);
+  if (st.maxFunds) p.push(`Max funds ${st.maxFunds}`);
+  if (st.minW) p.push(`Min weight ${+(st.minW*100).toFixed(2)}%`);
+  const uni = st.picks.length ? `Universe: ${st.picks.length} funds from Input (${st.picks.slice(0, 12).join(", ")}${st.picks.length > 12 ? "…" : ""})`
+    : `Universe: ${hasFilter() ? "filtered" : "all funds"}${st.main !== "All" ? " · " + st.main : ""}${st.shelf !== "All" ? " · shelf " + st.shelf : ""}${st.amc !== "All" ? " · " + st.amc : ""}`;
+  $("print-meta").textContent = p.join(" · ") + " — " + uni + " — Printed " + new Date().toLocaleString();
+}
+function printPage(){
+  unpinCard(); printMeta();
+  const t = document.title; document.title = "Efficient Frontier " + stamp();
+  const back = () => { document.title = t; window.removeEventListener("afterprint", back); };
+  window.addEventListener("afterprint", back);
+  ["chart", "comp-chart"].forEach(id => { try { Plotly.Plots.resize($(id)); } catch (e) {} });
+  setTimeout(() => window.print(), 150);
+}
+$("save-btn").onclick = saveFile;
+$("load-btn").onclick = () => $("load-file").click();
+$("load-file").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) loadFile(f); };
+$("print-btn").onclick = printPage;
+window.addEventListener("beforeprint", () => { printMeta(); ["chart", "comp-chart"].forEach(id => { try { Plotly.Plots.resize($(id)); } catch (e) {} }); });
 
 initFilters();
 recompute();
