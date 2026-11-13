@@ -291,14 +291,33 @@ table.dt .note { font-size:10px; color:var(--amber); }
 .footer { margin-top:22px; font-size:12px; color:var(--mute); border-top:1px solid var(--rule); padding-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 
 @media print {
-  @page { size:A4 landscape; margin:10mm; }
+  @page { size:A4 landscape; margin:9mm; }
   html, body { background:#fff !important; }
-  .no-print, .help-wrap, .modebar-container, #pf-card, .filters-toggle, #zoom-slider, .zoom-row, .pf-pick, .hv-dot, .hv-line { display:none !important; }
-  .print-only { display:block; flex:1 1 100%; font-size:11px; color:#444; line-height:1.5; }
-  .page { max-width:none; padding:0; }
-  .card, .comp-wrap, .table-scroll { break-inside:avoid; box-shadow:none !important; }
+  /* controls, filters, methodology and the Universe table are not printed; the summary line says what was used */
+  .no-print, .help-wrap, .modebar-container, #pf-card, .filters-toggle, .zoom-row, .pf-pick, .hv-dot, .hv-line,
+  .method, .ctl-row, #filters-body, .filters-head, .find-row, .chips, .panel-row .spacer,
+  .two > .table-wrap:nth-child(2), .table-wrap .hint { display:none !important; }
+  .print-only { display:block; flex:1 1 100%; font-size:10.5px; color:#444; line-height:1.45; }
+  .page { max-width:none !important; padding:0 !important; }
+  .title-bar { padding:0 0 6px; margin-bottom:8px; }
+  h1 { font-size:20px; margin:0; }
+  .card { box-shadow:none !important; border:0 !important; padding:0 !important; margin:0 !important; }
+  .panel-row { margin:0 0 2px; }
+  .panel-title { margin:0; }
+  .status { font-size:10px; margin:4px 0; }
+  #chart { height:315px !important; margin-top:2px; }
+  .comp-head { margin-top:6px; }
+  #comp-chart { height:165px !important; }
+  .legend-note { margin-top:4px; font-size:10px; gap:4px 12px; }
+  .two { display:block !important; margin-top:0; break-before:page; }
+  .table-wrap { box-shadow:none !important; break-inside:auto; }
   .table-scroll { max-height:none !important; overflow:visible !important; }
-  #filters-body.collapsed { display:block !important; }
+  table.dt th, table.dt td { padding-top:2px !important; padding-bottom:2px !important; font-size:10.5px; }
+  table.dt td.fund > div { display:inline; }
+  table.dt .fn { font-size:9px; margin-left:6px; }
+  table.dt td.fund .fc { font-size:10.5px; }
+  .table-wrap > header { padding:6px 10px; }
+  .footer { margin-top:8px; font-size:10px; }
   * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
 @media (max-width: 900px) {
@@ -318,6 +337,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
     <div class="file-tools no-print" role="group" aria-label="Save, load or print this page">
       <button type="button" id="save-btn" title="Download the current settings (universe, filters, parameters, selected portfolio) as a .json file">Save</button>
       <button type="button" id="load-btn" title="Restore a file saved earlier">Load</button>
+      <button type="button" id="reset-all-btn" title="Return every filter, parameter and selection to the page defaults">Reset</button>
       <button type="button" id="print-btn" title="Print this page or save it as a PDF">Print / PDF</button>
       <input type="file" id="load-file" accept=".json,application/json" hidden>
       <span class="file-msg" id="file-msg" role="status"></span>
@@ -1967,16 +1987,33 @@ function printPage(){
   const t = document.title; document.title = "Efficient Frontier " + stamp();
   const back = () => { document.title = t; window.removeEventListener("afterprint", back); };
   window.addEventListener("afterprint", back);
-  ["chart", "comp-chart"].forEach(id => { try { Plotly.Plots.resize($(id)); } catch (e) {} });
-  setTimeout(() => window.print(), 150);
+  sizeChartsForPrint(true);
+  setTimeout(() => window.print(), 250);
 }
+let DEFAULT_SNAP = null;
+$("reset-all-btn").onclick = () => {
+  if (!DEFAULT_SNAP) return;
+  try { applySnapshot(JSON.parse(JSON.stringify(DEFAULT_SNAP))); fileMsg("Reset to defaults"); }
+  catch (err) { fileMsg("Could not reset: " + (err && err.message || err), true); }
+};
 $("save-btn").onclick = saveFile;
 $("load-btn").onclick = () => $("load-file").click();
 $("load-file").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) loadFile(f); };
 $("print-btn").onclick = printPage;
-window.addEventListener("beforeprint", () => { printMeta(); ["chart", "comp-chart"].forEach(id => { try { Plotly.Plots.resize($(id)); } catch (e) {} }); });
+// Charts are sized to the printable A4-landscape width (about 1040 px) while printing, then returned to normal.
+const PRINT_SIZE = {chart:[1040, 315], "comp-chart":[1040, 165]};
+function sizeChartsForPrint(on){
+  Object.entries(PRINT_SIZE).forEach(([id, [w, h]]) => {
+    const el = $(id); if (!el || !el._fullLayout) return;
+    try { Plotly.relayout(el, on ? {autosize:false, width:w, height:h} : {autosize:true, width:null, height:null}); } catch (e) {}
+  });
+  if (on) placeLabels();
+}
+window.addEventListener("beforeprint", () => { printMeta(); sizeChartsForPrint(true); });
+window.addEventListener("afterprint", () => { sizeChartsForPrint(false); render(); });
 
 initFilters();
+DEFAULT_SNAP = snapshot();
 recompute();
 </script>
 </body>
