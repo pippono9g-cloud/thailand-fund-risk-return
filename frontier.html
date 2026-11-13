@@ -361,7 +361,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <button type="button" id="load-btn" title="Restore a file saved earlier">Load</button>
       <button type="button" id="reset-all-btn" title="Return every filter, parameter and selection to the page defaults">Reset</button>
       <button type="button" id="print-btn" title="Print this page or save it as a PDF">Print / PDF</button>
-      <input type="file" id="load-file" accept=".json,application/json" hidden>
+      <input type="file" id="load-file" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none">
       <span class="file-msg" id="file-msg" role="status"></span>
     </div>
     <div class="print-only" id="print-meta"></div>
@@ -1940,10 +1940,23 @@ function snapshot(){
 }
 function stamp(){ const d = new Date(), z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
 function saveFile(){
-  const blob = new Blob([JSON.stringify(snapshot(), null, 2)], {type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `efficient-frontier-${stamp()}.json`;
+  const name = `efficient-frontier-${stamp()}.json`, text = JSON.stringify(snapshot(), null, 2);
+  const file = (typeof File === "function") ? new File([text], name, {type:"application/json"}) : null;
+  const touch = navigator.maxTouchPoints > 1 && /iPad|iPhone|Macintosh/.test(navigator.userAgent);
+  // iPad / iPhone Safari does not reliably download a generated file (least of all inside the hub frame):
+  // offer the share sheet, which has "Save to Files".
+  if (touch && file && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], title:name}).then(() => fileMsg("Saved " + name))
+      .catch(err => { if (err && err.name !== "AbortError") downloadText(name, text); });
+    return;
+  }
+  downloadText(name, text);
+}
+function downloadText(name, text){
+  const blob = new Blob([text], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  fileMsg("Saved " + a.download);
+  fileMsg("Saved " + name);
 }
 function applySnapshot(o){
   if (!o || o.kind !== FILE_KIND || !o.state) throw new Error("This is not a saved Efficient Frontier file.");
@@ -2033,8 +2046,9 @@ function printPage(){
   docs.forEach(d => { d.title = name; });
   const back = () => { docs.forEach((d, i) => { d.title = old[i]; }); window.removeEventListener("afterprint", back); };
   window.addEventListener("afterprint", back);
+  setTimeout(back, 120000);   // iOS Safari does not always fire afterprint
   sizeChartsForPrint(true);
-  setTimeout(() => window.print(), 250);
+  window.print();
 }
 let DEFAULT_SNAP = null;
 $("reset-all-btn").onclick = () => {
@@ -2042,10 +2056,11 @@ $("reset-all-btn").onclick = () => {
   try { applySnapshot(JSON.parse(JSON.stringify(DEFAULT_SNAP))); fileMsg("Reset to defaults"); }
   catch (err) { fileMsg("Could not reset: " + (err && err.message || err), true); }
 };
-$("save-btn").onclick = saveFile;
-$("load-btn").onclick = () => $("load-file").click();
+const guard = fn => () => { try { fn(); } catch (err) { fileMsg("Error: " + (err && err.message || err), true); } };
+$("save-btn").onclick = guard(saveFile);
+$("load-btn").onclick = guard(() => $("load-file").click());
 $("load-file").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) loadFile(f); };
-$("print-btn").onclick = printPage;
+$("print-btn").onclick = guard(printPage);
 // Charts are sized to the printable A4-landscape width (about 1040 px) while printing, then returned to normal.
 const PRINT_SIZE = {chart:[1040, 315], "comp-chart":[1040, 165]};
 function sizeChartsForPrint(on){
