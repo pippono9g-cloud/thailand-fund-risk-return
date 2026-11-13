@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thailand Fund Trend (2026-11-11)</title>
-<script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"></script>
+<title>Thailand Fund Flow (11 Nov 2026)</title>
+<script src="vendor/plotly-3.0.1.min.js" charset="utf-8"></script>
 <style>
 :root {
   --scb:    #4F2D7F;
@@ -247,13 +247,24 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
 .drill-code { font-weight:600; font-size:11px; }
 .lowbase { color:var(--mute); font-size:9px; margin-left:2px; cursor:help; vertical-align:super; }
 .drill-name { font-size:10px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:155px; }
+/* Small screens only — desktop layout is untouched. */
+@media (max-width:640px){
+  .page { padding:14px 12px 40px; }
+  h1 { font-size:22px; line-height:1.25; }
+  .card { padding:12px; }
+  select, input, .search-wrap { max-width:100%; }
+  #amc-filter { width:100%; }
+  .date-range-row { flex-wrap:wrap; gap:8px 10px; }
+  table.trend { display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .drill-body { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
 </style>
 </head>
 <body>
 <div class="page">
 
 <div class="title-bar">
-  <h1>Thailand Fund Trend — sub-category flows &amp; momentum</h1>
+  <h1>Thailand Fund Flow — sub-category flows &amp; momentum</h1>
 </div>
 
 <div class="card">
@@ -361,7 +372,7 @@ table.drill-tbl tr:hover td { background:var(--scb-l); }
   Source: SEC Thailand Open API weekly build (sec_data.sqlite + Thailand_Fund_SEC). Category returns are
   start-AUM-weighted and NAV-computed; AUM from daily fund NAV reports. Implied flow = AUM change − weighted
   return (approximation; ignores intra-category dispersion and timing of flows); Flow (M THB) =
-  start-of-window AUM × implied flow. Generated 2026-11-12.
+  start-of-window AUM × implied flow. Data as of 11 Nov 2026 · Generated 13 Nov 2026.
   Not investment advice.
 </div>
 
