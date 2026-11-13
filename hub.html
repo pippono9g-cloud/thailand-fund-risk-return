@@ -40,6 +40,9 @@
   .loading::before{content:"";width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--scb);
     border-radius:50%;animation:spin .8s linear infinite;margin-right:10px}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .loading .slow{display:block;margin-top:10px;font-size:12px;text-align:center}
+  .loading .slow button{margin:0 6px;padding:5px 12px;border:1px solid var(--scb);border-radius:7px;background:#fff;color:var(--scb);font:700 12px inherit;cursor:pointer}
+  .loading .slow a{color:var(--scb);font-weight:700}
   .noscript{margin:30px auto;padding:20px;max-width:700px;background:#fff;border:1px solid var(--line);border-radius:12px}
   .signals-panel{height:100%;overflow:auto;padding:28px 24px 60px;background:#fff}
   .signals-wrap{max-width:1240px;margin:auto}.signals-head{display:flex;justify-content:space-between;gap:20px;
@@ -150,6 +153,21 @@
     body.innerHTML='<div class="signal-grid">'+keys.map(function(key){var s=data.signals[key];if(s.error)return '<article class="signal-card"><strong class="signal-ticker">'+esc(key)+'</strong><div class="signal-error">'+esc(s.error)+'</div></article>';var chg=Number(s.chg1d_pct||0);return '<article class="signal-card"><div class="signal-card-head"><span class="signal-ticker">'+esc(key)+'</span><span class="signal-price">'+esc(s.price)+' <span style="color:'+(chg>=0?'#087447':'#c62828')+'">'+(chg>=0?'+':'')+esc(s.chg1d_pct)+'%</span></span></div><div class="signal-label">'+esc(s.label)+'</div><span class="signal-status '+statusClass(s.status)+'">'+esc(s.status)+'</span><div class="signal-row">EMA20: '+(Number(s.ema20_pct)>=0?'+':'')+esc(s.ema20_pct)+'% · EMA50: '+(Number(s.ema50_pct)>=0?'+':'')+esc(s.ema50_pct)+'%</div><div class="signal-row">52w High: '+esc(s.high_52w)+' (เหลือ +'+esc(s.up_pct_to_high)+'%)</div><div class="signal-row">52w Low: '+esc(s.low_52w)+' (เหลือ −'+esc(s.down_pct_to_low)+'%)</div><div class="signal-row">R:R: '+esc(s.rr==null?'—':s.rr)+'</div></article>';}).join('')+'</div>';
   }
   function loadSignals(name){if(loaded[name])return;loaded[name]=true;var config=feeds[name];fetch(config.url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(function(data){renderSignals(data,config);}).catch(function(err){loaded[name]=false;document.getElementById(config.body).innerHTML='<div class="signal-error">โหลดข้อมูลไม่สำเร็จ: '+esc(err.message)+'</div>';});}
+  // If a dashboard is still loading after 20s, offer a retry and a direct link
+  // instead of leaving the spinner with no way out. Loading continues meanwhile.
+  function armSlowNotice(frame,name){
+    setTimeout(function(){
+      var loader=frame.parentNode.querySelector(".loading");
+      if(!loader||loader.querySelector(".slow"))return;
+      var box=document.createElement("span");box.className="slow";
+      box.innerHTML='ใช้เวลานานกว่าปกติ <button type="button">ลองใหม่</button><a target="_blank" rel="noopener noreferrer">เปิดหน้านี้โดยตรง ↗</a>';
+      box.querySelector("a").href=frame.getAttribute("data-src");
+      box.querySelector("button").addEventListener("click",function(){
+        box.remove();frame.removeAttribute("src");frame.removeAttribute("data-pending");show(name,false);
+      });
+      loader.appendChild(box);
+    },20000);
+  }
   function versionFor(target,done){
     var fallback=String(Date.now()),settled=false;
     function finish(v){if(!settled){settled=true;done(v);}}
@@ -175,6 +193,7 @@
       // stamp cannot be read we fall back to Date.now() (always fresh, as before).
       if(frame.getAttribute("data-pending"))return finishShow(name,writeHash);
       frame.setAttribute("data-pending","1");
+      armSlowNotice(frame,name);
       if(target&&(!/^https?:\/\//.test(target)||/^https:\/\/pippono9g-cloud\.github\.io\/longterm-markets-chart\//.test(target)))
         versionFor(target,function(v){frame.setAttribute("src",target+(target.indexOf("?")===-1?"?":"&")+"v="+v);});
       else frame.setAttribute("src",target);

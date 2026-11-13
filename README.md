@@ -1,13 +1,14 @@
 # Thailand Fund Dashboards
 
-Five interactive dashboards covering ~3,300 Thai mutual funds, built from the
+Six interactive dashboards covering ~3,300 Thai mutual funds, built from the
 Thailand SEC Open Data API (api.sec.or.th) and auto-refreshed daily at 11:00 AM
 Bangkok time.
 
 | Dashboard | Purpose |
 |---|---|
-| **[Investment Insights Hub](./hub.html)** | Unified navigation for the three fund dashboards, Long-term Markets, and an in-hub dropdown for Arnupap's Market Signals and SET100 Signals feeds. |
+| **[Investment Insights Hub](./hub.html)** | Unified navigation for the six fund dashboards, Long-term Markets, and an in-hub dropdown for Arnupap's Market Signals and SET100 Signals feeds. |
 | **[Risk Return](./index.html)** | Risk-return scatter with sub-category and SCB shelf filters, OR-style search, master-fund SD proxies, 1-Year spider benchmark, Top-20 / Worst-20 tables. |
+| **[Efficient Frontier](./frontier.html)** | Efficient frontier of the selected fund universe (Historical or Black-Litterman), solved in the browser with weight, asset-class and fund-count limits. |
 | **[Growth Comparison](./growth.html)** | Cumulative growth overlay — pick funds to compare price performance over 1W → Max. Raw NAV per class (ex-dividend dips visible). |
 | **[Flow](./trend.html)** | Sub-category return vs AUM-change bubble chart with drill-down per category (menu name "Flow"; file stays `trend.html`). |
 | **[Trend](./ma-quadrant.html)** | MA-Quadrant: AIMC sub-category position vs fast (default 30d) and slow (default 200d) moving averages, with sliders for the MA windows and zone-change lookback. |
