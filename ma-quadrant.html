@@ -274,7 +274,7 @@ function svg(rows,F,S,K,qry,sel){
   const R=MODE==="fund"?4:6;
   const isCh=e=>!!(e.pq&&e.pq!==e.q), dimmed=e=>(K>0&&!isCh(e))||(sel.size>0&&!selHas(sel,e));   // lookback>0: grey out categories that did not change zone
   const W=1000,H=760,ml=70,mr=30,mt=30,mb=60;
-  const ext=v=>{let lo,hi; if(MODE==="fund"&&v.length>200){const a=v.slice().sort((x,y)=>x-y); lo=Math.min(0,a[Math.floor(.01*(a.length-1))]); hi=Math.max(0,a[Math.floor(.99*(a.length-1))]);} else {lo=Math.min(0,...v); hi=Math.max(0,...v);} const pad=(hi-lo)*0.12||1; return[lo-pad,hi+pad];};   // fund view: 1st-99th percentile range, outliers sit on the edge
+  const ext=v=>{let lo=Math.min(0,...v), hi=Math.max(0,...v); const pad=(hi-lo)*0.12||1; return[lo-pad,hi+pad];};   // default view fits every dot (both views), so no fund sits outside or on the edge of the plot
   let [x0,x1]=ext(rows.map(e=>e.s)),[y0,y1]=ext(rows.map(e=>e.f));
   window.__full={x0,x1,y0,y1};
   if(VIEW){x0=VIEW.x0;x1=VIEW.x1;y0=VIEW.y0;y1=VIEW.y1;}
