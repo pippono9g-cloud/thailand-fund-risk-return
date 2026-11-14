@@ -142,7 +142,7 @@ table.trend tr.dim td { opacity:.42; }
     <div class="it"><label>Fast MA <b id="vF">20</b> days</label><input type="range" id="rF" min="5" max="100" step="1" value="20"></div>
     <div class="it"><label>Slow MA <b id="vS">125</b> days</label><input type="range" id="rS" min="50" max="250" step="5" value="125"></div>
     <div class="it"><label>Zone-change lookback <b id="vK">0</b> trading days</label><input type="range" id="rK" min="0" max="30" step="1" value="0"></div>
-    <div class="it"><label>Tail length <b id="vT">5</b> trading days (on hover)</label><input type="range" id="rT" min="0" max="60" step="5" value="5"></div>
+    <div class="it"><label>Tail length <b id="vT">5</b> trading days (on hover)</label><input type="range" id="rT" min="0" max="60" step="1" value="5"></div>
     <button id="bReset" type="button">Reset MA</button>
   </div>
   <div class="find-status" id="cat-status" style="margin:8px 0 0"></div>
@@ -197,7 +197,7 @@ table.trend tr.dim td { opacity:.42; }
         <li><b>X</b> = latest NAV ÷ MA125 − 1; <b>Y</b> = latest NAV ÷ MA20 − 1. MA = simple mean of the last 20 / 125 NAV observations (trading days).</li>
         <li><b>Strong</b> above both; <b>Pullback</b> above MA125, below MA20; <b>Recovery</b> below MA125, above MA20; <b>Weak</b> below both.</li>
         <li>Normal moves follow the clockwise cycle Recovery → Strong → Pullback → Weak → Recovery, so the previous zone is implied. A small white <b>V</b> on a dot marks a category that jumped or moved against that cycle (counter-clockwise or across the diagonal) within the lookback period. The open side of the V faces the quadrant it came from (e.g. opening downward = it came from the zone below); the table also lists the previous zone. With lookback above 0, categories that stayed in the same zone are removed from the chart (shown greyed in the table); at 0 every category is shown.</li>
-        <li><b>Tail</b> (on hover only): the hovered dot\'s historical position as a fading line, from a hollow start dot (Tail length trading days ago) to today. Category view uses the median of its funds on each date; Fund view the fund itself. Click dots to keep their tails shown (several at once, e.g. to compare two categories); click a dot again to release it, Esc releases all. Length is limited by the NAV history left after the Slow MA window.</li>
+        <li><b>Tail</b> (on hover only): the hovered dot\'s historical position as a fading line, from a hollow start dot (Tail length trading days ago) to today. Category view uses the median of its funds on each date; Fund view the fund itself. Tail length follows the Zone-change lookback automatically (adjust the Tail slider afterwards if you want a different length). Click dots to keep their tails shown (several at once, e.g. to compare two categories); click a dot again to release it, Esc releases all. Length is limited by the NAV history left after the Slow MA window.</li>
         <li>Funds with stale NAV (&gt;7 days) or fewer NAV observations than the Slow MA window are excluded (young funds appear when Slow MA is set shorter, minimum 50); categories with fewer than 3 funds are not shown. Raw NAV, not dividend-adjusted.</li>
       </ul>
     </div>
@@ -621,7 +621,9 @@ $("ctl").style.display="flex"; $("zoomrow").style.display=""; $("nojs").style.di
 ["rF","rS"].forEach(i=>$(i).addEventListener("input",()=>{ VIEW=null; render(); }));
 $("rT").addEventListener("input",()=>{ $("vT").textContent=$("rT").value;
   box.querySelectorAll('g[id^="ptail-"]').forEach(g=>g.remove()); reapplyPin(); });   // pinned tails follow the slider too
-$("rK").addEventListener("input",render);
+// Zone-change lookback drives the tail length (tail = lookback, back to the default when the lookback is off);
+// the user can still move the Tail slider afterwards.
+$("rK").addEventListener("input",()=>{ const k=+$("rK").value; $("rT").value=k>0?k:DEF.T; $("vT").textContent=$("rT").value; render(); });
 $("bReset").addEventListener("click",()=>{$("rF").value=DEF.F;$("rS").value=DEF.S;$("rK").value=DEF.K;$("rT").value=DEF.T;$("vT").textContent=DEF.T;render();});
 document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{
   MODE=b.dataset.m; VIEW=null; st.picks=[]; fi.value=""; fd.classList.remove("open");   // picks are categories in one view and funds in the other
