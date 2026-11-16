@@ -99,6 +99,8 @@
   .chip .dot{width:11px;height:11px;border-radius:3px}
   .chip button{border:none;background:transparent;cursor:pointer;color:var(--mute);font-size:14px;line-height:1;padding:0 2px}
   .chip button:hover{color:#dc2626}
+  .clear-all{border:1px solid var(--rule);border-radius:999px;background:#fff;padding:4px 14px;font-size:12.5px;font-weight:700;color:#dc2626;cursor:pointer}
+  .clear-all:hover{background:#fef2f2;border-color:#dc2626}
   .empty{color:var(--mute);font-size:13px;font-style:italic}
   .view-row{display:flex;justify-content:flex-end;align-items:center;margin:4px 0 0}
   .view-switch{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:#fff}
@@ -254,7 +256,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794802289"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794809520"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
@@ -456,8 +458,9 @@ function renderChips(){
   const box=$("chips");
   if(!state.sel.length){ box.innerHTML='<span class="empty">No funds selected — search above to add some.</span>'; setViewActive(); return; }
   box.innerHTML = state.sel.map(id=>{ const m=byId.get(id);
-    return `<span class="chip"><span class="dot" data-s="${id}" title="Click to change color / line width" style="background:${colorFor(id)};cursor:pointer"></span>${m.c}<button title="remove" data-i="${id}">×</button></span>`; }).join("");
-  box.querySelectorAll("button").forEach(b=>b.onclick=()=>remove(+b.dataset.i));
+    return `<span class="chip"><span class="dot" data-s="${id}" title="Click to change color / line width" style="background:${colorFor(id)};cursor:pointer"></span>${m.c}<button title="remove" data-i="${id}">×</button></span>`; }).join("") + '<button type="button" class="clear-all" id="clear-all" title="Remove every fund and clear the chart">Clear</button>';
+  box.querySelectorAll(".chip button").forEach(b=>b.onclick=()=>remove(+b.dataset.i));
+  $("clear-all").onclick=()=>{ closeStylePop(); state.sel=[]; renderChips(); render(); };
   box.querySelectorAll(".dot[data-s]").forEach(d=>d.onclick=e=>{ e.stopPropagation(); openStylePop(+d.dataset.s, e.clientX, e.clientY); });
   setViewActive();
 }
