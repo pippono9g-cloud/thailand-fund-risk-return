@@ -254,7 +254,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794800526"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794802289"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
