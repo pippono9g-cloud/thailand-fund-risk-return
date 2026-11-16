@@ -522,6 +522,9 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           <button class="reset" onclick="resetAll()" title="Remove ALL funds and weights from the list and start empty. Cannot be undone unless you saved a file first.">Clear</button>
           <button class="reset" onclick="savePortfolioFile()" title="Save your funds, weights, period and view settings to a .json file on this computer. The page itself is not changed.">Save</button>
           <button class="reset" onclick="document.getElementById('load-file').click()" title="Open a saved .json file. This REPLACES the current holdings and weights with the file's (funds not in this dataset are skipped).">Load</button>
+          <button class="reset" onclick="pushToRiskReturn()" title="Plot every fund in this portfolio on the Risk vs Return dashboard (replaces its current Find selection).">Push to Risk vs Return</button>
+          <button class="reset" onclick="pushTo('frontier')" title="Use every fund in this portfolio as the Input universe of the Efficient Frontier (it then solves the optimal weights for that universe; replaces its current Input list).">Push to Efficient Frontier</button>
+          <button class="reset" onclick="pushTo('growth')" title="Plot these funds on Growth Comparison (largest weights first, max 12; replaces its current selection).">Push to Growth Comparison</button>
           <input type="file" id="load-file" accept="application/json,.json" style="display:none" onchange="loadPortfolioFile(this)">
         </div>
         <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged).</div>
@@ -629,7 +632,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     <b>Disclaimer:</b> Portfolio return, risk, Sharpe Ratio and Maximum Drawdown shown above assume a buy-and-hold portfolio whose starting allocation, left untouched over the selected historical period, would have organically drifted into the CURRENT weights you set today — they are not a record of what you actually earned, and do not reflect any rebalancing or weight changes you may have made in the past. Figures are statistical estimates derived from historical fund performance for illustrative purposes only. Past performance and historical statistics are not indicative of future results and should not be construed as a guarantee, commitment, or prediction of future returns.
   </div>
 
-  <footer>Generated 15 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
+  <footer>Generated 16 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
 </div>
 
 <script>
@@ -2459,6 +2462,23 @@ async function savePortfolioFile(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
+const PUSH_TARGETS = {
+  risk:     {key:"rr-push-portfolio-v1", page:"index.html"},
+  frontier: {key:"ef-push-portfolio-v1", page:"frontier.html"},
+  growth:   {key:"gc-push-portfolio-v1", page:"growth.html"}
+};
+function pushTo(target){
+  const t = PUSH_TARGETS[target];
+  // Largest weight first (Growth Comparison only fits 12 and keeps the leaders).
+  const codes = state.holdings.slice().sort((a,b)=>b.w-a.w).map(h=>h.code);
+  if (!codes.length) { alert("Add at least one fund before pushing."); return; }
+  try { localStorage.setItem(t.key, JSON.stringify({codes, t:Date.now()})); }
+  catch { alert("Could not hand the portfolio over (browser storage is blocked)."); return; }
+  // Inside the Hub: switch to that tab (the page picks the funds up itself).
+  if (window.parent && window.parent !== window) { try { window.parent.postMessage({type:"hub-goto", panel:target}, location.origin); return; } catch {} }
+  window.location.href = t.page;
+}
+function pushToRiskReturn(){ pushTo("risk"); }
 function loadPortfolioFile(input){
   const f = input.files && input.files[0]; input.value = "";
   if (!f) return;

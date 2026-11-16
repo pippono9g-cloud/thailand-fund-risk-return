@@ -25,14 +25,14 @@
   .nav{display:flex;align-items:stretch;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1}
   .nav::-webkit-scrollbar{display:none}
   .nav button,.friend-link{border:0;border-bottom:3px solid transparent;background:transparent;color:#d8cbea;
-    padding:15px 16px 12px;font:700 13px/1.2 inherit;white-space:nowrap;cursor:pointer;text-decoration:none;
+    padding:15px 16px 12px;font-family:inherit;font-size:13px;line-height:1.2;font-weight:800;white-space:nowrap;cursor:pointer;text-decoration:none;
     display:flex;align-items:center;transition:.15s ease}
   .nav button:hover,.friend-link:hover{color:#fff;background:rgba(255,255,255,.06)}
   .nav button.active{color:#fff;border-bottom-color:var(--cyan);background:rgba(255,255,255,.04)}
   .signal-select{align-self:center;margin-left:auto;padding:8px 32px 8px 11px;border:1px solid #80699f;
-    border-radius:8px;background:#3a225c;color:#dff6ff;font:700 12px inherit;cursor:pointer}
+    border-radius:8px;background:#3a225c;color:#dff6ff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
   .mobile-select{display:none;width:100%;margin:10px 0;padding:11px 38px 11px 12px;border:1px solid #8d78aa;
-    border-radius:9px;background:#fff;color:var(--scb-deep);font:700 14px inherit}
+    border-radius:9px;background:#fff;color:var(--scb-deep);font-family:inherit;font-size:14px;font-weight:800}
   .workspace{position:relative;flex:1;min-height:0;background:#fff}
   .panel{position:absolute;inset:0;display:none}.panel.active{display:block}
   iframe{width:100%;height:100%;border:0;background:#fff;display:block}
@@ -41,7 +41,7 @@
     border-radius:50%;animation:spin .8s linear infinite;margin-right:10px}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading .slow{display:block;margin-top:10px;font-size:12px;text-align:center}
-  .loading .slow button{margin:0 6px;padding:5px 12px;border:1px solid var(--scb);border-radius:7px;background:#fff;color:var(--scb);font:700 12px inherit;cursor:pointer}
+  .loading .slow button{margin:0 6px;padding:5px 12px;border:1px solid var(--scb);border-radius:7px;background:#fff;color:var(--scb);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
   .loading .slow a{color:var(--scb);font-weight:700}
   .noscript{margin:30px auto;padding:20px;max-width:700px;background:#fff;border:1px solid var(--line);border-radius:12px}
   .signals-panel{height:100%;overflow:auto;padding:28px 24px 60px;background:#fff}
@@ -75,8 +75,8 @@
       <button type="button" data-panel="trend">Flow</button>
       <button type="button" data-panel="matrend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
-      <button type="button" data-panel="longterm">Long-term Markets</button>
       <button type="button" data-panel="portfolio">Portfolio Analysts</button>
+      <button type="button" data-panel="longterm">Long-term Markets</button>
       <select class="signal-select" aria-label="เลือก Market Signals">
         <option value="">Market Signals ▾</option>
         <option value="signals">Market Signals</option>
@@ -89,8 +89,8 @@
       <option value="trend">Flow</option>
       <option value="matrend">Trend</option>
       <option value="growth">Growth Comparison</option>
-      <option value="longterm">Long-term Markets</option>
       <option value="portfolio">Portfolio Analysts</option>
+      <option value="longterm">Long-term Markets</option>
       <option value="signals">Market Signals</option>
       <option value="set100">SET100 Signals</option>
     </select>
@@ -210,6 +210,7 @@
   select.addEventListener("change",function(){show(select.value,true);});
   signalSelect.addEventListener("change",function(){if(signalSelect.value)show(signalSelect.value,true);});
   document.querySelectorAll("iframe").forEach(function(frame){frame.addEventListener("load",function(){var loader=frame.parentNode.querySelector(".loading");if(loader)loader.remove();});});
+  window.addEventListener("message",function(e){if(e.origin===location.origin&&e.data&&e.data.type==="hub-goto"&&valid[e.data.panel])show(e.data.panel,true);});
   window.addEventListener("hashchange",function(){show(location.hash.slice(1),false);});
   // Always open the Hub on Risk vs Return. A stale hash from the previous
   // visit must not make Long-term Markets appear to be the default page.

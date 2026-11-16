@@ -242,7 +242,7 @@
 
   <div class="foot">
     <span>Source: SEC Thailand Open API · cumulative growth of NAV, dividends not reinvested · D marker = dividend event · daily NAV for the recent ~year, weekly (last of each week) for older data.</span>
-    <span>NAV as of 13 Nov 2026 · Generated 15 Nov 2026</span>
+    <span>NAV as of 13 Nov 2026 · Generated 16 Nov 2026</span>
   </div>
 </div>
 
@@ -254,7 +254,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794715838"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794800526"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
@@ -956,6 +956,28 @@ $("filters-toggle").onclick = () => {
   $("filters-toggle").title = collapsed ? "Show fund names" : "Hide fund names";
   $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
 };
+
+/* ---------- Receive a portfolio pushed from Portfolio Analysts ----------
+   Replaces the selection with the pushed funds (already ordered by weight,
+   largest first), up to MAXSEL. Key is consumed once applied. */
+const GC_PUSH_KEY = "gc-push-portfolio-v1";
+function applyPortfolioPush(){
+  let d;
+  try { const raw = localStorage.getItem(GC_PUSH_KEY); if (!raw) return; localStorage.removeItem(GC_PUSH_KEY); d = JSON.parse(raw); } catch { return; }
+  if (!d || !Array.isArray(d.codes)) return;
+  const byCodeGC = new Map(META.map(m => [m.c, m.i]));
+  const ids = []; d.codes.forEach(c => { const i = byCodeGC.get(c); if (i != null && !ids.includes(i)) ids.push(i); });
+  if (!ids.length) return;
+  state.sel = [];
+  ids.slice(0, MAXSEL).forEach(add);
+  if (ids.length > MAXSEL) {
+    const note = document.createElement("span"); note.className = "empty";
+    note.textContent = " Showing the " + MAXSEL + " largest of " + ids.length + " portfolio funds (chart limit).";
+    $("chips").appendChild(note);
+  }
+}
+window.addEventListener("storage", e => { if (e.key === GC_PUSH_KEY) applyPortfolioPush(); });
+applyPortfolioPush();
 </script>
 </body>
 </html>
