@@ -244,7 +244,7 @@
 
   <div class="foot">
     <span>Source: SEC Thailand Open API · cumulative growth of NAV, dividends not reinvested · D marker = dividend event · daily NAV for the recent ~year, weekly (last of each week) for older data.</span>
-    <span>NAV as of 13 Nov 2026 · Generated 16 Nov 2026</span>
+    <span>NAV as of 13 Nov 2026 · Generated 17 Nov 2026</span>
   </div>
 </div>
 
@@ -256,7 +256,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794809520"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794901313"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
@@ -915,12 +915,25 @@ function render(){
     const baseDate = GRID[baseGk], toDate = GRID[lastGidx];
     rows.push({m,col,ret,base:baseDate,to:toDate,days:rangeDays(baseDate,toDate)+1});
   }
+  // Fix the y range from the line data (excluding hover tags). Plotly's autorange also counts
+  // annotations placed in data coordinates, so a hover name-tag near the top/bottom of the
+  // plot would otherwise rescale the whole chart while the cursor moves.
+  let yLo = Infinity, yHi = -Infinity;
+  for(const t of traces){
+    if(t.dividendMarker) continue;
+    for(const v of t.y){ if(v < yLo) yLo = v; if(v > yHi) yHi = v; }
+  }
+  if(!isFinite(yLo) || !isFinite(yHi)){ yLo = 0; yHi = 1; }
+  if(yHi === yLo){ const d = Math.abs(yHi) * 0.01 || 1; yLo -= d; yHi += d; }
+  const yPad = (yHi - yLo) * 0.08;   // headroom so tag stacks near the extremes stay inside the plot
+  const yRange = [yLo - yPad, yHi + yPad];
   const layout={
     margin:{l:56,r:18,t:10,b:56}, height:560, hovermode:"x", dragmode:false,
     hoverlabel:{font:{size:12}, align:"left"},
     xaxis:{title:"<b>Date</b>",showgrid:true,gridcolor:"#eef0f3",zeroline:false,range:[state.from,state.to]},
     yaxis:{title: navMode ? "<b>NAV</b>" : "<b>Cumulative return (%)</b>",
-           showgrid:true,gridcolor:"#eef0f3",zeroline:false, ticksuffix: navMode ? "" : "%"},
+           showgrid:true,gridcolor:"#eef0f3",zeroline:false, ticksuffix: navMode ? "" : "%",
+           autorange:false, range:yRange, fixedrange:true},
     showlegend:false, plot_bgcolor:"#fff", paper_bgcolor:"#fff",
     shapes: baseShapes(navMode),
     annotations:[]
