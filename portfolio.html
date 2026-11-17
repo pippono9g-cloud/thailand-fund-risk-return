@@ -190,6 +190,11 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .bar.over .bar-fill { background:linear-gradient(90deg, var(--red), #ff6f6f); }
 .tray .lbl { font-weight:700; min-width:120px; text-align:right; }
 .tray.over .lbl { color:var(--red); }
+.push-menu { position:relative; display:inline-block; }
+.push-list { position:absolute; bottom:calc(100% + 4px); left:0; z-index:30; min-width:190px; background:#fff; border:1px solid var(--rule); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.14); padding:4px; display:flex; flex-direction:column; }
+.push-list[hidden] { display:none; }
+.push-list button { text-align:left; background:none; border:none; border-radius:5px; padding:7px 10px; font:inherit; font-size:12px; color:var(--ink); cursor:pointer; white-space:nowrap; }
+.push-list button:hover, .push-list button:focus-visible { background:#eef6ff; color:#1d4ed8; outline:none; }
 .tray .reset { background:none; border:1px solid var(--rule); color:var(--grey); padding:4px 10px;
   border-radius:5px; cursor:pointer; font-size:12px; }
 .tray .reset:hover { border-color:var(--cyan); color:var(--ink); }
@@ -522,9 +527,15 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           <button class="reset" onclick="resetAll()" title="Remove ALL funds and weights from the list and start empty. Cannot be undone unless you saved a file first.">Clear</button>
           <button class="reset" onclick="savePortfolioFile()" title="Save your funds, weights, period and view settings to a .json file on this computer. The page itself is not changed.">Save</button>
           <button class="reset" onclick="document.getElementById('load-file').click()" title="Open a saved .json file. This REPLACES the current holdings and weights with the file's (funds not in this dataset are skipped).">Load</button>
-          <button class="reset" onclick="pushToRiskReturn()" title="Plot every fund in this portfolio on the Risk vs Return dashboard (replaces its current Find selection).">Push to Risk vs Return</button>
-          <button class="reset" onclick="pushTo('frontier')" title="Use every fund in this portfolio as the Input universe of the Efficient Frontier (it then solves the optimal weights for that universe; replaces its current Input list).">Push to Efficient Frontier</button>
-          <button class="reset" onclick="pushTo('growth')" title="Plot these funds on Growth Comparison (largest weights first, max 12; replaces its current selection).">Push to Growth Comparison</button>
+          <div class="push-menu" id="push-menu">
+            <button class="reset" id="push-btn" onclick="togglePushMenu(event)" aria-haspopup="true" aria-expanded="false" title="Send every fund in this portfolio to another dashboard">Push to ▾</button>
+            <div class="push-list" id="push-list" role="menu" hidden>
+              <button role="menuitem" onclick="pushTo('risk')" title="Plot every fund in this portfolio on the Risk vs Return dashboard (replaces its current Find selection).">Risk vs Return</button>
+              <button role="menuitem" onclick="pushTo('frontier')" title="Use every fund in this portfolio as the Input universe of the Efficient Frontier (it then solves the optimal weights for that universe; replaces its current Input list).">Efficient Frontier</button>
+              <button role="menuitem" onclick="pushTo('growth')" title="Plot these funds on Growth Comparison (largest weights first, max 12; replaces its current selection).">Growth Comparison</button>
+              <button role="menuitem" onclick="pushTo('trend')" title="Open the Trend (MA Quadrant) page in its Fund view with every fund in this portfolio picked (replaces its current filters and picks).">Trend · Fund view</button>
+            </div>
+          </div>
           <input type="file" id="load-file" accept="application/json,.json" style="display:none" onchange="loadPortfolioFile(this)">
         </div>
         <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged).</div>
@@ -632,7 +643,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
     <b>Disclaimer:</b> Portfolio return, risk, Sharpe Ratio and Maximum Drawdown shown above assume a buy-and-hold portfolio whose starting allocation, left untouched over the selected historical period, would have organically drifted into the CURRENT weights you set today — they are not a record of what you actually earned, and do not reflect any rebalancing or weight changes you may have made in the past. Figures are statistical estimates derived from historical fund performance for illustrative purposes only. Past performance and historical statistics are not indicative of future results and should not be construed as a guarantee, commitment, or prediction of future returns.
   </div>
 
-  <footer>Generated 16 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
+  <footer>Generated 17 Nov 2026 · Source: <a href="https://api.sec.or.th">SEC.or.th</a> Open Data API · Portfolio Analysts v0.19</footer>
 </div>
 
 <script>
@@ -2465,8 +2476,19 @@ async function savePortfolioFile(){
 const PUSH_TARGETS = {
   risk:     {key:"rr-push-portfolio-v1", page:"index.html"},
   frontier: {key:"ef-push-portfolio-v1", page:"frontier.html"},
-  growth:   {key:"gc-push-portfolio-v1", page:"growth.html"}
+  growth:   {key:"gc-push-portfolio-v1", page:"growth.html"},
+  trend:    {key:"ma-push-portfolio-v1", page:"ma-quadrant.html", panel:"matrend"}   // hub tab "Trend" (MA Quadrant), opened in its Fund view
 };
+function togglePushMenu(ev){
+  if (ev) ev.stopPropagation();
+  const list = document.getElementById("push-list"), btn = document.getElementById("push-btn");
+  list.hidden = !list.hidden; btn.setAttribute("aria-expanded", String(!list.hidden));
+}
+document.addEventListener("click", e => {   // click anywhere else (or on an item) closes the menu
+  const list = document.getElementById("push-list"); if (!list || list.hidden) return;
+  list.hidden = true; document.getElementById("push-btn").setAttribute("aria-expanded", "false");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { const l = document.getElementById("push-list"); if (l) l.hidden = true; } });
 function pushTo(target){
   const t = PUSH_TARGETS[target];
   // Largest weight first (Growth Comparison only fits 12 and keeps the leaders).
@@ -2475,7 +2497,7 @@ function pushTo(target){
   try { localStorage.setItem(t.key, JSON.stringify({codes, t:Date.now()})); }
   catch { alert("Could not hand the portfolio over (browser storage is blocked)."); return; }
   // Inside the Hub: switch to that tab (the page picks the funds up itself).
-  if (window.parent && window.parent !== window) { try { window.parent.postMessage({type:"hub-goto", panel:target}, location.origin); return; } catch {} }
+  if (window.parent && window.parent !== window) { try { window.parent.postMessage({type:"hub-goto", panel:t.panel || target}, location.origin); return; } catch {} }
   window.location.href = t.page;
 }
 function pushToRiskReturn(){ pushTo("risk"); }

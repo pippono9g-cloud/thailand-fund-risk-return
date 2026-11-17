@@ -205,7 +205,7 @@ table.trend tr.dim td { opacity:.42; }
 </div>
 
 <div class="foot">
-  Source: SEC Thailand Open API (sec_data.sqlite); AIMC categories as in Portfolio Analysts. Data as of 13 Nov 2026 · Generated 16 Nov 2026.
+  Source: SEC Thailand Open API (sec_data.sqlite); AIMC categories as in Portfolio Analysts. Data as of 13 Nov 2026 · Generated 17 Nov 2026.
   Not investment advice.
 </div>
 
@@ -632,6 +632,25 @@ document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",(
   render();
 }));
 render();
+/* ---------- Receive a portfolio pushed from Portfolio Analysts ----------
+   Opens the Fund view, clears the filters and Find picks, and picks the pushed funds (all of them,
+   so every one is highlighted and the view fits around them). Funds without enough NAV history
+   for the current Slow MA are not plotted. The key is consumed once applied. */
+const MA_PUSH_KEY="ma-push-portfolio-v1";
+function applyPortfolioPush(){
+  let d;
+  try{ const raw=localStorage.getItem(MA_PUSH_KEY); if(!raw) return; localStorage.removeItem(MA_PUSH_KEY); d=JSON.parse(raw); }catch(e){ return; }
+  if(!d||!Array.isArray(d.codes)) return;
+  const known=new Set(D.f.map(fe=>fe[2])), codes=[]; d.codes.forEach(c=>{ if(known.has(c)&&!codes.includes(c)) codes.push(c); });
+  if(!codes.length) return;
+  document.querySelector('.seg button[data-m="fund"]').click();   // Fund view (this also empties the picks)
+  clearAll();                                                      // filters off, so no pushed fund is hidden by one
+  st.picks=codes; refit();
+  const skipped=d.codes.filter(c=>!known.has(c));   // funds this page has no data for (e.g. other share classes)
+  if(skipped.length){ const n=document.createElement("span"); n.className="chip"; n.style.background="#fff7ed"; n.style.borderColor="#fdba74"; n.textContent="Not in Trend data: "+skipped.join(", "); $("chips").appendChild(n); }
+}
+window.addEventListener("storage",e=>{ if(e.key===MA_PUSH_KEY) applyPortfolioPush(); });
+applyPortfolioPush();
 })();
 </script>
 </body>
