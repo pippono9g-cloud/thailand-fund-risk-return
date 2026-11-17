@@ -150,7 +150,8 @@
   #style-pop .sp-reset{margin-top:9px;font-size:11.5px;color:var(--mute);cursor:pointer;text-decoration:underline}
   #style-pop .sp-reset:hover{color:var(--scb)}
   /* Hide Plotly's default hover cards; custom chart annotations below replace them. */
-  .hoverlayer .hovertext{ display:none !important; }
+  .hoverlayer .hovertext,
+  .hoverlayer .axistext{ display:none !important; }  /* axistext = Plotly's own x-axis date label; our custom date tag replaces it */
   .hoverlayer .legendlines path,
   .hoverlayer .legendpoints path{ display:none !important; }
   /* Small screens only — desktop layout is untouched. */
@@ -256,7 +257,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794902221"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794902411"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
@@ -785,6 +786,18 @@ function bindCustomHover(navMode){
       borderwidth:1, borderpad:4, font:{size:12,color:"#374151"}
     }];
     const stackMid = (pts.length - 1) / 2;
+    // Keep the whole tag stack inside the plot, clear of the x-axis (and the date tag under it)
+    // and of the top edge: shift the stack as one block so tags never overlap each other.
+    const ya = gd._fullLayout && gd._fullLayout.yaxis;
+    const plotH = ya && ya._length;
+    let stackAdj = 0;
+    if(ya && plotH && typeof ya.c2p === "function"){
+      const centers = pts.map((p, i) => ya.c2p(p.y) - (stackMid - i) * 14);   // px from plot top
+      const lo = Math.min(...centers), hi = Math.max(...centers);
+      const TOP_PAD = 10, BOTTOM_PAD = 18;
+      if(hi > plotH - BOTTOM_PAD) stackAdj = (plotH - BOTTOM_PAD) - hi;      // negative → move up
+      if(lo + stackAdj < TOP_PAD) stackAdj = TOP_PAD - lo;                  // too tall to fit: favour top
+    }
     pts.forEach((p, i) => {
       if(!p.data || p.data.dividendMarker) return;
       const id = p.data && p.data.meta != null ? p.data.meta : state.sel[p.curveNumber];
@@ -793,7 +806,7 @@ function bindCustomHover(navMode){
       const val = navMode ? Number(p.y).toFixed(4) : `${p.y >= 0 ? "+" : ""}${Number(p.y).toFixed(2)}%`;
       annotations.push({
         x:p.x, y:p.y, xref:"x", yref:"y", text:`<b>${m ? m.c : p.data.name}</b>&nbsp;&nbsp;${val}`,
-        showarrow:false, xanchor:tagAnchor, yanchor:"middle", xshift:tagShift, yshift:(stackMid - i) * 14,
+        showarrow:false, xanchor:tagAnchor, yanchor:"middle", xshift:tagShift, yshift:(stackMid - i) * 14 - stackAdj,
         bgcolor:col, bordercolor:col, borderwidth:1, borderpad:2,
         font:{size:9,color:"#fff"}
       });
