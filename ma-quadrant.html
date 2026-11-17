@@ -641,13 +641,21 @@ function applyPortfolioPush(){
   let d;
   try{ const raw=localStorage.getItem(MA_PUSH_KEY); if(!raw) return; localStorage.removeItem(MA_PUSH_KEY); d=JSON.parse(raw); }catch(e){ return; }
   if(!d||!Array.isArray(d.codes)) return;
-  const known=new Set(D.f.map(fe=>fe[2])), codes=[]; d.codes.forEach(c=>{ if(known.has(c)&&!codes.includes(c)) codes.push(c); });
+  // This page keeps ONE share class per fund; the fund's other classes are aliases (fe[7], space-joined). A pushed
+  // class that is only an alias is mapped to the class the page plots, so the fund is not lost.
+  const known=new Set(D.f.map(fe=>fe[2])), codes=[], mapped=[], skipped=[];
+  d.codes.forEach(c=>{
+    let rep=known.has(c)?c:null;
+    if(!rep){ const fe=D.f.find(x=>(" "+(x[7]||"")+" ").includes(" "+c+" ")); if(fe){ rep=fe[2]; mapped.push(c+" → "+rep); } }
+    if(!rep) skipped.push(c); else if(!codes.includes(rep)) codes.push(rep);
+  });
   if(!codes.length) return;
   document.querySelector('.seg button[data-m="fund"]').click();   // Fund view (this also empties the picks)
   clearAll();                                                      // filters off, so no pushed fund is hidden by one
   st.picks=codes; refit();
-  const skipped=d.codes.filter(c=>!known.has(c));   // funds this page has no data for (e.g. other share classes)
-  if(skipped.length){ const n=document.createElement("span"); n.className="chip"; n.style.background="#fff7ed"; n.style.borderColor="#fdba74"; n.textContent="Not in Trend data: "+skipped.join(", "); $("chips").appendChild(n); }
+  const note=(txt,bg,bd)=>{ const n=document.createElement("span"); n.className="chip"; n.style.background=bg; n.style.borderColor=bd; n.textContent=txt; $("chips").appendChild(n); };
+  if(mapped.length) note("Other share class plotted: "+mapped.join(", "),"#eff6ff","#93c5fd");
+  if(skipped.length) note("Not in Trend data: "+skipped.join(", "),"#fff7ed","#fdba74");   // no data for the fund at all
 }
 window.addEventListener("storage",e=>{ if(e.key===MA_PUSH_KEY) applyPortfolioPush(); });
 applyPortfolioPush();
