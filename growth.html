@@ -256,7 +256,7 @@ const DIVS = {"1":[{"d":354,"pay":"2024-03-05","v":0.18},{"d":462,"pay":"2024-10
 /* Web build only: SERIES starts empty and each fund's NAV history is fetched on
  * demand from small chunk files (DATA = {dir, per, v}). The local single-file
  * build embeds every series and sets DATA to null, so nothing is fetched. */
-const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794901313"};
+const DATA = {"dir":"growth-data/","per":32,"v":"2026-11-13-1794902221"};
 const _chunks = {};
 function ensureSeries(id){
   if(!DATA || SERIES[id]) return Promise.resolve(false);
@@ -780,8 +780,8 @@ function bindCustomHover(navMode){
     const tagShift = xPos > 0.72 ? -6 : 6;
     const dateAnchor = xPos > 0.9 ? "right" : (xPos < 0.1 ? "left" : "center");
     const annotations = [{
-      x, y:-0.11, xref:"x", yref:"paper", text:formatHoverDate(x), showarrow:false,
-      xanchor:dateAnchor, yanchor:"top", bgcolor:"#fff", bordercolor:"#d1d5db",
+      x, y:0, xref:"x", yref:"paper", text:formatHoverDate(x), showarrow:false,
+      xanchor:dateAnchor, yanchor:"top", yshift:-2, bgcolor:"#fff", bordercolor:"#d1d5db",
       borderwidth:1, borderpad:4, font:{size:12,color:"#374151"}
     }];
     const stackMid = (pts.length - 1) / 2;
