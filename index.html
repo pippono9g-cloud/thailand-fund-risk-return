@@ -472,7 +472,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
         <div class="help-pop" id="help-pop">
           <h4>How to use</h4>
           <ul>
-            <li><b>Click a time-window pill</b> to change the return window for the chart and both tables.</li>
+            <li><b>Click a time-window pill</b> to change the period for the chart, both tables and any open Card.</li>
             <li><b>Hover</b> a point for the full fund card — <b>Fund Score</b>, spider rating, and 1Y comparison vs its sub-category.</li>
             <li><b>Drag</b> = pan · <b>mouse wheel</b> = zoom at cursor · <b>double-click or Reset</b> = back to full view.</li>
             <li><b>Filters</b> cascade (Main → Sub) and combine with AND; Find matches name / code / AMC, multiple words = OR.</li>
@@ -810,9 +810,9 @@ function clearAllFilters(){
 function buildPills(){
   const i = state.win;
   $("pills").innerHTML =
-    '<span class="wsel-label">Return window</span>' +
+    '<span class="wsel-label">Period</span>' +
     '<div class="wdrop" id="wdrop">' +
-      '<div class="wsel" id="wsel" tabindex="0" title="Click to choose the return window">' +
+      '<div class="wsel" id="wsel" tabindex="0" title="Click to choose the period">' +
         '<span class="dot" style="background:'+WIN_COLORS[i]+'"></span>' +
         '<span class="wsel-cur">'+WINDOWS[i]+'</span>' +
         '<span class="caret">&#9660;</span>' +
@@ -1671,6 +1671,22 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeCardMen
 window.addEventListener("blur", closeCardMenu);
 window.addEventListener("resize", closeCardMenu);
 
+// Keep open (pinned) Cards in step with the Period selector: re-render the body from the
+// current state, leaving each Card's position, size and details panel as the user set them.
+function refreshPinnedCards(){
+  _pinnedCards.forEach((hc, id) => {
+    const f = byId.get(id) || byId.get(+id);
+    const body = hc.querySelector(".card-body");
+    if (!f || !body || hc.style.display === "none") return;
+    body.innerHTML = hoverCardHTML(f);
+    syncCardGeometry(hc);
+    if (!hc.classList.contains("details-open")) {
+      hc.dataset.collapsedHeight = String(hc.querySelector(".card-scale-content").scrollHeight);
+      syncCardGeometry(hc);
+    }
+  });
+}
+
 function renderHoverCard(f, pinned){
   const fundKey = String(f.id);
   if (pinned && _pinnedCards.has(fundKey)) return null;
@@ -2042,6 +2058,7 @@ function setZoom(xmax, fromSlider, xmin){
 function refresh(){
   const list = filtered();
   drawChart(list);
+  refreshPinnedCards();
   drawTables(list);
   renderChips();
   renderWatermarkButton();
