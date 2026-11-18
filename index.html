@@ -262,6 +262,12 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 #hover-card.pinned .close-btn { display:flex; align-items:center; justify-content:center; }
 #hover-card .close-btn:hover { border-color:var(--red); color:var(--red); }
+.card-menu { position:fixed; z-index:300; min-width:176px; background:#fff; border:1px solid #cbd5e1; border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18); padding:4px; display:flex; flex-direction:column; }
+.card-menu button { text-align:left; border:0; background:transparent; padding:7px 10px; border-radius:5px; font-size:12px; color:var(--ink); cursor:pointer; font-family:inherit; }
+.card-toast { position:fixed; z-index:310; background:#1f1f1f; color:#fff; font-size:12px; padding:6px 12px; border-radius:6px; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+.card-menu button:hover { background:var(--scb-l); color:var(--scb); }
+
 #hover-card.pinned .close-btn, #hover-card.pinned .details-toggle { cursor:pointer; }
 #hover-card .drag-handle {
   position:absolute; z-index:3; top:0; left:0; right:78px; height:34px;
@@ -271,12 +277,14 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card.pinned .drag-handle { display:block; }
 #hover-card .details-toggle {
   position:absolute; z-index:11; top:50%; left:min(358px, calc(100% - 28px)); right:auto;
-  width:24px; height:34px; transform:translateY(-50%);
+  width:18px; height:26px; transform:translateY(-50%);
   display:none; align-items:center; justify-content:center; padding:0;
   border:0; border-radius:0; background:transparent; color:var(--scb);
   font-size:22px; font-weight:700; line-height:1; cursor:pointer;
 }
 #hover-card.pinned.has-details .details-toggle { display:flex; }
+#hover-card .details-toggle svg { display:block; transition:transform .15s; }
+#hover-card.details-open .details-toggle svg { transform:rotate(180deg); }
 #hover-card .details-toggle:hover { color:#2f1763; background:transparent; }
 #hover-card .resize-edge { position:absolute; z-index:10; display:none; touch-action:none; }
 #hover-card.pinned .resize-edge { display:block; }
@@ -316,6 +324,49 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .ids { font-size:11px; color:var(--mute); font-weight:700; margin-bottom:4px; line-height:1.5; }
 #hover-card .meta { font-size:11px; color:var(--grey); margin-bottom:6px; line-height:1.5; }
 #hover-card .rets-wrap { margin:6px 0 4px; }
+
+/* ---- Risk & Return card (vertical layout) ---- */
+#hover-card.has-details .col-l { padding-right:14px; }  /* keep the > details toggle clear of the numbers */
+#hover-card h3.rr-name { padding-right:26px; font-size:13.5px; line-height:1.25; font-weight:800; color:#0b2a5b; letter-spacing:-0.01em; margin:0 0 2px; }
+#hover-card .rr-sub { font-size:10.5px; font-weight:700; color:var(--mute); margin-bottom:8px; }
+#hover-card .rr-ids { font-size:9.5px; color:var(--mute); line-height:1.45; margin-bottom:1px; }
+#hover-card .rr-kpis { display:grid; grid-template-columns:repeat(3, max-content) 1fr; background:var(--scb-l); border-radius:10px; padding:8px 4px; margin-bottom:6px; }
+#hover-card .rr-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid rgba(79,45,127,.18); min-width:0; }
+#hover-card .rr-kpis > div:first-child { border-left:0; }
+#hover-card .rr-kpis .k { font-size:8.5px; font-weight:700; color:var(--mute); white-space:nowrap; }
+#hover-card .rr-kpis b { font-size:12px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#hover-card .rr-kpis .sub { display:flex; justify-content:space-between; gap:4px; font-size:8.5px; color:var(--mute); white-space:nowrap; font-variant-numeric:tabular-nums; }
+#hover-card .rr-kpis .d { font-size:8px; color:#999; white-space:nowrap; }
+#hover-card .rr-sec { font-size:11px; font-weight:800; color:var(--ink); margin:8px 0 3px; padding-top:7px; border-top:1px solid var(--grid); }
+#hover-card .rr-prow { display:grid; grid-template-columns:26px 1fr 54px 48px; align-items:center; gap:6px; padding:2px 4px; border-radius:6px; font-variant-numeric:tabular-nums; }
+#hover-card .rr-prow:nth-child(odd):not(.hd) { background:var(--soft); }
+#hover-card .rr-prow.sel { box-shadow:inset 0 0 0 1.5px var(--scb); }
+#hover-card .rr-prow.hd { font-size:8.5px; color:var(--mute); padding-top:0; padding-bottom:0; }
+#hover-card .rr-prow.hd b { text-align:right; font-weight:700; }
+#hover-card .rr-pl { font-size:10px; font-weight:800; }
+#hover-card .rr-track { position:relative; height:12px; }
+#hover-card .rr-bar { position:absolute; top:2px; height:8px; border-radius:3px; }
+#hover-card .rr-bar.up { background:#6ee7b7; } #hover-card .rr-bar.dn { background:#fca5a5; }
+#hover-card .rr-zero { position:absolute; top:0; bottom:0; width:1px; background:#94a3b8; }
+#hover-card .rr-cat { position:absolute; top:0; height:12px; width:2px; margin-left:-1px; background:#475569; }
+#hover-card .rr-legend .rr-cat { position:static; display:inline-block; vertical-align:-2px; height:9px; margin:0 2px 0 0; }
+#hover-card .rr-pv { text-align:right; font-size:10.5px; font-weight:800; white-space:nowrap; }
+#hover-card .rr-pc { text-align:right; font-size:9.5px; color:var(--mute); white-space:nowrap; }
+#hover-card .rr-duo { display:flex; align-items:center; gap:6px; margin-top:6px; padding-top:4px; border-top:1px solid var(--grid); }
+#hover-card .rr-radar { flex:0 0 158px; }
+#hover-card .rr-radar svg { display:block; width:158px; height:auto; }
+#hover-card .rr-stats { flex:1; min-width:0; }
+#hover-card .rr-stats .rr-sec { margin:0 0 2px; padding-top:0; border-top:0; }
+#hover-card .rr-stat { padding:3px 0; border-bottom:1px solid var(--soft); font-variant-numeric:tabular-nums; }
+#hover-card .rr-stat:last-child { border-bottom:0; }
+#hover-card .rr-stat .l1 { display:flex; justify-content:space-between; gap:4px; font-size:10.5px; }
+#hover-card .rr-stat .l1 b { font-weight:800; white-space:nowrap; }
+#hover-card .rr-stat .l2 { display:flex; justify-content:space-between; gap:4px; font-size:9px; color:var(--mute); white-space:nowrap; }
+#hover-card .rr-short { margin-top:6px; } #hover-card .rr-short .rets-wrap { margin:0; }
+#hover-card .rr-short .rets-grid > div { min-height:36px; padding:4px 2px; }
+#hover-card .rr-short .rets-grid > div.sel { background:#f0fafe; border-radius:4px; }
+#hover-card .rr-foot { margin-top:8px; padding-top:7px; border-top:1px solid var(--grid); font-size:9.5px; color:var(--mute); }
+#hover-card .vc-note { font-size:10px; line-height:1.4; margin-top:4px; }
 
 .legend-note { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--mute); margin-top:6px; align-items:center; }
 .legend-note .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
@@ -778,42 +829,120 @@ function buildPills(){
 }
 
 /* ---------- custom hover card (spider + details, like v1) ---------- */
-function retsGridHTML(f){
-  const w = state.win;
-  const cells = (from, to) => WINDOWS.slice(from, to).map((lbl,j) => {
-    const i = from + j;
-    return '<div'+(i===w?' style="background:#f0fafe;border-radius:4px;"':'')+'><div class="h">'+WIN_SHORT[i]+'</div><div class="v '+pctClass(f.rets[i])+'">'+fmtPerf(f.rets[i])+'</div></div>';
+// Mean return per sub-category for the six sub-year windows (1W … YTD), mature funds only.
+const CAT_RET_MEAN = (() => {
+  const acc = {};
+  FUNDS.forEach(f => {
+    if (f.young) return;
+    const a = acc[f.cat] || (acc[f.cat] = [0,1,2,3,4,5].map(() => [0,0]));
+    for (let i = 0; i < 6; i++) { const v = f.rets[i]; if (v != null) { a[i][0] += v; a[i][1]++; } }
+  });
+  const out = {};
+  for (const c in acc) out[c] = acc[c].map(([sum,n]) => n ? Math.round(sum/n*100)/100 : null);
+  return out;
+})();
+// Sub-category colours follow the theme: countries/regions get their "own" colour (Japan red,
+// US blue …) and each group shares a family (Thai equity indigo, bonds purple, allocation olive,
+// property brown …). Any sub-category not listed falls back to a stable generated hue.
+const CAT_COLOR_MAP = {
+  "Japan Equity":"#c81e1e", "US Equity":"#1d4ed8", "China Equity - A Shares":"#ea580c", "China Equity":"#ea580c",
+  "Greater China Equity":"#c2410c", "Asia Pacific Ex Japan":"#0d9488", "Asia Pacific ex-Japan Equity":"#0d9488",
+  "Emerging Market":"#a21caf", "India Equity":"#ca8a04", "Vietnam Equity":"#15803d", "European Equity":"#0284c7",
+  "ASEAN Equity":"#0e7490",
+  "Global Equity":"#1e3a8a", "Global Equity Fully FX Risk Hedge":"#1e40af",
+  "Equity Large Cap":"#4338ca", "SET 50 Index Fund":"#3730a3", "Equity Small - Mid Cap":"#6366f1", "Equity General":"#4f46e5",
+  "Health Care":"#be185d", "Technology Equity":"#0e7490", "Global Equity - Consumer Goods and Services":"#c0267c",
+  "Global Equity - Infrastructure":"#9d174d", "Global Equity - Alternative Energy":"#047857",
+  "Other Global Sector Equity":"#7f1d4f", "Energy":"#b45309",
+  "Short Term General Bond":"#7c3aed", "Mid Term General Bond":"#6d28d9", "Mid Term Government Bond":"#5b21b6",
+  "Long Term General Bond":"#4c1d95", "Short Term Government Bond":"#7e57c2",
+  "Global Bond Discretionary F/X Hedge or Unhedge":"#6b21a8", "Emerging Market Bond Discretionary F/X Hedge or Unhedge":"#86198f",
+  "Global Bond Fully F/X Hedge":"#581c87", "High Yield Bond":"#7c2d92",
+  "Aggressive Allocation":"#365314", "Moderate Allocation":"#4d7c0f", "Conservative Allocation":"#577f12",
+  "Foreign Investment Allocation":"#6b7a10",
+  "Money Market Government":"#64748b", "Money Market General":"#475569",
+  "Fund of Property Fund - Thai":"#92400e", "Fund of Property fund -Thai and Foreign":"#78350f",
+  "Fund of Property Fund - Foreign":"#a16207", "Property - Indirect Flexible":"#854d0e",
+  "Commodities Precious Metals":"#946b00", "Commodities Energy":"#6b4f10",
+  "Miscellaneous":"#78716c", "Uncategorised":"#57534e"
+};
+const CAT_COLOR = (() => {
+  const m = {};
+  [...new Set(FUNDS.map(f => f.cat))].sort().forEach((c, i) => {
+    m[c] = CAT_COLOR_MAP[c] || "hsl(" + Math.round((i * 137.508) % 360) + ",68%,34%)";
+  });
+  return m;
+})();
+function gradeCls(g){ return ({"A+":"g-ap","A":"g-a","B+":"g-bp","B":"g-b","C":"g-c","D":"g-d"})[g] || "g-na"; }
+// Performance bars: fund (bar) vs sub-category average (tick) for 1Y / 3Y / 5Y,
+// all on one shared scale so lengths are comparable.
+function rrPerfHTML(f){
+  // Sub-category average per window: 1Y / 3Y / 5Y come from the build (same figures as
+  // the %ile blocks); the shorter windows use CAT_RET_MEAN (mean of non-young peers).
+  const cm = CAT_RET_MEAN[f.cat] || [];
+  const catOf = {0:cm[0], 1:cm[1], 2:cm[2], 3:cm[3], 4:cm[4], 5:cm[5],
+                 6: f.sp && f.sp.cat_perf, 7: f.sp3 && f.sp3.cat_perf, 8: f.sp5 && f.sp5.cat_perf};
+  const rows = WIN_SHORT.map((lbl,i) => [lbl, f.rets[i], catOf[i], i, i===6 && f.sp && f.sp.perf_implied]);
+  const vals = [];
+  rows.forEach(r => { if (r[1]!=null) vals.push(r[1]); if (r[2]!=null) vals.push(r[2]); });
+  if (!vals.length) return "";
+  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), span = (hi-lo) || 1;
+  const zero = (-lo/span)*100;
+  const body = rows.map(([lbl,v,c,wi,impl]) => {
+    let bar = "";
+    if (v!=null) {
+      const left = Math.min(zero, zero + v/span*100), wd = Math.max(Math.abs(v)/span*100, .8);
+      bar = '<i class="rr-bar '+(v>=0?"up":"dn")+'" style="left:'+left.toFixed(2)+'%;width:'+wd.toFixed(2)+'%"></i>';
+    }
+    const tick = c!=null ? '<i class="rr-cat" style="left:'+(zero+c/span*100).toFixed(2)+'%"></i>' : "";
+    return '<div class="rr-prow'+(state.win===wi?' sel':'')+'"><span class="rr-pl">'+lbl+'</span>' +
+      '<span class="rr-track"><i class="rr-zero" style="left:'+zero.toFixed(2)+'%"></i>'+bar+tick+'</span>' +
+      '<b class="rr-pv '+pctClass(v)+'">'+fmtPct(v)+'</b>' +
+      '<span class="rr-pc">'+(c!=null?fmtPct(c):"—")+'</span></div>';
   }).join("");
-  return '<div class="rets-wrap"><div class="rets-grid short">'+cells(0,6)+'</div>' +
-    '<div class="rets-grid long">'+cells(6,9)+'</div></div>';
+  return '<div class="rr-sec">Performance</div>' +
+    '<div class="rr-prow hd"><span></span><span class="rr-legend"><i class="rr-cat"></i> = sub-category avg</span><b>Fund</b><span class="rr-pc">Cat avg</span></div>' + body;
 }
-function vsCatHTML(sp, f, winLabel){
-  winLabel = winLabel || "1-Year";
-  if (!sp || (sp.perf == null && sp.sharpe == null && sp.dd == null)) return "";
-  // 3-column grid (metric · value · cat/%ile) so the "(cat … · %ile …)" text
-  // starts at the same x on every row.
-  const grid =
-    // 6-column grid: metric | value | "cat" | cat-value | "%ile" | pctile.
-    // Numeric cells are right-aligned with tabular figures so the decimal
-    // points line up in each column; Sharpe (no %) gets a hidden "%" spacer so
-    // its decimal aligns with the percentage rows.
-    '<div class="vc-grid">' +
-      '<div class="vc-row"><span class="vc-pair"><span>Return:</span><b class="vc-num '+pctClass(sp.perf)+'">'+fmtPct(sp.perf)+(sp.perf_implied?'<span style="color:#B45309"> †</span>':'')+'</b></span>' +
-      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_perf)+'</span></span>' +
-      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.perf_pct)+'</span></span></div>' +
-      '<div class="vc-row"><span class="vc-pair"><span>Sharpe:</span><b class="vc-num">'+(sp.sharpe!=null?sp.sharpe.toFixed(2):"—")+'</b></span>' +
-      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+(sp.cat_sharpe!=null?sp.cat_sharpe.toFixed(2):"—")+'</span></span>' +
-      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.sharpe_pct)+'</span></span></div>' +
-      '<div class="vc-row"><span class="vc-pair"><span>Max drawdown:</span><b class="vc-num '+pctClass(sp.dd)+'">'+fmtPct(sp.dd)+'</b></span>' +
-      '<span class="vc-pair"><span class="vc-w">Cat</span><span class="vc-num vc-cat">'+fmtPct(sp.cat_dd)+'</span></span>' +
-      '<span class="vc-pair"><span class="vc-w">%ile</span><span class="vc-num vc-cat">'+msPct(sp.dd_pct)+'</span></span></div>' +
-    '</div>';
-  return '<div class="vs-cat"><b class="t">'+winLabel+' vs '+(f&&f.cat?f.cat:"sub-category")+' (n='+(sp.n_cat||"—")+') · %ile 1=best</b>' +
-    grid +
-    ((sp.perf_proxy||sp.sharpe_proxy||sp.dd_proxy) ? '<div class="vc-note" style="color:#9333ea"><b>*</b> = proxied with category median</div>' : '') +
-    ((f && f.young && winLabel==="1-Year") ? '<div class="vc-note" style="color:#B45309">Young fund (&lt;1Y): '+(sp.perf_implied?'<b>†</b> Return = annualised since-inception (implied 1Y); ':'')+'Sharpe / drawdown from since-inception history — treat percentiles as provisional</div>' : '') +
-    ((f && f.sd_freq) ? '<div class="vc-note" style="color:#B45309">SD / Sharpe / drawdown from '+f.sd_freq+' NAV pricing — compared against daily-priced peers, excluded from their baselines</div>' : '') +
-    '</div>';
+// Risk statistics for the selected window: value · sub-category average · percentile (1 = best).
+// SD vs sub-category (computed here: the build only ranks return / Sharpe / drawdown).
+// Baseline = mature, daily-priced funds with their own SD, same rule as the other peer stats.
+// Lower SD is better, so it ranks like the other rows: higher %ile = better.
+const _sdBase = {};
+function sdBaseline(key){
+  if (_sdBase[key]) return _sdBase[key];
+  const m = {};
+  FUNDS.forEach(g => {
+    if (g.young || g.sd_freq || (key === "sd" && g.proxy) || g[key] == null) return;
+    (m[g.cat] || (m[g.cat] = [])).push(g[key]);
+  });
+  return (_sdBase[key] = m);
+}
+function sdVsCat(f, key){
+  const arr = sdBaseline(key)[f.cat], x = f[key];
+  if (!arr || x == null || arr.length < 2) return {};
+  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const member = !f.young && !f.sd_freq && !(key === "sd" && f.proxy);
+  const below = arr.filter(v => v < x).length;
+  const pct = 100 - Math.round(100 * below / (member ? arr.length - 1 : arr.length));
+  return { cat: mean.toFixed(2) + "%", pct: Math.max(1, pct) };
+}
+function rrStatsHTML(f, sp, winLabel){
+  const mk = (label, val, cat, pct, proxy) => {
+    if (proxy) { val = "—"; cat = null; pct = null; proxy = false; }   // never show proxied figures
+    const hasL2 = cat!=null || pct!=null;
+    return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#9333ea">*</span>':'')+'</b></div>' +
+      (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+Math.max(1, Math.round(pct)) : '')+'</span><span>'+(cat!=null ? 'Cat '+cat : '')+'</span></div>' : '') + '</div>';
+  };
+  // A young fund's 1Y figure is only an implied one, so it is not shown.
+  const retHidden = f.young || sp.perf_implied || sp.perf_proxy;
+  return '<div class="rr-sec">Statistics</div>' +
+    mk(winLabel.replace("-", " ") + " Return", retHidden || sp.perf==null ? "—" : '<span class="'+pctClass(sp.perf)+'">'+fmtPct(sp.perf)+'</span>', sp.cat_perf!=null?fmtPct(sp.cat_perf):null, sp.perf_pct, retHidden) +
+    mk("Max drawdown", '<span class="'+pctClass(sp.dd)+'">'+fmtPct(sp.dd)+'</span>', sp.cat_dd!=null?fmtPct(sp.cat_dd):null, sp.dd_pct, sp.dd_proxy) +
+    mk("Sharpe ratio", sp.sharpe!=null?sp.sharpe.toFixed(2):"—", sp.cat_sharpe!=null?sp.cat_sharpe.toFixed(2):null, sp.sharpe_pct, f.young || sp.sharpe_proxy);   // young fund's Sharpe rests on the implied 1Y return
+}
+function rrNotesHTML(sp, f, winLabel){
+  return ((f && f.young && winLabel==="1-Year") ? '<div class="vc-note" style="color:#B45309">Drawdown since inception</div>' : '') +
+    ((f && f.sd_freq) ? '<div class="vc-note" style="color:#B45309">SD / Sharpe / drawdown from '+f.sd_freq+' NAV pricing — compared against daily-priced peers, excluded from their baselines</div>' : '');
 }
 function holdingsHTML(f){
   if (!f.hold || !f.hold.length) return "";
@@ -834,28 +963,42 @@ function hoverCardHTML(f){
   const sp = _spWin.o || f.sp || {};
   const spLab = _spWin.o ? _spWin.l : "1-Year";
   const spCap = spLab==="3-Year" ? "3 Years" : spLab==="5-Year" ? "5 Years" : "1 Year";
-  const spider = (sp.perf_pct != null || sp.sharpe_pct != null || sp.dd_pct != null) ? buildSpiderSVG(sp, spCap) : "";
+  // Young funds, funds missing any of the three percentiles, and proxied values get the
+  // empty triangle only: nothing is plotted from incomplete or substituted data.
+  const radarOk = !f.young && sp.perf_pct != null && sp.sharpe_pct != null && sp.dd_pct != null &&
+                  !sp.perf_proxy && !sp.sharpe_proxy && !sp.dd_proxy;
+  const spider = buildSpiderSVG(radarOk ? sp : {}, spCap);
   // SD shown follows the selected return window: 3Y→SD3Y, 5Y→SD5Y, every
   // sub-year window and 1Y→SD1Y. If a long-window SD is missing (fund lacks
   // that much history) fall back to the 1Y SD. Proxy / cadence notes describe
   // the 1Y figure, so they show only when the 1Y value is the one displayed.
   const _wi = state.win;
-  const _sd = (_wi===7 && f.sd3!=null) ? {v:f.sd3, l:"StdDev 3Y", one:false}
-            : (_wi===8 && f.sd5!=null) ? {v:f.sd5, l:"StdDev 5Y", one:false}
-            :                            {v:f.sd,  l:"StdDev 1Y", one:true};
+  const _sd = (_wi===7 && f.sd3!=null) ? {v:f.sd3, l:"StdDev 3Y", one:false, k:"sd3"}
+            : (_wi===8 && f.sd5!=null) ? {v:f.sd5, l:"StdDev 5Y", one:false, k:"sd5"}
+            :                            {v:f.sd,  l:"StdDev 1Y", one:true,  k:"sd"};
+  const rl = f.risk_level;
   const left =
-    '<h3>' + f.name + shelfBadge(f) + proxyBadge(f) + divBadge(f) + youngBadge(f) + '</h3>' +
-    '<div class="sub">' + f.cat + '</div>' +
-    '<div class="ids">Fund Code: ' + f.code + '</div>' +
-    (f.isin ? '<div class="ids">ISIN: ' + f.isin + '</div>' : '') +
-    '<div class="meta"><b style="color:var(--ink)">' + (f.amc||"") + '</b><br>' +
-    (f.master ? 'Master fund: <b style="color:var(--ink)">' + f.master + '</b><br>' : '') +
-    'AUM ' + fmtAum(f.aum) + ' · NAV ' + (f.nav||"—") + (f.navd ? ' <span style="color:#999">(' + f.navd + ')</span>' : '') + '<br>' +
-    '<b style="color:var(--ink)">Fund risk level: ' + (f.risk_level == null ? 'N/A' : f.risk_level) + '</b><br>' +
-    _sd.l + ': ' + (_sd.v==null?"—":_sd.v.toFixed(2)+"%") + (_sd.one && f.pxl ? ' <span style="color:#B45309">(' + f.pxl + ')</span>' : '') +
-    (_sd.one && f.sd_freq ? ' <span style="color:#B45309">(own NAV, ' + f.sd_freq + ' pricing)</span>' : '') + '</div>' +
-    spider + retsGridHTML(f) + vsCatHTML(sp, f, spLab);
+    '<h3 class="rr-name">' + f.name + '</h3>' +
+    '<div class="rr-ids">' + f.code + (f.isin ? ' · ' + f.isin : '') + '</div>' +
+    '<div class="rr-sub" style="color:' + (CAT_COLOR[f.cat] || "var(--mute)") + '">' + f.cat + '</div>' +
+    '<div class="rr-kpis">' +
+      '<div><span class="k">NAV</span><b>' + (f.nav||"—") + '</b>' + (f.navd ? '<span class="d">' + f.navd + '</span>' : '') + '</div>' +
+      '<div><span class="k">Fund size</span><b>' + fmtAum(f.aum) + '</b></div>' +
+      '<div><span class="k">Risk level</span><b>' + (rl == null ? 'N/A' : rl) + '</b></div>' +
+      '<div><span class="k">' + _sd.l.replace("StdDev ", "Volatility (SD) ") + '</span>' + (function(){
+        if (_sd.v == null || (_sd.one && (f.proxy || f.young))) return '<b>—</b>';
+        const v = sdVsCat(f, _sd.k);
+        return '<b>' + _sd.v.toFixed(2) + '%</b>' + (v.cat ? '<span class="sub"><span>Cat ' + v.cat + '</span><span>%ile ' + v.pct + '</span></span>' : '');
+      })() + '</div>' +
+    '</div>' +
+    rrPerfHTML(f) +
+    '<div class="rr-duo">' + (spider ? '<div class="rr-radar">' + spider + '</div>' : '') +
+      '<div class="rr-stats">' + rrStatsHTML(f, sp, spLab) + '</div></div>' +
+    '<div class="rr-foot">vs funds in the same sub-category' + (sp.n_cat ? ' (n=' + sp.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
+    rrNotesHTML(sp, f, spLab);
   const right =
+    (f.amc ? '<div class="sec-title">AMC</div><div class="strat">' + f.amc + '</div>' : '') +
+    (f.master ? '<div class="sec-title">Master fund</div><div class="strat">' + f.master + '</div>' : '') +
     (f.strat ? '<div class="sec-title">Investment strategy</div><div class="strat">' + f.strat + '</div>' : '') +
     holdingsHTML(f);
   if (!right) return left;
@@ -916,9 +1059,14 @@ function buildSpiderSVG(sp, winCap){
     const [x, y] = pt(100, i);
     svg += '<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#cbd5e1" stroke-width="0.6"/>';
   }
-  const benchPcts = [sp.cat_perf_pct ?? 50, sp.cat_sharpe_pct ?? 50, sp.cat_dd_pct ?? 50];
-  const benchPts = [0,1,2].map(i => { const [x,y] = pt(benchPcts[i], i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
-  svg += '<polygon points="'+benchPts+'" fill="none" stroke="#94a3b8" stroke-width="1.0" stroke-dasharray="3,3"/>';
+  const hasData = pcts.some(p => p != null);
+  if (hasData) {
+    const benchPcts = [sp.cat_perf_pct ?? 50, sp.cat_sharpe_pct ?? 50, sp.cat_dd_pct ?? 50];
+    const benchPts = [0,1,2].map(i => { const [x,y] = pt(benchPcts[i], i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
+    svg += '<polygon points="'+benchPts+'" fill="none" stroke="#94a3b8" stroke-width="1.0" stroke-dasharray="3,3"/>';
+  } else {
+    svg += '<text x="'+cx+'" y="'+(cy+8)+'" font-size="9" fill="#94a3b8" text-anchor="middle">Not enough data</text>';
+  }
   if (pcts.some(p => p != null)) {
     const fundPts = [0,1,2].map(i => { const [x,y] = pt(pcts[i], i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
     svg += '<polygon points="'+fundPts+'" fill="rgba(0,127,255,0.30)" stroke="#007FFF" stroke-width="1.4"/>';
@@ -943,7 +1091,7 @@ function buildSpiderSVG(sp, winCap){
     svg += '<text x="'+tx.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="11" font-weight="700" fill="#1a1a1a" text-anchor="'+anchor+'">'+L.text+pm+'</text>';
     svg += '<text x="'+tx.toFixed(1)+'" y="'+(ty+12).toFixed(1)+'" font-size="10" font-weight="700" fill="'+q.bg+'" text-anchor="'+anchor+'">'+q.label+'</text>';
   }
-  svg += '<text x="'+(W-4)+'" y="'+(H-6)+'" font-size="9" fill="#94a3b8" text-anchor="end">dashed = sub-category</text>';
+  if (hasData) svg += '<text x="'+(W-4)+'" y="'+(H-6)+'" font-size="9" fill="#94a3b8" text-anchor="end">dashed = sub-category</text>';
   // Data timeframe the radar (and the risk stats above) are based on.
   svg += '<text x="4" y="'+(H-6)+'" font-size="9.5" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
@@ -1231,10 +1379,11 @@ function drawChart(list){
     Plotly.newPlot("chart", traces, layout, config).then(gd => {
       attachChartEvents(gd);
       placeLabelsRR();
+      drawPinnedHairlines();
     });
     plotInit = true;
   } else {
-    Plotly.react("chart", traces, layout, config).then(() => placeLabelsRR());
+    Plotly.react("chart", traces, layout, config).then(() => { placeLabelsRR(); drawPinnedHairlines(); });
   }
   const baseStatus = pts.length.toLocaleString() + " of " + FUNDS.length.toLocaleString() + " funds shown";
   $("find-status").textContent = state.watermark && watermarkPts.length
@@ -1244,6 +1393,12 @@ function drawChart(list){
 // Hover crosshair: hairlines from the hovered dot to the X and Y axes with the
 // dot's values printed on the axes. Drawn in a pointer-events:none SVG overlay
 // (not Plotly shapes) so it never triggers relayout/label placement.
+const hairPill = (cx, cy, txt, anchor) => {
+  const w = txt.length * 6.6 + 10, rx = anchor === "end" ? cx - w : cx - w / 2;
+  return '<rect x="' + rx.toFixed(1) + '" y="' + (cy - 9).toFixed(1) + '" width="' + w.toFixed(1) +
+    '" height="18" rx="3" fill="#4F2D7F"/><text x="' + (rx + w / 2).toFixed(1) + '" y="' + (cy + 4).toFixed(1) +
+    '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial,sans-serif">' + txt + '</text>';
+};
 function hideHairlines(){ const s = document.getElementById("rr-hair"); if (s) s.style.display = "none"; }
 function drawHairlines(gd, p){
   if (!p || typeof p.x !== "number" || typeof p.y !== "number") return hideHairlines();
@@ -1260,12 +1415,7 @@ function drawHairlines(gd, p){
   const px = xa._offset + xa.l2p(xa.d2l(p.x)), py = ya._offset + ya.l2p(ya.d2l(p.y));
   const x0 = xa._offset, y1 = ya._offset + ya._length;
   if (!(px >= x0 - 1 && px <= x0 + xa._length + 1 && py >= ya._offset - 1 && py <= y1 + 1)) return hideHairlines();
-  const pill = (cx, cy, txt, anchor) => {
-    const w = txt.length * 6.6 + 10, rx = anchor === "end" ? cx - w : cx - w / 2;
-    return '<rect x="' + rx.toFixed(1) + '" y="' + (cy - 9).toFixed(1) + '" width="' + w.toFixed(1) +
-      '" height="18" rx="3" fill="#4F2D7F"/><text x="' + (rx + w / 2).toFixed(1) + '" y="' + (cy + 4).toFixed(1) +
-      '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial,sans-serif">' + txt + '</text>';
-  };
+  const pill = hairPill;
   s.innerHTML =
     '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + y1.toFixed(1) +
       '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
@@ -1273,6 +1423,37 @@ function drawHairlines(gd, p){
       '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
     pill(px, y1 + 12, p.x.toFixed(2) + "%", "middle") +
     pill(x0 - 4, py, (p.y > 0 ? "+" : "") + p.y.toFixed(2) + "%", "end");
+  s.style.display = "block";
+}
+// Funds whose Card is pinned keep their hairlines on screen (same look as the hover
+// crosshair, own overlay so the two never fight). Redrawn after every chart redraw / pan / zoom.
+function drawPinnedHairlines(){
+  const gd = $("chart"), fl = gd && gd._fullLayout, xa = fl && fl.xaxis, ya = fl && fl.yaxis;
+  let s = document.getElementById("rr-hair-pin");
+  if (!xa || !ya || !xa.l2p || !ya.l2p || !_pinnedCards.size) { if (s) s.style.display = "none"; return; }
+  if (!s) {
+    if (getComputedStyle(gd).position === "static") gd.style.position = "relative";
+    s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.id = "rr-hair-pin";
+    s.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible";
+    gd.appendChild(s);
+  }
+  const w = state.win, x0 = xa._offset, y0 = ya._offset, y1 = ya._offset + ya._length;
+  let h = "";
+  [..._pinnedCards.keys()].forEach(id => {
+    const f = byId.get(id) || byId.get(+id);
+    if (!f || sdOf(f) == null || f.rets[w] == null) return;
+    const vx = sdOf(f), vy = f.rets[w];
+    const px = xa._offset + xa.l2p(xa.d2l(vx)), py = ya._offset + ya.l2p(ya.d2l(vy));
+    if (!(px >= x0 - 1 && px <= x0 + xa._length + 1 && py >= y0 - 1 && py <= y1 + 1)) return;   // off-screen: no lines
+    h += '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + y1.toFixed(1) +
+           '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+         '<line x1="' + x0.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
+           '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+         hairPill(px, y1 + 12, vx.toFixed(2) + "%", "middle") +
+         hairPill(x0 - 4, py, (vy > 0 ? "+" : "") + vy.toFixed(2) + "%", "end");
+  });
+  s.innerHTML = h;
   s.style.display = "block";
 }
 // Card is "pinned" when a tap (touch) opened it. Hover events don't dismiss
@@ -1290,9 +1471,8 @@ function enablePinnedCardInteractions(hc){
     ev.stopPropagation();
     const opening = !hc.classList.contains("details-open");
     hc.classList.toggle("details-open", opening);
-    toggle.textContent = opening ? "<" : ">";
     toggle.setAttribute("aria-label", opening ? "Hide investment details" : "Show investment details");
-    const collapsedWidth = parseFloat(hc.dataset.collapsedWidth || "390");
+    const collapsedWidth = parseFloat(hc.dataset.collapsedWidth || "335");
     const expandedWidth = window.innerWidth > 700 ? Math.min(700, window.innerWidth - 32) : collapsedWidth;
     hc.dataset.baseWidth = String(opening ? expandedWidth : collapsedWidth);
     syncCardGeometry(hc);
@@ -1356,7 +1536,7 @@ function syncCardGeometry(hc){
   const content = hc.querySelector(".card-scale-content");
   if (!content) return;
   const scale = parseFloat(hc.dataset.scale || "1");
-  const baseWidth = parseFloat(hc.dataset.baseWidth || "390");
+  const baseWidth = parseFloat(hc.dataset.baseWidth || "335");
   content.style.width = baseWidth + "px";
   content.style.transform = "scale(" + scale + ")";
   const naturalHeight = content.scrollHeight;
@@ -1368,10 +1548,99 @@ function syncCardGeometry(hc){
   if (toggle) {
     const collapsedHeight = parseFloat(hc.dataset.collapsedHeight || naturalHeight);
     const mainColumnWidth = parseFloat(hc.dataset.mainColumnWidth || "358");
-    toggle.style.left = Math.min(width - 26, mainColumnWidth * scale) + "px";
+    toggle.style.left = Math.min(width - 20, (mainColumnWidth + 7) * scale) + "px";
     toggle.style.top = Math.max(28, collapsedHeight * .50 * scale) + "px";
   }
 }
+
+/* ---------- Copy card as image ----------
+   Renders the card body to PNG without any library: every element's computed
+   style is inlined into a clone, the clone is wrapped in an SVG <foreignObject>,
+   drawn onto a canvas (2x for sharpness) and put on the clipboard. If the
+   browser refuses clipboard images, the PNG is downloaded instead. */
+function inlineCardStyles(src, dst){
+  if (!(src instanceof HTMLElement)) return;           // SVG subtrees keep their own attributes
+  const css = el => { const c = getComputedStyle(el); let t = ""; for (let i = 0; i < c.length; i++) t += c[i] + ":" + c.getPropertyValue(c[i]) + ";"; return t; };
+  dst.setAttribute("style", css(src));
+  const kids = [...dst.children];
+  [...src.children].forEach((k, i) => { if (kids[i]) inlineCardStyles(k, kids[i]); });
+  ["::before", "::after"].forEach(ps => {
+    const pc = getComputedStyle(src, ps), c = pc.content;
+    if (!c || c === "none" || c === "normal") return;
+    const sp = document.createElement("span");
+    let t = ""; for (let i = 0; i < pc.length; i++) t += pc[i] + ":" + pc.getPropertyValue(pc[i]) + ";";
+    sp.setAttribute("style", t);
+    sp.textContent = c.replace(/^["']|["']$/g, "");
+    if (ps === "::before") dst.insertBefore(sp, dst.firstChild); else dst.appendChild(sp);
+  });
+}
+async function cardPngBlob(hc){
+  const body = hc.querySelector(".card-body");
+  const w = Math.ceil(body.offsetWidth), h = Math.ceil(body.offsetHeight);
+  const clone = body.cloneNode(true);
+  inlineCardStyles(body, clone);
+  clone.style.background = "#fff"; clone.style.width = w + "px"; clone.style.height = h + "px";
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' +
+    new XMLSerializer().serializeToString(clone) + '</foreignObject></svg>';
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("render failed")); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+  const k = 2, cv = document.createElement("canvas");
+  cv.width = w * k; cv.height = h * k;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.scale(k, k); ctx.drawImage(img, 0, 0, w, h);
+  return await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error("toBlob failed")), "image/png"));
+}
+async function saveCardPng(hc, blobP){
+  const blob = await (blobP || cardPngBlob(hc)), a = document.createElement("a"), f = byId.get(+hc.dataset.fundId);
+  a.href = URL.createObjectURL(blob); a.download = ((f && f.code) || "fund-card") + ".png";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function cardFlash(hc, txt){
+  const t = document.createElement("div");
+  t.className = "card-toast"; t.textContent = txt;
+  document.body.appendChild(t);
+  const r = hc.getBoundingClientRect();
+  t.style.left = Math.max(8, r.left + r.width / 2 - t.offsetWidth / 2) + "px";
+  t.style.top = Math.max(8, r.top + 12) + "px";
+  setTimeout(() => t.remove(), 1600);
+}
+async function copyCardImage(hc){
+  try {
+    const blobP = cardPngBlob(hc);
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blobP })]);
+      cardFlash(hc, "Card copied as image");
+    } catch (e) {
+      await saveCardPng(hc, blobP);
+      cardFlash(hc, "Clipboard unavailable — saved as PNG");
+    }
+  } catch (e) { cardFlash(hc, "Could not render the card"); }
+}
+/* Right-click menu on a pinned card */
+let _cardMenu = null;
+function closeCardMenu(){ if (_cardMenu) { _cardMenu.remove(); _cardMenu = null; } }
+function openCardMenu(hc, x, y){
+  closeCardMenu();
+  const m = document.createElement("div");
+  m.className = "card-menu";
+  m.innerHTML = '<button data-a="copy">Copy card as image</button>';
+  document.body.appendChild(m);
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top  = Math.max(8, Math.min(y, window.innerHeight - m.offsetHeight - 8)) + "px";
+  m.onpointerdown = ev => ev.stopPropagation();
+  m.onclick = ev => {
+    const act = ev.target.dataset && ev.target.dataset.a;
+    if (!act) return;
+    ev.stopPropagation(); closeCardMenu();
+    if (act === "copy") copyCardImage(hc);
+  };
+  _cardMenu = m;
+}
+document.addEventListener("pointerdown", closeCardMenu);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeCardMenu(); });
+window.addEventListener("blur", closeCardMenu);
+window.addEventListener("resize", closeCardMenu);
 
 function renderHoverCard(f, pinned){
   const fundKey = String(f.id);
@@ -1397,15 +1666,15 @@ function renderHoverCard(f, pinned){
     hc.id = "hover-card";
     document.body.appendChild(hc);
   }
-  const hasDetails = !!(f.strat || holdingsHTML(f));
+  const hasDetails = !!(f.amc || f.master || f.strat || holdingsHTML(f));
   hc.innerHTML = '<div class="card-scale-content"><div class="card-body">' + hoverCardHTML(f) + '</div></div>' +
     '<div class="drag-handle" id="hover-drag" title="Drag to move"></div>' +
     '<div class="resize-edge corner" title="Drag to resize"></div>' +
-    (hasDetails ? '<button class="details-toggle" id="hover-details-toggle" aria-label="Show investment details" title="Show/hide investment details">&gt;</button>' : '') +
+    (hasDetails ? '<button class="details-toggle" id="hover-details-toggle" aria-label="Show investment details" title="Show/hide investment details"><svg viewBox="0 0 10 11.55" width="10" height="11.55" aria-hidden="true"><polygon points="0,0 0,11.55 10,5.775" fill="currentColor"/></svg></button>' : '') +
     '<button class="close-btn" id="hover-close" aria-label="Close">×</button>';
   hc.className = (pinned ? "pinned " : "") + (hasDetails ? "has-details" : "");
   hc.dataset.fundId = fundKey;
-  const collapsedWidth = Math.min(390, window.innerWidth - 32);
+  const collapsedWidth = Math.min(335, window.innerWidth - 32);
   const mainColumnWidth = collapsedWidth - 32;
   hc.dataset.scale = "1";
   hc.dataset.baseWidth = String(collapsedWidth);
@@ -1440,6 +1709,7 @@ function renderHoverCard(f, pinned){
     _pinnedCards.set(fundKey, hc);
     _cardPinned = true;
     enablePinnedCardInteractions(hc);
+    hc.oncontextmenu = (ev) => { ev.preventDefault(); ev.stopPropagation(); openCardMenu(hc, ev.clientX, ev.clientY); };
     // Redraw only after the card is registered so its chart point immediately
     // receives the locked-selection edge.
     drawChart(filtered());
@@ -1587,12 +1857,14 @@ function attachPinchZoom(gd){
   gd.addEventListener("touchcancel", stop, true);
 }
 
+window.addEventListener("resize", () => setTimeout(drawPinnedHairlines, 250));
 function attachChartEvents(){
   const gd = $("chart");
   // Re-place labels after pan / zoom (same pattern as Trend dashboard)
   if (!_rrBound) {
     gd.on("plotly_relayout", () => {
       hideHairlines();
+      drawPinnedHairlines();
       if (!_placingRR) placeLabelsRR();
       drawTablesForViewport();
     });
