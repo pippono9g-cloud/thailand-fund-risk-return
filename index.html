@@ -908,7 +908,7 @@ function rrPerfHTML(f){
 // Risk statistics for the selected window: value · sub-category average · percentile (1 = best).
 // SD vs sub-category (computed here: the build only ranks return / Sharpe / drawdown).
 // Baseline = mature, daily-priced funds with their own SD, same rule as the other peer stats.
-// Lower SD is better, so it ranks like the other rows: higher %ile = better.
+// Lower SD is better, so the lowest-SD fund is rank 1, like the other rows.
 const _sdBase = {};
 function sdBaseline(key){
   if (_sdBase[key]) return _sdBase[key];
@@ -921,24 +921,25 @@ function sdBaseline(key){
 }
 function sdVsCat(f, key){
   const arr = sdBaseline(key)[f.cat], x = f[key];
-  if (!arr || x == null || arr.length < 2) return {};
+  if (!arr || arr.length < 2) return {};
   const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const catPct = 100 - Math.round(100 * arr.filter(v => v < mean).length / arr.length);
+  if (x == null) return { cat: mean.toFixed(2) + "%", catPct };
   const member = !f.young && !f.sd_freq && !(key === "sd" && f.proxy);
   const below = arr.filter(v => v < x).length;
   const pct = 100 - Math.round(100 * below / (member ? arr.length - 1 : arr.length));
-  const catPct = 100 - Math.round(100 * arr.filter(v => v < mean).length / arr.length);
-  return { cat: mean.toFixed(2) + "%", pct: Math.max(1, pct), catPct: Math.max(1, catPct) };
+  return { cat: mean.toFixed(2) + "%", pct, catPct };   // internal 0–100 (100 = best); the card shows msPct() = rank 1 (best) … 100 (worst)
 }
 function rrStatsHTML(f, sp, winLabel, sd){
   const mk = (label, val, cat, pct, proxy) => {
-    if (proxy) { val = "—"; cat = null; pct = null; proxy = false; }   // never show proxied figures
+    if (proxy) { val = "—"; pct = null; proxy = false; }   // never show the fund's own proxied / implied figure; the category value stays
     const hasL2 = cat!=null || pct!=null;
     return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#9333ea">*</span>':'')+'</b></div>' +
-      (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+Math.max(1, Math.round(pct)) : '')+'</span><span>'+(cat!=null ? 'Cat '+cat : '')+'</span></div>' : '') + '</div>';
+      (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+msPct(Math.round(pct)) : '')+'</span><span>'+(cat!=null ? 'Cat '+cat : '')+'</span></div>' : '') + '</div>';
   };
   // A young fund's 1Y figure is only an implied one, so it is not shown.
   const sdHidden = sd.v == null || (sd.one && (f.proxy || f.young));
-  const sdv = sdHidden ? {} : sdVsCat(f, sd.k);
+  const sdv = sdVsCat(f, sd.k);
   const retHidden = f.young || sp.perf_implied || sp.perf_proxy;
   return '<div class="rr-sec">Statistics</div>' +
     mk(winLabel.replace("-", " ") + " Return", retHidden || sp.perf==null ? "—" : '<span class="'+pctClass(sp.perf)+'">'+fmtPct(sp.perf)+'</span>', sp.cat_perf!=null?fmtPct(sp.cat_perf):null, sp.perf_pct, retHidden) +
@@ -979,12 +980,14 @@ function hoverCardHTML(f){
             : (_wi===8 && f.sd5!=null) ? {v:f.sd5, l:"StdDev 5Y", one:false, k:"sd5"}
             :                            {v:f.sd,  l:"StdDev 1Y", one:true,  k:"sd"};
   const sdHidden = _sd.v == null || (_sd.one && (f.proxy || f.young));
-  const vol = sdHidden ? {} : sdVsCat(f, _sd.k);
+  const volAll = sdVsCat(f, _sd.k);
+  const vol = { pct: sdHidden ? null : volAll.pct, catPct: volAll.catPct };
   // Young funds, funds missing any of the four percentiles, and proxied values get the
   // empty frame only: nothing is plotted from incomplete or substituted data.
   const radarOk = !f.young && sp.perf_pct != null && sp.sharpe_pct != null && sp.dd_pct != null && vol.pct != null &&
                   !sp.perf_proxy && !sp.sharpe_proxy && !sp.dd_proxy;
-  const spider = buildSpiderSVG(radarOk ? Object.assign({}, sp, { vol_pct: vol.pct, cat_vol_pct: vol.catPct }) : {}, spCap);
+  const catShape = { cat_perf_pct: sp.cat_perf_pct, cat_sharpe_pct: sp.cat_sharpe_pct, cat_dd_pct: sp.cat_dd_pct, cat_vol_pct: vol.catPct };
+  const spider = buildSpiderSVG(radarOk ? Object.assign({}, sp, catShape, { vol_pct: vol.pct }) : catShape, spCap);
   const rl = f.risk_level;
   const left =
     '<h3 class="rr-name">' + f.name + '</h3>' +
@@ -998,7 +1001,7 @@ function hoverCardHTML(f){
     rrPerfHTML(f) +
     '<div class="rr-duo">' + (spider ? '<div class="rr-radar">' + spider + '</div>' : '') +
       '<div class="rr-stats">' + rrStatsHTML(f, sp, spLab, _sd) + '</div></div>' +
-    '<div class="rr-pnote"><b>%ile</b> = score 1–100 within the sub-category · <b>100 = best</b> (low Vol / small Drawdown also score high)</div>' +
+    '<div class="rr-pnote"><b>%ile</b> = rank 1–100 within the sub-category · <b>1 = best</b>, <b>100 = worst</b> (lowest Vol / smallest Drawdown = 1)</div>' +
     '<div class="rr-foot">vs funds in the same sub-category' + (sp.n_cat ? ' (n=' + sp.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
     rrNotesHTML(sp, f, spLab);
   const right =
@@ -1071,26 +1074,31 @@ function buildSpiderSVG(sp, winCap){
     const [x, y] = pt(100, i);
     svg += '<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#cbd5e1" stroke-width="0.6"/>';
   }
-  const hasData = pcts.every(p => p != null);        // a partial radar would mislead: all four or an empty frame
-  if (hasData) {
-    const benchPcts = [sp.cat_perf_pct ?? 50, sp.cat_sharpe_pct ?? 50, sp.cat_dd_pct ?? 50, sp.cat_vol_pct ?? 50];
-    const benchPts = idx.map(i => { const [x,y] = pt(shape(benchPcts[i], i), i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
+  const hasFund = pcts.every(p => p != null);        // a partial fund shape would mislead: all four axes or none
+  const cb = [sp.cat_perf_pct, sp.cat_sharpe_pct, sp.cat_dd_pct, sp.cat_vol_pct];
+  const hasBench = cb.every(p => p != null);          // the sub-category shape stands on its own
+  if (hasFund) {
     const fundPts = idx.map(i => { const [x,y] = pt(shape(pcts[i], i), i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
     svg += '<polygon points="'+fundPts+'" fill="rgba(0,127,255,0.30)" stroke="#007FFF" stroke-width="1.4"/>';
+  }
+  if (hasBench) {
     // Sub-category average: drawn above the fund's fill, in a dark dashed line with hollow dots at each axis.
+    const benchPts = idx.map(i => { const [x,y] = pt(shape(cb[i], i), i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
     svg += '<polygon points="'+benchPts+'" fill="none" stroke="#1e293b" stroke-width="1.6" stroke-dasharray="5,3" stroke-linejoin="round"/>';
     for (const i of idx) {
-      const [bx, by] = pt(shape(benchPcts[i], i), i);
+      const [bx, by] = pt(shape(cb[i], i), i);
       svg += '<circle cx="'+bx.toFixed(1)+'" cy="'+by.toFixed(1)+'" r="2.8" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>';
     }
+  }
+  if (hasFund) {
     for (const i of idx) {
       const [x, y] = pt(shape(pcts[i], i), i);
       svg += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.4" fill="'+(flip[i] ? "#dc2626" : "#16a34a")+'" stroke="#fff" stroke-width="1"/>';
     }
   } else {
-    svg += '<text x="'+cx+'" y="'+(cy+3)+'" font-size="9" fill="#94a3b8" text-anchor="middle">Not enough data</text>';
+    svg += '<text x="'+cx+'" y="'+(cy+3)+'" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle" stroke="#fff" stroke-width="3" paint-order="stroke">Not enough data</text>';
   }
-  const shown = hasData ? pcts : [null, null, null, null];
+  const shown = hasFund ? pcts : [null, null, null, null];
   // Labels sit on the chart itself (inside each axis tip) with a white halo, so the SVG needs no outer margin.
   const labelDefs = [
     { x: cx,         y: cy - R + 14, anchor: "middle", text: "Return",       pct: shown[0] },
@@ -1114,7 +1122,7 @@ function buildSpiderSVG(sp, winCap){
   ];
   for (const g of signs)
     svg += '<text x="'+g.x+'" y="'+g.y+'" font-size="15" font-weight="800" fill="'+g.c+'" text-anchor="middle"><title>'+g.tip+'</title>'+g.t+'</text>';
-  if (hasData) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = sub-category avg</text>';
+  if (hasBench) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = sub-category avg</text>';
   // Data timeframe the radar (and the statistics beside it) are based on.
   svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
