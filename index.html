@@ -359,6 +359,8 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .rr-stats .rr-sec { margin:0 0 2px; padding-top:0; border-top:0; }
 #hover-card .rr-stat { padding:3px 0; border-bottom:1px solid rgba(15,60,120,.12); font-variant-numeric:tabular-nums; }
 #hover-card .rr-stat:last-child { border-bottom:0; }
+#hover-card .rr-pnote { margin-top:5px; font-size:8.5px; line-height:1.35; color:#475569; }
+#hover-card .rr-pnote b { color:#1e293b; }
 #hover-card .rr-stat .l1 { display:flex; justify-content:space-between; gap:4px; font-size:10.5px; }
 #hover-card .rr-stat .l1 b { font-weight:800; white-space:nowrap; }
 #hover-card .rr-stat .l2 { display:flex; justify-content:space-between; gap:4px; font-size:9px; color:var(--mute); white-space:nowrap; }
@@ -996,6 +998,7 @@ function hoverCardHTML(f){
     rrPerfHTML(f) +
     '<div class="rr-duo">' + (spider ? '<div class="rr-radar">' + spider + '</div>' : '') +
       '<div class="rr-stats">' + rrStatsHTML(f, sp, spLab, _sd) + '</div></div>' +
+    '<div class="rr-pnote"><b>%ile</b> = score 1–100 within the sub-category · <b>100 = best</b> (low Vol / small Drawdown also score high)</div>' +
     '<div class="rr-foot">vs funds in the same sub-category' + (sp.n_cat ? ' (n=' + sp.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
     rrNotesHTML(sp, f, spLab);
   const right =
@@ -1051,6 +1054,10 @@ function buildSpiderSVG(sp, winCap){
   const angles = [-Math.PI/2, 0, Math.PI/2, Math.PI];
   const pcts = [sp.perf_pct, sp.sharpe_pct, sp.dd_pct, sp.vol_pct];
   const N = 4, idx = [0,1,2,3];
+  // Return and Sharpe plot their score (outward = better). Drawdown and Volatility plot the
+  // opposite way (outward = bigger drawdown / higher volatility), which the red − at their tips says.
+  const flip = [false, false, true, true];
+  const shape = (v, i) => v == null ? null : (flip[i] ? 100 - v : v);
   const pt = (pct, i) => {
     const r = R * (pct == null ? 0 : pct/100);
     return [cx + r * Math.cos(angles[i]), cy + r * Math.sin(angles[i])];
@@ -1067,13 +1074,18 @@ function buildSpiderSVG(sp, winCap){
   const hasData = pcts.every(p => p != null);        // a partial radar would mislead: all four or an empty frame
   if (hasData) {
     const benchPcts = [sp.cat_perf_pct ?? 50, sp.cat_sharpe_pct ?? 50, sp.cat_dd_pct ?? 50, sp.cat_vol_pct ?? 50];
-    const benchPts = idx.map(i => { const [x,y] = pt(benchPcts[i], i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
-    svg += '<polygon points="'+benchPts+'" fill="none" stroke="#94a3b8" stroke-width="1.0" stroke-dasharray="3,3"/>';
-    const fundPts = idx.map(i => { const [x,y] = pt(pcts[i], i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
+    const benchPts = idx.map(i => { const [x,y] = pt(shape(benchPcts[i], i), i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
+    const fundPts = idx.map(i => { const [x,y] = pt(shape(pcts[i], i), i); return x.toFixed(1)+","+y.toFixed(1); }).join(" ");
     svg += '<polygon points="'+fundPts+'" fill="rgba(0,127,255,0.30)" stroke="#007FFF" stroke-width="1.4"/>';
+    // Sub-category average: drawn above the fund's fill, in a dark dashed line with hollow dots at each axis.
+    svg += '<polygon points="'+benchPts+'" fill="none" stroke="#1e293b" stroke-width="1.6" stroke-dasharray="5,3" stroke-linejoin="round"/>';
     for (const i of idx) {
-      const [x, y] = pt(pcts[i], i);
-      svg += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#007FFF" stroke="#fff" stroke-width="1"/>';
+      const [bx, by] = pt(shape(benchPcts[i], i), i);
+      svg += '<circle cx="'+bx.toFixed(1)+'" cy="'+by.toFixed(1)+'" r="2.8" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>';
+    }
+    for (const i of idx) {
+      const [x, y] = pt(shape(pcts[i], i), i);
+      svg += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.4" fill="'+(flip[i] ? "#dc2626" : "#16a34a")+'" stroke="#fff" stroke-width="1"/>';
     }
   } else {
     svg += '<text x="'+cx+'" y="'+(cy+3)+'" font-size="9" fill="#94a3b8" text-anchor="middle">Not enough data</text>';
@@ -1081,10 +1093,10 @@ function buildSpiderSVG(sp, winCap){
   const shown = hasData ? pcts : [null, null, null, null];
   // Labels sit on the chart itself (inside each axis tip) with a white halo, so the SVG needs no outer margin.
   const labelDefs = [
-    { x: cx,         y: cy - R + 14, anchor: "middle", text: "Performance",  pct: shown[0] },
-    { x: cx + R - 6, y: cy - 15,     anchor: "end",    text: "Sharpe Ratio", pct: shown[1] },
+    { x: cx,         y: cy - R + 14, anchor: "middle", text: "Return",       pct: shown[0] },
+    { x: cx + R - 6, y: cy - 15,     anchor: "end",    text: "Sharpe",       pct: shown[1] },
     { x: cx,         y: cy + R - 14, anchor: "middle", text: "Drawdown",     pct: shown[2] },
-    { x: cx - R + 6, y: cy - 15,     anchor: "start",  text: "Volatility",   pct: shown[3] },
+    { x: cx - R + 6, y: cy - 15,     anchor: "start",  text: "Vol",          pct: shown[3] },
   ];
   const halo = ' stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke"';
   for (const L of labelDefs) {
@@ -1092,7 +1104,17 @@ function buildSpiderSVG(sp, winCap){
     svg += '<text x="'+L.x.toFixed(1)+'" y="'+L.y.toFixed(1)+'" font-size="11" font-weight="700" fill="#1a1a1a" text-anchor="'+L.anchor+'"'+halo+'>'+L.text+'</text>';
     svg += '<text x="'+L.x.toFixed(1)+'" y="'+(L.y+12).toFixed(1)+'" font-size="10" font-weight="700" fill="'+q.bg+'" text-anchor="'+L.anchor+'"'+halo+'>'+q.label+'</text>';
   }
-  if (hasData) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#94a3b8" text-anchor="end">dashed = sub-category</text>';
+  // Direction marks at the axis tips: + = a high value is out there (good), − = a high value is
+  // out there and it is the bad direction (bigger drawdown / higher volatility).
+  const signs = [
+    { x: cx,         y: 11,          t: "+",      c: "#047857", tip: "Outward = higher return" },
+    { x: cx + R + 8, y: cy + 5,      t: "+",      c: "#047857", tip: "Outward = higher Sharpe ratio" },
+    { x: cx,         y: cy + R + 11, t: "−", c: "#b91c1c", tip: "Outward = larger drawdown (worse)" },
+    { x: cx - R - 8, y: cy + 5,      t: "−", c: "#b91c1c", tip: "Outward = higher volatility (worse)" },
+  ];
+  for (const g of signs)
+    svg += '<text x="'+g.x+'" y="'+g.y+'" font-size="15" font-weight="800" fill="'+g.c+'" text-anchor="middle"><title>'+g.tip+'</title>'+g.t+'</text>';
+  if (hasData) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = sub-category avg</text>';
   // Data timeframe the radar (and the statistics beside it) are based on.
   svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
