@@ -880,6 +880,19 @@ const CAT_COLOR = (() => {
   });
   return m;
 })();
+// One colour per Main group, in the same family as its sub-categories where they share one.
+const MAIN_COLOR_MAP = {
+  "Equity — Country / Region":"#0f766e", "Thai Equity / Index":"#4338ca", "Equity — Sector / Theme":"#be185d",
+  "Equity — Global / Broad":"#1e3a8a", "Allocation / Multi-asset":"#4d7c0f", "Fixed Income":"#6d28d9",
+  "Property / REITs":"#92400e", "Commodities":"#946b00", "Money Market":"#475569", "Other":"#57534e"
+};
+const MAIN_COLOR = (() => {
+  const m = {};
+  [...new Set(FUNDS.map(f => f.main))].sort().forEach((c, i) => {
+    m[c] = MAIN_COLOR_MAP[c] || "hsl(" + Math.round((i * 137.508 + 40) % 360) + ",60%,32%)";
+  });
+  return m;
+})();
 function gradeCls(g){ return ({"A+":"g-ap","A":"g-a","B+":"g-bp","B":"g-b","C":"g-c","D":"g-d"})[g] || "g-na"; }
 /* ---------- Peer group for the Card: Sub-category / Main group / All funds ----------
    The build ranks every fund inside its sub-category. The other two levels are computed here
@@ -1110,7 +1123,7 @@ function hoverCardHTML(f){
       '<div class="rr-stats">' + rrStatsHTML(f, spL, spLab, _sd) + '</div></div>' +
     '<div class="rr-pnote"><b>%ile</b> = rank 1–100 within ' + (peerLevel === "all" ? "all funds" : "the " + PEER_TXT[peerLevel].name) + ' · <b>1 = best</b>, <b>100 = worst</b> (lowest Vol / smallest Drawdown = 1)</div>' +
     '<div class="rr-foot">' + (peerLevel === "all" ? "vs all funds"
-        : "vs funds in the same " + PEER_TXT[peerLevel].name + ": <b" + (peerLevel === "cat" ? ' style="color:' + (CAT_COLOR[f.cat] || "inherit") + '"' : "") + ">" + (peerLevel === "cat" ? f.cat : f.main) + "</b>") +
+        : "vs funds in the same " + PEER_TXT[peerLevel].name + ": <b" + (peerLevel === "cat" ? ' style="color:' + (CAT_COLOR[f.cat] || "inherit") + '"' : ' style="color:' + (MAIN_COLOR[f.main] || "inherit") + '"') + ">" + (peerLevel === "cat" ? f.cat : f.main) + "</b>") +
       (spL.n_cat ? ' (n=' + spL.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
     rrNotesHTML(sp, f, spLab);
   const right =
