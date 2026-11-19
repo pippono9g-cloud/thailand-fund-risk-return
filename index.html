@@ -353,7 +353,12 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .rr-pv { text-align:right; font-size:10.5px; font-weight:800; white-space:nowrap; }
 #hover-card .rr-pc { text-align:right; font-size:9.5px; color:var(--mute); white-space:nowrap; }
 #hover-card .rr-duo { display:flex; align-items:center; gap:4px; margin-top:8px; }
-#hover-card .rr-radar { flex:0 0 150px; }
+#hover-card .rr-radar { flex:0 0 150px; display:flex; flex-direction:column; align-items:center; }
+#hover-card .rr-peer { display:flex; width:146px; margin:0 0 3px; border:1px solid #94a3b8; border-radius:6px; overflow:hidden; background:#fff; }
+#hover-card .rr-peer button { flex:1; border:0; border-left:1px solid #cbd5e1; padding:3px 0; font:700 8.5px Arial,sans-serif; color:#475569; background:#fff; cursor:pointer; }
+#hover-card .rr-peer button:first-child { border-left:0; }
+#hover-card .rr-peer button.on { background:#334155; color:#fff; }
+#hover-card.pinned .rr-peer button { cursor:pointer; }
 #hover-card .rr-radar svg { display:block; width:150px; height:auto; }
 #hover-card .rr-stats { flex:1; min-width:0; background:#eaf3ff; border-radius:10px; padding:7px 6px; }
 #hover-card .rr-stats .rr-sec { margin:0 0 2px; padding-top:0; border-top:0; }
@@ -876,14 +881,110 @@ const CAT_COLOR = (() => {
   return m;
 })();
 function gradeCls(g){ return ({"A+":"g-ap","A":"g-a","B+":"g-bp","B":"g-b","C":"g-c","D":"g-d"})[g] || "g-na"; }
-// Performance bars: fund (bar) vs sub-category average (tick) for 1Y / 3Y / 5Y,
+/* ---------- Peer group for the Card: Sub-category / Main group / All funds ----------
+   The build ranks every fund inside its sub-category. The other two levels are computed here
+   from the same per-fund figures, with the same baseline rules (mature funds only; funds on
+   weekly/monthly pricing stay out of the Sharpe / drawdown / SD baselines; proxied SDs too). */
+let peerLevel = "cat";                       // "cat" | "main" | "all" — one setting for every open Card
+const PEER_TXT = {
+  cat:  { name: "sub-category", short: "Cat",  avg: "sub-category avg", btn: "Sub-cat" },
+  main: { name: "main group",   short: "Main", avg: "main-group avg",   btn: "Main"    },
+  all:  { name: "all funds",    short: "All",  avg: "all-fund avg",     btn: "All"     },
+};
+const WK = { "1-Year": {sp:"sp",  r:6, sd:"sd"}, "3-Year": {sp:"sp3", r:7, sd:"sd3"}, "5-Year": {sp:"sp5", r:8, sd:"sd5"} };
+const WK_BY_R = { 6: WK["1-Year"], 7: WK["3-Year"], 8: WK["5-Year"] };
+const PEER_GET = {
+  perf:   (g, wk) => g.rets[wk.r],
+  sharpe: (g, wk) => (g[wk.sp] || {}).sharpe,
+  dd:     (g, wk) => (g[wk.sp] || {}).dd,
+  vol:    (g, wk) => g[wk.sd],
+};
+const PEER_SKIP = {                          // who stays out of the baseline (mirrors the build)
+  perf:   (g, wk) => false,
+  sharpe: (g, wk) => (wk.r === 6 && g.young) || !!g.sd_freq,
+  dd:     (g, wk) => (wk.r === 6 && g.young) || !!g.sd_freq,
+  vol:    (g, wk) => g.young || !!g.sd_freq || (wk.sd === "sd" && g.proxy),
+};
+const peerKeyOf = (level, g) => level === "main" ? g.main : level === "all" ? "*" : g.cat;
+const _peer = {};
+function peerBase(level, metric, wk){
+  const ck = level + "|" + metric + "|" + wk.sp;
+  if (_peer[ck]) return _peer[ck];
+  const m = {};
+  FUNDS.forEach(g => {
+    const v = PEER_GET[metric](g, wk);
+    if (v == null || PEER_SKIP[metric](g, wk)) return;
+    (m[peerKeyOf(level, g)] || (m[peerKeyOf(level, g)] = [])).push(v);
+  });
+  for (const k in m) { m[k].sort((a, b) => a - b); m[k].sum = m[k].reduce((a, b) => a + b, 0); }
+  return (_peer[ck] = m);
+}
+function lowerCount(arr, x){                 // how many values are strictly below x
+  let lo = 0, hi = arr.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < x) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+// pct is the internal 0–100 score (100 = best); the Card shows msPct() = rank 1 (best) … 100 (worst).
+function peerRank(level, metric, wk, f, lowerBetter){
+  const arr = peerBase(level, metric, wk)[peerKeyOf(level, f)], x = PEER_GET[metric](f, wk);
+  if (!arr || arr.length < 2) return {};
+  const mean = arr.sum / arr.length;
+  const member = x != null && !PEER_SKIP[metric](f, wk);
+  const rank = v => { const s = Math.round(100 * lowerCount(arr, v) / (member ? arr.length - 1 : arr.length)); return lowerBetter ? 100 - s : s; };
+  return { mean, n: arr.length, pct: x == null ? null : rank(x),
+           catPct: (lowerBetter ? 100 : 0) + (lowerBetter ? -1 : 1) * Math.round(100 * lowerCount(arr, mean) / arr.length) };
+}
+// Same shape as a build "sp" block, but ranked / averaged against the chosen peer group.
+function peerSpFor(f, sp, spLab){
+  if (peerLevel === "cat") return sp;
+  const wk = WK[spLab] || WK["1-Year"], o = Object.assign({}, sp);
+  const one = (metric, key, dec) => {
+    const r = peerRank(peerLevel, metric, wk, f, false);
+    o[key + "_pct"] = r.pct == null ? null : r.pct;
+    o["cat_" + key] = r.mean == null ? null : Math.round(r.mean * 100) / 100;
+    o["cat_" + key + "_pct"] = r.catPct == null ? null : r.catPct;
+    return r;
+  };
+  o.n_cat = (one("perf", "perf").n) || null;
+  one("sharpe", "sharpe"); one("dd", "dd");
+  return o;
+}
+const _retMeanByLevel = {};
+function peerRetMean(f){                     // mean 1W…YTD return of mature peers, per peer group
+  if (peerLevel === "cat") return CAT_RET_MEAN[f.cat] || [];
+  if (!_retMeanByLevel[peerLevel]) {
+    const acc = {};
+    FUNDS.forEach(g => {
+      if (g.young) return;
+      const a = acc[peerKeyOf(peerLevel, g)] || (acc[peerKeyOf(peerLevel, g)] = [0,1,2,3,4,5].map(() => [0, 0]));
+      for (let i = 0; i < 6; i++) { const v = g.rets[i]; if (v != null) { a[i][0] += v; a[i][1]++; } }
+    });
+    const out = {};
+    for (const k in acc) out[k] = acc[k].map(([sum, n]) => n ? Math.round(sum / n * 100) / 100 : null);
+    _retMeanByLevel[peerLevel] = out;
+  }
+  return _retMeanByLevel[peerLevel][peerKeyOf(peerLevel, f)] || [];
+}
+function peerCatPerf(f, wi){                 // peer average for the 1Y / 3Y / 5Y bars
+  if (peerLevel === "cat") return wi === 6 ? (f.sp && f.sp.cat_perf) : wi === 7 ? (f.sp3 && f.sp3.cat_perf) : (f.sp5 && f.sp5.cat_perf);
+  const r = peerRank(peerLevel, "perf", WK_BY_R[wi], f, false);
+  return r.mean == null ? null : Math.round(r.mean * 100) / 100;
+}
+function peerToggleHTML(){
+  return '<div class="rr-peer" role="group" aria-label="Compare with">' +
+    ["cat", "main", "all"].map(k => '<button type="button" data-p="' + k + '"' + (peerLevel === k ? ' class="on"' : '') +
+      ' title="Compare with ' + PEER_TXT[k].name + '">' + PEER_TXT[k].btn + '</button>').join("") + '</div>';
+}
+function setPeerLevel(k){ if (!PEER_TXT[k] || k === peerLevel) return; peerLevel = k; refreshPinnedCards(); }
+
+// Performance bars: fund (bar) vs peer-group average (tick) for 1Y / 3Y / 5Y,
 // all on one shared scale so lengths are comparable.
 function rrPerfHTML(f){
   // Sub-category average per window: 1Y / 3Y / 5Y come from the build (same figures as
   // the %ile blocks); the shorter windows use CAT_RET_MEAN (mean of non-young peers).
-  const cm = CAT_RET_MEAN[f.cat] || [];
+  const cm = peerRetMean(f);
   const catOf = {0:cm[0], 1:cm[1], 2:cm[2], 3:cm[3], 4:cm[4], 5:cm[5],
-                 6: f.sp && f.sp.cat_perf, 7: f.sp3 && f.sp3.cat_perf, 8: f.sp5 && f.sp5.cat_perf};
+                 6: peerCatPerf(f, 6), 7: peerCatPerf(f, 7), 8: peerCatPerf(f, 8)};
   const rows = WIN_SHORT.map((lbl,i) => [lbl, f.rets[i], catOf[i], i, i===6 && f.sp && f.sp.perf_implied]);
   const vals = [];
   rows.forEach(r => { if (r[1]!=null) vals.push(r[1]); if (r[2]!=null) vals.push(r[2]); });
@@ -903,7 +1004,7 @@ function rrPerfHTML(f){
       '<span class="rr-pc">'+(c!=null?fmtPct(c):"—")+'</span></div>';
   }).join("");
   return '<div class="rr-sec">Performance</div>' +
-    '<div class="rr-prow hd"><span></span><span class="rr-legend"><i class="rr-cat"></i> = sub-category avg</span><b>Fund</b><span class="rr-pc">Cat avg</span></div>' + body;
+    '<div class="rr-prow hd"><span></span><span class="rr-legend"><i class="rr-cat"></i> = ' + PEER_TXT[peerLevel].avg + '</span><b>Fund</b><span class="rr-pc">' + PEER_TXT[peerLevel].short + ' avg</span></div>' + body;
 }
 // Risk statistics for the selected window: value · sub-category average · percentile (1 = best).
 // SD vs sub-category (computed here: the build only ranks return / Sharpe / drawdown).
@@ -920,6 +1021,11 @@ function sdBaseline(key){
   return (_sdBase[key] = m);
 }
 function sdVsCat(f, key){
+  if (peerLevel !== "cat") {
+    const r = peerRank(peerLevel, "vol", key === "sd3" ? WK["3-Year"] : key === "sd5" ? WK["5-Year"] : WK["1-Year"], f, true);
+    if (r.mean == null) return {};
+    return r.pct == null ? { cat: r.mean.toFixed(2) + "%", catPct: r.catPct } : { cat: r.mean.toFixed(2) + "%", pct: r.pct, catPct: r.catPct };
+  }
   const arr = sdBaseline(key)[f.cat], x = f[key];
   if (!arr || arr.length < 2) return {};
   const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -935,7 +1041,7 @@ function rrStatsHTML(f, sp, winLabel, sd){
     if (proxy) { val = "—"; pct = null; proxy = false; }   // never show the fund's own proxied / implied figure; the category value stays
     const hasL2 = cat!=null || pct!=null;
     return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#9333ea">*</span>':'')+'</b></div>' +
-      (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+msPct(Math.round(pct)) : '')+'</span><span>'+(cat!=null ? 'Cat '+cat : '')+'</span></div>' : '') + '</div>';
+      (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+msPct(Math.round(pct)) : '')+'</span><span>'+(cat!=null ? PEER_TXT[peerLevel].short+' '+cat : '')+'</span></div>' : '') + '</div>';
   };
   // A young fund's 1Y figure is only an implied one, so it is not shown.
   const sdHidden = sd.v == null || (sd.one && (f.proxy || f.young));
@@ -970,6 +1076,7 @@ function hoverCardHTML(f){
   const sp = _spWin.o || f.sp || {};
   const spLab = _spWin.o ? _spWin.l : "1-Year";
   const spCap = spLab==="3-Year" ? "3 Years" : spLab==="5-Year" ? "5 Years" : "1 Year";
+  const spL = peerSpFor(f, sp, spLab);            // same as sp for the sub-category level
   // SD / Volatility is the fourth radar axis and a statistics row, so resolve it first.
   // SD shown follows the selected return window: 3Y→SD3Y, 5Y→SD5Y, every
   // sub-year window and 1Y→SD1Y. If a long-window SD is missing (fund lacks
@@ -984,10 +1091,10 @@ function hoverCardHTML(f){
   const vol = { pct: sdHidden ? null : volAll.pct, catPct: volAll.catPct };
   // Young funds, funds missing any of the four percentiles, and proxied values get the
   // empty frame only: nothing is plotted from incomplete or substituted data.
-  const radarOk = !f.young && sp.perf_pct != null && sp.sharpe_pct != null && sp.dd_pct != null && vol.pct != null &&
-                  !sp.perf_proxy && !sp.sharpe_proxy && !sp.dd_proxy;
-  const catShape = { cat_perf_pct: sp.cat_perf_pct, cat_sharpe_pct: sp.cat_sharpe_pct, cat_dd_pct: sp.cat_dd_pct, cat_vol_pct: vol.catPct };
-  const spider = buildSpiderSVG(radarOk ? Object.assign({}, sp, catShape, { vol_pct: vol.pct }) : catShape, spCap);
+  const radarOk = !f.young && spL.perf_pct != null && spL.sharpe_pct != null && spL.dd_pct != null && vol.pct != null &&
+                  !spL.perf_proxy && !spL.sharpe_proxy && !spL.dd_proxy;
+  const catShape = { cat_perf_pct: spL.cat_perf_pct, cat_sharpe_pct: spL.cat_sharpe_pct, cat_dd_pct: spL.cat_dd_pct, cat_vol_pct: vol.catPct };
+  const spider = buildSpiderSVG(radarOk ? Object.assign({}, spL, catShape, { vol_pct: vol.pct }) : catShape, spCap, PEER_TXT[peerLevel].avg);
   const rl = f.risk_level;
   const left =
     '<h3 class="rr-name">' + f.name + '</h3>' +
@@ -999,10 +1106,12 @@ function hoverCardHTML(f){
       '<div><span class="k">Risk level</span><b>' + (rl == null ? 'N/A' : rl) + '</b></div>' +
     '</div>' +
     rrPerfHTML(f) +
-    '<div class="rr-duo">' + (spider ? '<div class="rr-radar">' + spider + '</div>' : '') +
-      '<div class="rr-stats">' + rrStatsHTML(f, sp, spLab, _sd) + '</div></div>' +
-    '<div class="rr-pnote"><b>%ile</b> = rank 1–100 within the sub-category · <b>1 = best</b>, <b>100 = worst</b> (lowest Vol / smallest Drawdown = 1)</div>' +
-    '<div class="rr-foot">vs funds in the same sub-category' + (sp.n_cat ? ' (n=' + sp.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
+    '<div class="rr-duo">' + (spider ? '<div class="rr-radar">' + peerToggleHTML() + spider + '</div>' : '') +
+      '<div class="rr-stats">' + rrStatsHTML(f, spL, spLab, _sd) + '</div></div>' +
+    '<div class="rr-pnote"><b>%ile</b> = rank 1–100 within ' + (peerLevel === "all" ? "all funds" : "the " + PEER_TXT[peerLevel].name) + ' · <b>1 = best</b>, <b>100 = worst</b> (lowest Vol / smallest Drawdown = 1)</div>' +
+    '<div class="rr-foot">' + (peerLevel === "all" ? "vs all funds"
+        : "vs funds in the same " + PEER_TXT[peerLevel].name + ": <b" + (peerLevel === "cat" ? ' style="color:' + (CAT_COLOR[f.cat] || "inherit") + '"' : "") + ">" + (peerLevel === "cat" ? f.cat : f.main) + "</b>") +
+      (spL.n_cat ? ' (n=' + spL.n_cat + ')' : '') + ' • ' + spLab + ' data</div>' +
     rrNotesHTML(sp, f, spLab);
   const right =
     (f.amc ? '<div class="sec-title">AMC</div><div class="strat">' + f.amc + '</div>' : '') +
@@ -1050,7 +1159,7 @@ function qualityFor(pct){
   for (const t of QUALITY_TIERS) if (pct >= t.min) return t;
   return { label: "No data", bg: "#cbd5e1" };
 }
-function buildSpiderSVG(sp, winCap){
+function buildSpiderSVG(sp, winCap, avgTxt){
   // Four axes at the compass points: Performance (top), Sharpe Ratio (right),
   // Drawdown (bottom), Volatility (left). Every axis is a percentile where outward = better.
   const W = 190, H = 190, cx = 95, cy = 95, R = 80;
@@ -1122,7 +1231,7 @@ function buildSpiderSVG(sp, winCap){
   ];
   for (const g of signs)
     svg += '<text x="'+g.x+'" y="'+g.y+'" font-size="15" font-weight="800" fill="'+g.c+'" text-anchor="middle"><title>'+g.tip+'</title>'+g.t+'</text>';
-  if (hasBench) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = sub-category avg</text>';
+  if (hasBench) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = ' + (avgTxt || 'sub-category avg') + '</text>';
   // Data timeframe the radar (and the statistics beside it) are based on.
   svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
@@ -1509,6 +1618,10 @@ function enablePinnedCardInteractions(hc){
     syncCardGeometry(hc);
   };
 
+  hc.onclick = (ev) => {                          // Compare-with switch (Sub-cat / Main / All)
+    const b = ev.target.closest(".rr-peer button");
+    if (b) { ev.stopPropagation(); setPeerLevel(b.dataset.p); }
+  };
   hc.onpointerdown = (ev) => {
     if (ev.target.closest("button, .resize-edge")) return;
     if (ev.button != null && ev.button !== 0) return;
