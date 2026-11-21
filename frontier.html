@@ -269,7 +269,10 @@ table.dt tr.gs td { height:6px; padding:0; border:0; background:none; }
 .pf-foot { font-size:10px; color:var(--mute); margin-top:6px; }
 
 /* selected portfolio + universe tables */
-.two { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:10px; }
+.two.collapsed { display:none; }
+.two-head { margin-top:18px; }
+@media print { .two.collapsed { display:grid; } .two-head { display:none; } }
 .table-wrap { border:1px solid var(--rule); border-radius:10px; overflow:hidden; }
 .table-wrap header { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; background:var(--soft); font-weight:700; font-size:13px; }
 .table-wrap header .hint { font-weight:400; font-size:12px; color:var(--mute); }
@@ -532,7 +535,8 @@ table.dt .note { font-size:10px; color:var(--amber); }
     </div>
   </div>
 
-  <div class="two">
+  <div class="filters-head two-head"><span class="filters-head-label">Selected portfolio &amp; Universe</span><button class="filters-toggle" id="two-toggle" type="button" title="Show Selected portfolio &amp; Universe" aria-expanded="false">▴</button></div>
+  <div class="two collapsed" id="two">
     <div class="table-wrap">
       <header><span id="sel-title">Selected portfolio</span><span class="hint">pick on the chart</span></header>
       <div class="table-scroll" id="sel-wrap"></div>
@@ -2115,6 +2119,11 @@ if (/[?&]print=1/.test(location.search)){
     document.body.appendChild(bar);
   }, 800);
 }
+// One button hides / shows the Selected-portfolio and Universe tables (hidden by default).
+(function(){ const b = document.getElementById("two-toggle"), w = document.getElementById("two");
+  b.onclick = () => { const c = w.classList.toggle("collapsed");
+    b.textContent = c ? "▴" : "▾"; b.title = c ? "Show Selected portfolio & Universe" : "Hide Selected portfolio & Universe"; b.setAttribute("aria-expanded", String(!c)); };
+})();
 </script>
 </body>
 </html>
