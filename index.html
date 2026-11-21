@@ -42,8 +42,7 @@ h1 { margin:0; font-size:32px; font-weight:700; letter-spacing:-0.005em; flex:1;
 .card { border:1px solid var(--rule); border-radius:12px; padding:16px 18px; margin-top:18px;
   box-shadow:0 1px 3px rgba(79,45,127,0.06); }
 .panel-title { font-size:15px; font-weight:700; margin:0; }
-.panel-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.panel-row .spacer { flex:1; }
+.page-notes { margin-top:12px; padding-top:10px; border-top:1px solid var(--rule); }
 
 details.method { margin:8px 0 4px; font-size:12px; color:var(--grey); }
 details.method summary { cursor:pointer; font-weight:600; color:var(--scb); list-style:none; display:inline-flex; align-items:center; gap:6px; }
@@ -92,6 +91,11 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .pills { display:inline-flex; align-items:center; gap:9px; flex-wrap:wrap; margin:12px 0 4px; position:relative; }
 .wsel-label { font-size:11.5px; font-weight:600; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
 .wdrop { position:relative; }
+/* The Period selector sits inside the chart, top-right corner; its menu opens leftwards so it never leaves the card */
+.chart-box { position:relative; }
+.chart-box .chart-corner { position:absolute; top:10px; right:14px; z-index:30; display:flex; align-items:center; gap:10px; }
+.chart-box .pills { margin:0; }
+.chart-box .wmenu { left:auto; right:0; }
 .wsel {
   display:inline-flex; align-items:center; gap:9px; cursor:pointer;
   border:1.5px solid var(--ink); border-radius:999px; padding:6px 15px;
@@ -126,7 +130,10 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .amc-row { margin-top:6px; }
 .amc-row select { min-width:260px; max-width:320px; }
 .find-wrap { position:relative; }
-#find-input { width:320px; }
+#find-input { width:100%; }
+/* Funds row: the box flexes (150-320px) so the status and the explanation stay on the same line */
+.search-row .find-wrap { flex:1 1 170px; min-width:150px; max-width:320px; }
+.find-status, .find-hint { white-space:nowrap; }
 .find-dd { position:absolute; top:calc(100% + 4px); left:0; width:420px; max-width:90vw; z-index:200;
   background:#fff; border:1px solid var(--rule); border-radius:8px;
   box-shadow:0 6px 22px rgba(13,30,60,0.10); max-height:300px; overflow-y:auto; display:none; }
@@ -178,6 +185,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 .find-row button:hover, .zoom-row button:hover { border-color:var(--cyan); color:var(--ink); }
 .find-status { font-size:12px; color:var(--scb); font-weight:700; }
+.find-hint { font-size:11.5px; color:var(--mute); }
 
 .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; min-height:0; }
 .chip {
@@ -204,10 +212,13 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .zoom-row .sd-inputs button:hover{background:var(--scb-deep);border-color:var(--scb-deep);color:#fff}
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-row .step-btn  { font-weight:700; min-width:34px; padding:5px 8px; font-size:14px; line-height:1; }
-.watermark-btn { border-color:#94a3b8; color:var(--grey); font-weight:700; min-width:196px; text-align:center; white-space:nowrap; justify-content:center; }
-.watermark-btn:disabled { opacity:.45; cursor:not-allowed; }
-.watermark-btn:disabled:hover { border-color:#94a3b8; color:var(--grey); }
-.watermark-btn.active { background:#f0fafe; border-color:var(--cyan); color:var(--cyan-d); }
+/* Convert Filter to Watermark: same look as the other buttons here (rounded, 12px) in the purple theme:
+   outline like Reset view; filled purple like the active presets when it is on. */
+.wm-row .watermark-btn { font:700 12px Arial, Helvetica, "Segoe UI", sans-serif; padding:5px 14px; min-width:196px; text-align:center; white-space:nowrap;
+  border:1px solid var(--scb); border-radius:7px; background:#fff; color:var(--scb); cursor:pointer; }
+.wm-row .watermark-btn:hover { border-color:var(--scb); background:var(--scb-l); color:var(--scb-d); }
+.wm-row .watermark-btn.active { background:var(--scb); border-color:var(--scb); color:#fff; }
+.wm-row .watermark-btn.active:hover { background:var(--scb-d); border-color:var(--scb-d); color:#fff; }
 
 #chart { width:100%; height:560px; margin-top:6px;
   /* iPad / touch: route pinch + drag to Plotly instead of letting the browser
@@ -459,7 +470,6 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
 @media (max-width: 900px) {
   .tables { grid-template-columns:1fr; }
   #chart { height:440px; }
-  #find-input { width:140px; }
 }
 /* Compact header on wide screens so more of the chart is visible on first load.
    Nothing is hidden or reordered; narrower screens keep the original spacing. */
@@ -486,40 +496,6 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
   </div>
 
   <div class="card">
-    <div class="panel-row">
-      <div>
-        <p class="panel-title">Risk vs return by time window</p>
-        <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
-      </div>
-      <div class="spacer"></div>
-      <div class="help-wrap">
-        <button class="help-btn" id="help-btn" title="How to use">?</button>
-        <div class="help-pop" id="help-pop">
-          <h4>How to use</h4>
-          <ul>
-            <li><b>Click a time-window pill</b> to change the period for the chart, both tables and any open Card.</li>
-            <li><b>Hover</b> a point for the full fund card — <b>Fund Score</b>, spider rating, and 1Y comparison vs its sub-category.</li>
-            <li><b>Drag</b> = pan · <b>mouse wheel</b> = zoom at cursor · <b>double-click or Reset</b> = back to full view.</li>
-            <li><b>Filters</b> cascade (Main → Sub) and combine with AND; Funds searches name / code / AMC (multiple words = OR); funds you add replace the Filters on the chart unless you convert the Filters to a Watermark.</li>
-            <li>Dashed lines mark the <b>median SD</b>, <b>median return</b>, and <b>0% return</b> of the current selection.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <details class="method">
-      <summary>Methodology &amp; data freshness</summary>
-      <div class="body">
-        <b>Fund Score (v3):</b> Composite 0–100 score from SEC factsheet stats ranked within each AIMC sub-category — 40% 1Y return, 35% Sharpe, 25% max drawdown (less negative = better). Grades: A+ ≥90, A ≥80, B+ ≥70, B ≥60, C ≥40, D &lt;40. Bubble colour follows score tier. Funds launched &lt;1Y ago carry a <span class="badge young">young fund</span> badge — their 1Y return is an <b>implied</b> figure (annualised since-inception, marked †) and their Sharpe / drawdown come from since-inception history. Young funds are ranked <b>against</b> the mature peers' actual 1Y stats for their own comparison only — they are excluded from every peer distribution and category average, so they never affect other funds' percentiles. Treat their rankings as provisional. Funds priced weekly/monthly (e.g. PE vehicles) get risk stats from their own NAV at native cadence (×√52 / ×√12), flagged on the card and likewise excluded from peer baselines.<br>
-        <b>Universe:</b> 3,485 funds (SEC Thailand Open API). Funds without their own 1-Yr StdDev fall back to (1) another share class of the same master fund (hollow amber rim), or (2) the category median (tagged <i>cat·proxy</i>).<br>
-        <b>NAV / return freshness:</b> <b>1,535</b> funds priced 2026-11-19 · <b>1,339</b> on 2026-11-20 · <b>424</b> on 2026-11-18 · most recent <b>2026-11-20</b>. Hover or pin any fund to see its own NAV date.<br>
-        <b>Source:</b> Thailand SEC Open Data API (<a href="https://api.sec.or.th" target="_blank" rel="noopener">api.sec.or.th</a>). Stats computed locally from daily NAV history.<br>
-        <b>Dividend treatment:</b> SEC publishes raw NAV; dividend classes are converted to Total Return where possible. Funds tagged <span class="badge tr-proxy">TR proxy</span> use the sister Acc class. Funds tagged <span class="badge tr-proxy">TR adjusted</span> use SEC FundDailyInfo dividend history to reinvest cash distributions. Funds still tagged <span class="badge tr-orphan">price-only</span> have no usable dividend data yet, so returns exclude paid distributions.
-      </div>
-    </details>
-
-    <div class="pills" id="pills"></div>
-
     <div id="filters-section">
       <div class="filters-head">
         <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
@@ -528,10 +504,11 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
       <div class="find-row search-row">
         <label for="find-input">Funds</label>
         <div class="find-wrap">
-          <input id="find-input" type="text" placeholder="Search a fund · add more to build your list" autocomplete="off">
+          <input id="find-input" type="text" placeholder="Search a fund by name or code" autocomplete="off">
           <div id="find-dd" class="find-dd"></div>
         </div>
         <span class="find-status" id="find-status"></span>
+        <span class="find-hint">Find a fund, or add several to create your own universe.</span>
       </div>
       <div class="chips" id="chips"></div>
       </div>
@@ -588,7 +565,25 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
       <button class="reset-btn" id="reset-btn">⟲ Reset view</button>
     </div>
 
-    <div id="chart"></div>
+    <div class="chart-box">
+      <div class="chart-corner">
+        <div class="pills" id="pills"></div>
+        <div class="help-wrap">
+          <button class="help-btn" id="help-btn" title="How to use">?</button>
+          <div class="help-pop" id="help-pop">
+            <h4>How to use</h4>
+            <ul>
+              <li><b>Click a time-window pill</b> to change the period for the chart, both tables and any open Card.</li>
+              <li><b>Hover</b> a point for the full fund card — <b>Fund Score</b>, spider rating, and 1Y comparison vs its sub-category.</li>
+              <li><b>Drag</b> = pan · <b>mouse wheel</b> = zoom at cursor · <b>double-click or Reset</b> = back to full view.</li>
+              <li><b>Filters</b> cascade (Main → Sub) and combine with AND; Funds searches name / code / AMC (multiple words = OR); funds you add replace the Filters on the chart unless you convert the Filters to a Watermark.</li>
+              <li>Dashed lines mark the <b>median SD</b>, <b>median return</b>, and <b>0% return</b> of the current selection.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="chart"></div>
+    </div>
     <div id="hover-card"></div>
 
     <div class="legend-note">
@@ -597,6 +592,20 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
       <span>· Bubble size ∝ AUM · colour = Fund Score tier</span>
       <span>· Hover a point for the full fund card</span>
     </div>
+    <div class="page-notes">
+    <p class="panel-title">Risk vs return by time window</p>
+    <span style="font-size:12px;color:var(--mute);">X = StdDev <span id="sub-sdwin">1Y</span> (%) · Y = return for the selected window (%) · rankings follow filters and the visible area after zoom or pan</span>
+    <details class="method">
+      <summary>Methodology &amp; data freshness</summary>
+      <div class="body">
+        <b>Fund Score (v3):</b> Composite 0–100 score from SEC factsheet stats ranked within each AIMC sub-category — 40% 1Y return, 35% Sharpe, 25% max drawdown (less negative = better). Grades: A+ ≥90, A ≥80, B+ ≥70, B ≥60, C ≥40, D &lt;40. Bubble colour follows score tier. Funds launched &lt;1Y ago carry a <span class="badge young">young fund</span> badge — their 1Y return is an <b>implied</b> figure (annualised since-inception, marked †) and their Sharpe / drawdown come from since-inception history. Young funds are ranked <b>against</b> the mature peers' actual 1Y stats for their own comparison only — they are excluded from every peer distribution and category average, so they never affect other funds' percentiles. Treat their rankings as provisional. Funds priced weekly/monthly (e.g. PE vehicles) get risk stats from their own NAV at native cadence (×√52 / ×√12), flagged on the card and likewise excluded from peer baselines.<br>
+        <b>Universe:</b> 3,485 funds (SEC Thailand Open API). Funds without their own 1-Yr StdDev fall back to (1) another share class of the same master fund (hollow amber rim), or (2) the category median (tagged <i>cat·proxy</i>).<br>
+        <b>NAV / return freshness:</b> <b>1,535</b> funds priced 2026-11-19 · <b>1,339</b> on 2026-11-20 · <b>424</b> on 2026-11-18 · most recent <b>2026-11-20</b>. Hover or pin any fund to see its own NAV date.<br>
+        <b>Source:</b> Thailand SEC Open Data API (<a href="https://api.sec.or.th" target="_blank" rel="noopener">api.sec.or.th</a>). Stats computed locally from daily NAV history.<br>
+        <b>Dividend treatment:</b> SEC publishes raw NAV; dividend classes are converted to Total Return where possible. Funds tagged <span class="badge tr-proxy">TR proxy</span> use the sister Acc class. Funds tagged <span class="badge tr-proxy">TR adjusted</span> use SEC FundDailyInfo dividend history to reinvest cash distributions. Funds still tagged <span class="badge tr-orphan">price-only</span> have no usable dividend data yet, so returns exclude paid distributions.
+      </div>
+    </details>
+  </div>
   </div>
 
   <div class="tables">
@@ -1443,7 +1452,7 @@ function drawChart(list){
       mode: "markers", type: "scattergl", name: "background watermark",
       marker: {
         color: col,
-        opacity: 0.16,
+        opacity: 0.07,
         size: watermarkPts.map(f=>Math.max(4, Math.min(9, f.size || 6))),
         line: { width:0, color:"rgba(0,0,0,0)" }
       },
