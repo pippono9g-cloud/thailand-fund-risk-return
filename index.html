@@ -71,9 +71,22 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
   display:flex; align-items:center; justify-content:center;
 }
 .filters-toggle:hover { border-color:var(--cyan); }
-.filters-head { display:flex; align-items:center; justify-content:space-between; margin:8px 0 4px; padding-top:8px; border-top:1px solid var(--rule); }
+/* A thin rule above Find + Filters; the hide / show button sits on it at the right and always stays visible. */
+.filters-head { position:relative; height:0; margin:14px 0 0; border-top:1px solid var(--rule); }
+.filters-head .filters-toggle { position:absolute; right:0; top:-12px; background:#fff; }
 .filters-head-label { font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
-#filters-body.collapsed { display:none; }
+/* Filter box: Main / Sub-category / Shelf / AMC in an outlined box, heading sitting on the line; the Watermark button is outside, on the next line. */
+#filters-section { margin-top:10px; }
+.filter-box { position:relative; border:1px solid var(--rule); border-radius:10px; padding:16px 8px 10px; margin-top:14px; }
+.filter-box .find-row select { max-width:200px; }
+.filter-box .filter-box-title { position:absolute; top:-9px; left:12px; padding:0 8px; background:#fff; line-height:16px; }
+.filter-box .filter-row { margin-top:0; }
+.filter-box .amc-row { margin-top:8px; }
+.wm-row { margin:10px 0 2px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.wm-why { font-size:11.5px; color:var(--mute); }
+.wm-why.need { color:#92400e; }
+#filters-section.collapsed #filters-body, #filters-section.collapsed .wm-row, #filters-section.collapsed #find-block { display:none; }
+#filters-section.collapsed .filter-box { display:none; }
 
 /* window selector = single dropdown control (one window shown at a time) */
 .pills { display:inline-flex; align-items:center; gap:9px; flex-wrap:wrap; margin:12px 0 4px; position:relative; }
@@ -175,10 +188,6 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 /* A Filter turned into a Watermark group: dashed grey = background, solid blue = the funds you picked */
 .chip.bg { background:#f4f5f7; border:1px dashed #94a3b8; color:var(--grey); }
 .chip.bg button { color:var(--grey); }
-.wm-hint { display:none; margin-top:8px; padding:6px 10px; border:1px solid #fde68a; border-radius:8px; background:#fffbeb; color:#92400e; font-size:12px; }
-.wm-hint.show { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.wm-hint button { border:1px solid #94a3b8; background:#fff; color:var(--grey); border-radius:6px; padding:3px 10px; font:700 12px Arial,sans-serif; cursor:pointer; }
-.wm-hint button:hover { border-color:var(--cyan); color:var(--cyan-d); }
 .chip button { border:none; background:transparent; color:var(--cyan-d); cursor:pointer; font-size:13px; line-height:1; padding:0 3px; }
 .chip.clear-all { background:#fff; border:1px solid var(--rule); color:var(--grey); cursor:pointer; padding:3px 11px; }
 .chip.clear-all:hover { border-color:var(--red); color:var(--red); }
@@ -195,7 +204,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .zoom-row .sd-inputs button:hover{background:var(--scb-deep);border-color:var(--scb-deep);color:#fff}
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-row .step-btn  { font-weight:700; min-width:34px; padding:5px 8px; font-size:14px; line-height:1; }
-.watermark-btn { border-color:#94a3b8; color:var(--grey); font-weight:700; min-width:146px; text-align:center; justify-content:center; }
+.watermark-btn { border-color:#94a3b8; color:var(--grey); font-weight:700; min-width:196px; text-align:center; white-space:nowrap; justify-content:center; }
 .watermark-btn:disabled { opacity:.45; cursor:not-allowed; }
 .watermark-btn:disabled:hover { border-color:#94a3b8; color:var(--grey); }
 .watermark-btn.active { background:#f0fafe; border-color:var(--cyan); color:var(--cyan-d); }
@@ -461,7 +470,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
   .pills { margin-top:6px; }
   #filters-body:not(.collapsed) { display:flex; flex-wrap:wrap; align-items:center; column-gap:16px; }
   #filters-body > .filter-row, #filters-body > .amc-row { margin-top:6px; }
-  #filters-body > .search-row, #filters-body > .chips, #filters-body > .wm-hint { flex:1 1 100%; }
+  #filters-body > .search-row, #filters-body > .chips { flex:1 1 100%; }
   .search-row { margin-top:6px; padding-top:6px; }
   .zoom-row { gap:6px; margin-top:6px; }
   .zoom-row input[type=range] { width:90px; }
@@ -491,7 +500,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
             <li><b>Click a time-window pill</b> to change the period for the chart, both tables and any open Card.</li>
             <li><b>Hover</b> a point for the full fund card — <b>Fund Score</b>, spider rating, and 1Y comparison vs its sub-category.</li>
             <li><b>Drag</b> = pan · <b>mouse wheel</b> = zoom at cursor · <b>double-click or Reset</b> = back to full view.</li>
-            <li><b>Filters</b> cascade (Main → Sub) and combine with AND; Find matches name / code / AMC, multiple words = OR.</li>
+            <li><b>Filters</b> cascade (Main → Sub) and combine with AND; Funds searches name / code / AMC (multiple words = OR); funds you add replace the Filters on the chart unless you convert the Filters to a Watermark.</li>
             <li>Dashed lines mark the <b>median SD</b>, <b>median return</b>, and <b>0% return</b> of the current selection.</li>
           </ul>
         </div>
@@ -511,11 +520,24 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
 
     <div class="pills" id="pills"></div>
 
-    <div class="filters-head">
-      <span class="filters-head-label">Filters</span>
-      <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
-    </div>
-    <div id="filters-body">
+    <div id="filters-section">
+      <div class="filters-head">
+        <button class="filters-toggle" id="filters-toggle" type="button" title="Hide filters" aria-expanded="true">▾</button>
+      </div>
+      <div id="find-block">
+      <div class="find-row search-row">
+        <label for="find-input">Funds</label>
+        <div class="find-wrap">
+          <input id="find-input" type="text" placeholder="Search a fund · add more to build your list" autocomplete="off">
+          <div id="find-dd" class="find-dd"></div>
+        </div>
+        <span class="find-status" id="find-status"></span>
+      </div>
+      <div class="chips" id="chips"></div>
+      </div>
+      <div class="filter-box" id="filter-box">
+        <span class="filters-head-label filter-box-title">Filters</span>
+        <div id="filters-body">
       <div class="find-row filter-row">
         <label for="main-select">Main</label>
         <select id="main-select"></select>
@@ -536,18 +558,13 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
       <div class="find-row amc-row">
         <label for="amc-select">AMC</label>
         <select id="amc-select"></select>
-        <button class="watermark-btn" id="watermark-btn" title="Show other sub-category funds as a faint background layer">Watermark</button>
       </div>
-      <div class="find-row search-row">
-        <label for="find-input">Find</label>
-        <div class="find-wrap">
-          <input id="find-input" type="text" placeholder="type → pick from list → repeat to add more funds" autocomplete="off">
-          <div id="find-dd" class="find-dd"></div>
         </div>
-        <span class="find-status" id="find-status"></span>
       </div>
-      <div class="chips" id="chips"></div>
-      <div class="wm-hint" id="wm-hint"></div>
+      <div class="wm-row">
+        <button class="watermark-btn" id="watermark-btn" title="Show other sub-category funds as a faint background layer">Convert Filter to Watermark</button>
+        <span class="wm-why" id="wm-why"></span>
+      </div>
     </div>
 
     <div class="zoom-row">
@@ -691,6 +708,9 @@ function filtered(includePicks=true){
   const pickSet = state.picks.length
     ? new Set(state.picks.map(c => (c || "").toLowerCase()))
     : null;
+  // Convert Filter to Watermark with no funds added yet: the Filter group (or the whole universe when no Filter
+  // is set) is drawn only as the faint background, and the foreground stays empty until funds are added above.
+  if (includePicks && !pickSet && state.watermark) return [];
   return FUNDS.filter(f => {
     if (includePicks && pickSet) return pickSet.has((f.code || "").toLowerCase());
     if (!passesDropdownFilters(f)) return false;
@@ -792,7 +812,7 @@ function renderChips(){
     const lbl = pf ? esc(code) + " — " + esc(pf.name) : esc(code);
     chips.push({k:"pick", code, label:"“"+lbl+"”"});
   });
-  const asBg = state.watermark && state.picks.length > 0;     // filters are the background group, picks are the foreground
+  const asBg = state.watermark;                                // filters are the background group, funds you add are the foreground
   let h = chips.map((c,i) => '<span class="chip'+(asBg && c.k !== "pick" ? ' bg' : '')+'"'+(asBg && c.k !== "pick" ? ' title="Background group (Watermark)"' : '')+'>'+c.label+'<button data-i="'+i+'" title="Remove">✕</button></span>').join("");
   if (chips.length > 1) h += '<span class="chip clear-all" id="chip-clear">Clear all</span>';
   $("chips").innerHTML = h;
@@ -814,26 +834,22 @@ function renderWatermarkButton(){
   const btn = $("watermark-btn");
   if (!btn) return;
   const picked = state.picks.length > 0, hasF = hasPeerFilter();
-  const canConvert = picked && hasF;
+  const bg = hasF ? "Filter group" : "universe";                   // no Filter set = every fund is the group
   btn.classList.toggle("active", state.watermark);
   btn.setAttribute("aria-pressed", state.watermark ? "true" : "false");
-  btn.textContent = state.watermark ? "Watermark → Filter" : "Filter → Watermark";
-  btn.disabled = !(state.watermark || canConvert);               // nothing to convert until funds are picked AND a filter is set
+  btn.textContent = "Convert Filter to Watermark";                // fixed label: an on / off button
+  btn.disabled = false;
   btn.title = state.watermark
-    ? "Convert the Watermark back into a Filter: the chart shows the filtered group again"
-    : canConvert
-      ? "Convert the Main / Sub-category / Shelf / AMC filters into a faint Watermark group behind the funds you picked"
-      : !picked ? "Pick funds with Find (or load a Universe) first; the filters can then become a Watermark group behind them"
-                : "Set a Main / Sub-category / Shelf / AMC filter first; it can then become a Watermark group behind your picked funds";
-  const head = document.querySelector(".filters-head-label");
-  if (head) head.textContent = state.watermark && picked ? "Watermark group" : "Filters";
-  // picked funds override the filters silently: say so, with a one-click way to use them as the background
-  const hint = $("wm-hint");
-  if (hint) {
-    const show = picked && hasF && !state.watermark;
-    hint.classList.toggle("show", show);
-    hint.innerHTML = show ? '<span>Filters are not applied while funds are picked.</span><button type="button" id="wm-hint-btn">Filter → Watermark</button>' : "";
-    const hb = $("wm-hint-btn"); if (hb) hb.onclick = () => btn.click();
+    ? "On: the " + bg + " is shown faintly in the background. Click to turn it off"
+    : hasF
+      ? "Turn the Main / Sub-category / Shelf / AMC filters into a faint Watermark group in the background; the funds you add above are drawn on top"
+      : "With no Filter set, the whole universe becomes the faint Watermark in the background; the funds you add above are drawn on top to compare against it";
+  const why = $("wm-why");
+  if (why) {
+    why.classList.remove("need");
+    why.textContent = state.watermark
+        ? (picked ? "On · the " + bg + " is shown faintly behind your funds" : "On · the " + bg + " is shown faintly; add funds above to compare against it")
+      : (picked ? "Shows the " + bg + " faintly behind your funds" : "Turns the " + bg + " into a faint background; add funds above to compare");
   }
 }
 function clearAllFilters(){
@@ -1395,10 +1411,11 @@ function drawChart(list){
   const watermarkPts = state.watermark
     ? peerPts.filter(f => !visibleIds.has(f.id))
     : [];
-  const axisPts = state.picks.length && hasPeerFilter() && peerPts.length
-    ? peerPts.concat(pts.filter(f => !peerPts.some(p => p.id === f.id)))
-    : pts;
-  const medianPts = state.picks.length && hasPeerFilter() && peerPts.length ? peerPts : pts;
+  // Axes and medians follow the peer group when funds are picked inside a Filter, or whenever the Watermark is on
+  // (the Filter group, or the whole universe if no Filter is set).
+  const usePeerAxes = peerPts.length > 0 && ((state.picks.length > 0 && hasPeerFilter()) || state.watermark);
+  const axisPts = usePeerAxes ? (pts.length ? peerPts.concat(pts.filter(f => !peerPts.some(p => p.id === f.id))) : peerPts) : pts;
+  const medianPts = usePeerAxes ? peerPts : pts;
   const direct = pts.filter(f => !f.proxy), proxy = pts.filter(f => f.proxy);
   // Funds with a locked (pinned) Card already carry a permanent name label
   // from the "locked card selection" trace below — blank out their code
@@ -1575,7 +1592,7 @@ function drawChart(list){
   }
   const baseStatus = pts.length.toLocaleString() + " of " + FUNDS.length.toLocaleString() + " funds shown";
   $("find-status").textContent = state.watermark && watermarkPts.length
-    ? pts.length.toLocaleString() + " picked · " + watermarkPts.length.toLocaleString() + " funds in background"
+    ? (pts.length ? pts.length.toLocaleString() + " picked" : "No funds added") + " · " + watermarkPts.length.toLocaleString() + " funds in background"
     : baseStatus;
 }
 // Hover crosshair: hairlines from the hovered dot to the X and Y axes with the
@@ -2167,7 +2184,7 @@ function drawTables(list, visibleScope){
   // watermark for pan/zoom since it operates on rendered chart points, but
   // the initial/filtered ranking here did not).
   let tableList = list, watermarked = false;
-  if (!visibleScope && state.watermark && hasPeerFilter()) {
+  if (!visibleScope && state.watermark) {
     const peers = filtered(false);
     if (peers.length) {
       const visibleIds = new Set(list.map(f => f.id));
@@ -2178,7 +2195,7 @@ function drawTables(list, visibleScope){
   const ranked = tableList.filter(f => f.rets[w] != null).sort((a,b)=>b.rets[w]-a.rets[w]);
   const topRanked = ranked.filter(f => !SCB_TERM_RE.test(f.code));
   const scope = (visibleScope ? ranked.length.toLocaleString() + " funds visible" : ranked.length.toLocaleString() + " filtered funds") +
-    ((watermarked || (visibleScope && state.watermark && hasPeerFilter())) ? " · incl. watermark group" : "");
+    ((watermarked || (visibleScope && state.watermark)) ? " · incl. watermark group" : "");
   $("top-title").textContent = "Top 20 visible funds — best " + WINDOWS[w] + " return · excl. SCB 3M/6M fix-term series";
   $("bot-title").textContent = "Worst 20 visible funds — weakest " + WINDOWS[w] + " return";
   $("top-scope").textContent = scope;
@@ -2383,7 +2400,7 @@ $("help-btn").onclick = e => { e.stopPropagation(); $("help-pop").classList.togg
 // Collapse the filter controls (Main/Sub-category/Shelf/AMC/Find + chips)
 // so a screenshot of the chart doesn't leak the current filter state.
 $("filters-toggle").onclick = () => {
-  const collapsed = $("filters-body").classList.toggle("collapsed");
+  const collapsed = $("filters-section").classList.toggle("collapsed");
   $("filters-toggle").textContent = collapsed ? "▴" : "▾";
   $("filters-toggle").title = collapsed ? "Show filters" : "Hide filters";
   $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
