@@ -513,7 +513,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
           <div id="find-dd" class="find-dd"></div>
         </div>
         <span class="find-status" id="find-status"></span>
-        <span class="find-hint">Find a fund, or add several to create your own universe.</span>
+        <span class="find-hint">Find or select funds to create your own universe.</span>
       </div>
       <div class="chips" id="chips"></div>
       </div>
@@ -613,7 +613,7 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
   </div>
   </div>
 
-  <div class="tables-head"><span class="tables-head-label">Top &amp; Worst 20 funds</span><button class="filters-toggle" id="tables-toggle" type="button" title="Show Top / Worst 20" aria-expanded="false">▴</button></div>
+  <div class="tables-head"><span class="tables-head-label">Top &amp; Worst 20 funds of Current Universe</span><button class="filters-toggle" id="tables-toggle" type="button" title="Show Top / Worst 20 funds of Current Universe" aria-expanded="false">▴</button></div>
   <div class="tables collapsed" id="tables">
     <div class="table-wrap">
       <header><span id="top-title">Top 20 funds</span><span class="hint" id="top-scope">Visible chart area</span></header>
@@ -2424,7 +2424,7 @@ $("filters-toggle").onclick = () => {
 $("tables-toggle").onclick = () => {
   const c = $("tables").classList.toggle("collapsed");
   $("tables-toggle").textContent = c ? "▴" : "▾";
-  $("tables-toggle").title = c ? "Show Top / Worst 20" : "Hide Top / Worst 20";
+  $("tables-toggle").title = c ? "Show Top / Worst 20 funds of Current Universe" : "Hide Top / Worst 20 funds of Current Universe";
   $("tables-toggle").setAttribute("aria-expanded", String(!c));
 };
 document.addEventListener("click", e => { if (!$("help-pop").contains(e.target) && e.target !== $("help-btn")) $("help-pop").classList.remove("show"); });
