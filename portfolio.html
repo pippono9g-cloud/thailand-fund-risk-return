@@ -745,7 +745,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           </div>
           <input type="file" id="load-file" accept="application/json,.json" style="display:none" onchange="loadPortfolioFile(this)">
         </div>
-        <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged) · <b>Opp = Opportunistic</b>: counted like Include, but the fund's Asset class and Sub-sector become Opportunistic.</div>
+        <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Opp = Opportunistic</b>: counted like Include, but the fund's Asset class and Sub-sector become Opportunistic · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged).</div>
       </div>
       </div>
       <div class="editor-rail card" aria-label="Fund inputs hidden">
@@ -1320,7 +1320,7 @@ function cycleHoldingStatus(code){
   const h=state.holdings.find(x=>x.code===code);
   if (!h) return;
   const current=holdingStatus(h);
-  h.status=current==="include" ? "exclude" : current==="exclude" ? "just" : current==="just" ? "opp" : "include";
+  h.status=current==="include" ? "opp" : current==="opp" ? "exclude" : current==="exclude" ? "just" : "include";   // cycle: Include → Opportunistic → Exclude → Just Include
   delete h.excluded;
   render();
 }
