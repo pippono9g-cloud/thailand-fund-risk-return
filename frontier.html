@@ -8,9 +8,9 @@
 <style>
 /* Theme copied from the Risk-Return dashboard (Thailand_Fund_template_v3.html). */
 :root {
-  --scb:    #4F2D7F;
-  --scb-l:  #EFE9F7;
-  --scb-d:  #3a2160;
+  --scb:    #056DAE;
+  --scb-l:  #E6F1F9;
+  --scb-d:  #002D72;
   --cyan:   #00A3D9;
   --cyan-d: #007BB0;
   --amber:  #B45309;
@@ -42,7 +42,7 @@ html, body {
 .print-only { display:none; }
 h1 { margin:0; font-size:32px; font-weight:700; letter-spacing:-0.005em; }
 .card { border:1px solid var(--rule); border-radius:12px; padding:16px 18px; margin-top:18px;
-  box-shadow:0 1px 3px rgba(79,45,127,0.06); }
+  box-shadow:0 1px 3px rgba(5,109,174,0.06); }
 .panel-title { font-size:15px; font-weight:700; margin:0; }
 .panel-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .panel-row .spacer { flex:1; }
@@ -90,7 +90,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 .ctl-row input[type=number] { width:64px; }
 .ctl-row #cap-input, .ctl-row #gcap-input, .ctl-row #maxfunds-input, .ctl-row #minw-input { width:78px; }
-.bl-panel { margin:10px 0 2px; padding:10px 12px; border:1px solid var(--scb-l); border-radius:10px; background:#faf8fd; font-size:12.5px; }
+.bl-panel { margin:10px 0 2px; padding:10px 12px; border:1px solid var(--scb-l); border-radius:10px; background:#F4F9FD; font-size:12.5px; }
 .bl-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
 .bl-title { font-weight:700; color:var(--scb); }
 .bl-sub { color:var(--mute); font-size:12px; flex:1; min-width:220px; }
@@ -190,7 +190,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .zoom-row button:hover { border-color:var(--scb); color:var(--scb); }
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-slide { display:inline-flex; align-items:center; gap:6px; }
-.zoom-slide input[type=range] { width:220px; accent-color:var(--scb); }
+.zoom-slide input[type=range] { width:220px; accent-color:#056DAE; }
 .zoom-readout { font-size:12px; color:var(--mute); font-variant-numeric:tabular-nums; min-width:92px; }
 @media (hover:none) and (pointer:coarse) {
   .zoom-slide input[type=range] { width:200px; height:24px; }
@@ -203,22 +203,22 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 /* hover sync: a ring on the frontier and a line on the allocation chart mark the same portfolio */
 .chart-wrap { position:relative; }
 .hv-dot { position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
-  border:2.5px solid var(--scb); background:rgba(79,45,127,.18); pointer-events:none; z-index:5; }
+  border:2.5px solid var(--scb); background:rgba(5,109,174,.18); pointer-events:none; z-index:5; }
 .hv-line { position:absolute; width:0; border-left:1.5px solid var(--scb); pointer-events:none; z-index:5; }
 .empty-msg { display:flex; align-items:center; justify-content:center; text-align:center; height:100%;
   color:var(--mute); font-size:14px; border:1px dashed var(--rule); border-radius:10px; padding:20px; }
 
 .legend-note { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--mute); margin-top:6px; align-items:center; }
 .legend-note .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
-.legend-note .ul { display:inline-block; width:18px; height:0; border-top:2px dashed rgba(79,45,127,0.45); margin-right:5px; vertical-align:3px; }
+.legend-note .ul { display:inline-block; width:18px; height:0; border-top:2px dashed rgba(5,109,174,0.45); margin-right:5px; vertical-align:3px; }
 .legend-note .dl { display:inline-block; width:18px; height:0; border-top:2px dotted var(--amber); margin-right:5px; vertical-align:3px; }
-.legend-note .ln { display:inline-block; width:18px; height:3px; border-radius:2px; margin-right:5px; vertical-align:2px; background:var(--scb); }
+.legend-note .ln { display:inline-block; width:18px; height:3px; border-radius:2px; margin-right:5px; vertical-align:2px; background:#056DAE; }
 
 /* hover card — same look as the Risk-Return fund card */
 #pf-card {
   position:fixed; z-index:100; display:none; width:430px; max-width:calc(100vw - 32px); pointer-events:none;
   background:#fff; border:1px solid #cbd5e1; border-radius:14px;
-  box-shadow:0 12px 40px rgba(79,45,127,0.18); font-size:12px; overflow:hidden;
+  box-shadow:0 12px 40px rgba(5,109,174,0.18); font-size:12px; overflow:hidden;
 }
 /* pinned (clicked) card: stays open, can be read and scrolled, closed with x / Esc / click elsewhere */
 #pf-card.pinned { pointer-events:auto; border-color:var(--scb); max-height:calc(100vh - 16px); overflow-y:auto; }
@@ -244,7 +244,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .wt .n { font-size:10px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
 .wt .sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
 .wt td.bar { width:90px; padding:0 8px; }
-.wt td.bar span { display:block; height:7px; border-radius:4px; background:var(--scb); opacity:.75; }
+.wt td.bar span { display:block; height:7px; border-radius:4px; background:#056DAE; opacity:.75; }
 .wt td.pct { text-align:right; font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .wt tr.rest td { color:var(--mute); font-style:italic; }
 /* funds grouped by asset class (main category): one small tinted box per group */
@@ -301,7 +301,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
 .pf-pick button { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; padding:4px 10px; border:1px solid var(--rule);
   border-radius:7px; background:#fff; cursor:pointer; color:var(--grey); font-weight:600; }
 .pf-pick button:hover { border-color:var(--scb); color:var(--scb); }
-.pf-pick button.active { background:var(--scb); border-color:var(--scb); color:#fff; }
+.pf-pick button.active { background:#056DAE; border-color:#056DAE; color:#fff; }
 .pf-pick .mk { font-size:12px; line-height:1; }
 .pf-pick button.active .mk { color:#fff !important; }
 
@@ -511,7 +511,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <div class="pf-pick" id="pf-pick" role="group" aria-label="Select a portfolio">
         <button type="button" data-k="min"><span class="mk" style="color:#00A3D9">◆</span>Min variance</button>
         <button type="button" data-k="sharpe" class="active"><span class="mk" style="color:#B45309">★</span>Max Sharpe</button>
-        <button type="button" data-k="max"><span class="mk" style="color:#4F2D7F">▲</span>Max return</button>
+        <button type="button" data-k="max"><span class="mk" style="color:#056DAE">▲</span>Max return</button>
       </div>
     </div>
     <div class="comp-head">
@@ -524,7 +524,7 @@ table.dt .note { font-size:10px; color:var(--amber); }
       <span><span class="ln"></span>Efficient frontier — hover either chart for weights, click to select</span>
       <span><span class="sw" style="background:#00A3D9"></span>Min variance</span>
       <span><span class="sw" style="background:#B45309"></span>Max Sharpe</span>
-      <span><span class="sw" style="background:#4F2D7F"></span>Max return</span>
+      <span><span class="sw" style="background:#056DAE"></span>Max return</span>
       <span><span class="dl"></span>Capital Market Line: mixes of risk-free and the Max Sharpe portfolio</span>
       <span id="lg-hist" hidden><span class="hl"></span>Historical-return frontier (same funds), for comparison</span>
       <span id="lg-unlimited" hidden><span class="ul"></span>Frontier without the Max funds / Min weight limits</span>
@@ -1226,7 +1226,7 @@ function recomputeNow(){
     MODEL.peak = peak;
     const ord = [...peak.keys()].sort((a,b) => peak[b]-peak[a]);
     MODEL.color = new Array(ok.length);
-    ord.forEach((i, k) => MODEL.color[i] = `hsl(${(265 + k*137.508)%360},${k%2?52:64}%,${k%3===2?40:50}%)`);
+    ord.forEach((i, k) => MODEL.color[i] = `hsl(${(205 + k*137.508)%360},${k%2?52:64}%,${k%3===2?40:50}%)`);
   }
   render();
 }
@@ -1283,16 +1283,16 @@ function renderChart(){
     ...(m.frHist ? [{x: m.frHist.pts.map(p => p.sd*100), y: m.frHist.pts.map(p => p.ret*100), mode:"lines", type:"scatter",
       name:"historical", line:{color:"#9aa3b0", width:2, dash:"dash", shape:"spline", smoothing:0.6}, hoverinfo:"skip"}] : []),
     ...(m.frFull ? [{x: m.frFull.pts.map(p => p.sd*100), y: m.frFull.pts.map(p => p.ret*100), mode:"lines", type:"scatter",
-      name:"unlimited", line:{color:"rgba(79,45,127,0.35)", width:2, dash:"dash", shape:"spline", smoothing:0.6}, hoverinfo:"skip"}] : []),
+      name:"unlimited", line:{color:"rgba(5,109,174,0.35)", width:2, dash:"dash", shape:"spline", smoothing:0.6}, hoverinfo:"skip"}] : []),
     {x: fr.pts.map(p => p.sd*100), y: fr.pts.map(p => p.ret*100), mode:"lines+markers", type:"scatter", name:"frontier",
-     line:{color:"#4F2D7F", width:3, shape: m.frFull ? "linear" : "spline", smoothing:0.6}, marker:{size:6, color:"#4F2D7F", opacity:0.001},
+     line:{color:"#056DAE", width:3, shape: m.frFull ? "linear" : "spline", smoothing:0.6}, marker:{size:6, color:"#056DAE", opacity:0.001},
      hoverinfo:"none"},
     {x:[fr.minVar.sd*100], y:[fr.minVar.ret*100], mode:"markers", type:"scatter", name:"min",
      marker:{size:14, color:"#00A3D9", symbol:"diamond", line:{width:2, color:"#fff"}}, hoverinfo:"none"},
     {x:[fr.maxSharpe.sd*100], y:[fr.maxSharpe.ret*100], mode:"markers", type:"scatter", name:"sharpe",
      marker:{size:17, color:"#B45309", symbol:"star", line:{width:1.5, color:"#fff"}}, hoverinfo:"none"},
     {x:[fr.maxRet.sd*100], y:[fr.maxRet.ret*100], mode:"markers", type:"scatter", name:"max",
-     marker:{size:14, color:"#4F2D7F", symbol:"triangle-up", line:{width:1.5, color:"#fff"}}, hoverinfo:"none"},
+     marker:{size:14, color:"#056DAE", symbol:"triangle-up", line:{width:1.5, color:"#fff"}}, hoverinfo:"none"},
     {x:[sel.sd*100], y:[sel.ret*100], mode:"markers", type:"scatter", name:"selected",
      marker:{size:20, color:"rgba(0,0,0,0)", line:{width:2.5, color:"#1a1a1a"}}, hoverinfo:"none"},
   ];
@@ -1442,7 +1442,7 @@ function pfLabel(pf){
   return pf === fr.maxSharpe ? "Max Sharpe portfolio" : pf === fr.minVar ? "Min variance portfolio" :
          pf === fr.maxRet ? "Max return portfolio" : "Frontier portfolio";
 }
-const GROUP_PALETTE = ["#4F2D7F","#00A3D9","#B45309","#16A34A","#DC2626","#0891B2","#CA8A04","#DB2777","#64748B","#7C3AED"];
+const GROUP_PALETTE = ["#056DAE","#00A3D9","#B45309","#16A34A","#DC2626","#0891B2","#CA8A04","#DB2777","#64748B","#0e7490"];
 const GROUP_NAMES = [...new Set(FUNDS.map(f => f.main || "Other"))].sort();
 const groupColor = n => GROUP_PALETTE[GROUP_NAMES.indexOf(n || "Other") % GROUP_PALETTE.length];
 // split fund indices into asset-class groups, biggest group first, biggest fund first inside each
@@ -2109,8 +2109,8 @@ if (/[?&]print=1/.test(location.search)){
     } catch (e) {}
     const bar = document.createElement("div");
     bar.className = "no-print";
-    bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:300;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px;background:#4F2D7F;color:#fff;font-size:14px";
-    bar.innerHTML = '<span>Ready to print — tap Print, then Share / Save to Files for a PDF</span><button type="button" style="font:inherit;font-weight:700;padding:6px 16px;border:0;border-radius:8px;background:#fff;color:#4F2D7F">Print</button>';
+    bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:300;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px;background:#056DAE;color:#fff;font-size:14px";
+    bar.innerHTML = '<span>Ready to print — tap Print, then Share / Save to Files for a PDF</span><button type="button" style="font:inherit;font-weight:700;padding:6px 16px;border:0;border-radius:8px;background:#fff;color:#056DAE">Print</button>';
     bar.querySelector("button").onclick = () => { bar.style.display = "none"; printPage(); setTimeout(() => { bar.style.display = "flex"; }, 1500); };
     document.body.appendChild(bar);
   }, 800);

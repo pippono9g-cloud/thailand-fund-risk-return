@@ -7,7 +7,7 @@
 <script src="vendor/plotly-3.0.1.min.js" charset="utf-8"></script>
 <style>
   :root{
-    --scb:#6A1B9A; --scb-l:#F1E6F8; --scb-d:#4A148C; --ink:#1f2937; --grey:#4b5563; --mute:#9ca3af;
+    --scb:#056DAE; --scb-l:#E6F1F9; --scb-d:#056DAE; --ink:#1f2937; --grey:#4b5563; --mute:#9ca3af;
     --rule:#e5e7eb; --soft:#f1f5f9; --bg:#fbfbfd;
   }
   *{box-sizing:border-box}
@@ -42,10 +42,10 @@
   #drop.open{display:block}
   .opt{padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--soft);font-size:13px}
   .opt:last-child{border-bottom:none}
-  .opt:hover,.opt.hi{background:#f5edfb}
+  .opt:hover,.opt.hi{background:#EAF3FA}
   .opt b{color:var(--scb);font-weight:800} .opt .sub{color:var(--mute);font-size:11.5px}
   .presets button{font-size:12.5px;padding:6px 11px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--grey);cursor:pointer}
-  .presets button.active{background:var(--scb);color:#fff;border-color:var(--scb)}
+  .presets button.active{background:#056DAE;color:#fff;border-color:#056DAE}
   .presets button:hover:not(.active){border-color:var(--scb);color:var(--scb)}
   .date-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--soft)}
   .date-controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
@@ -55,7 +55,7 @@
               background:#fff;cursor:pointer;font-family:inherit;min-width:118px;text-align:left;
               font-variant-numeric:tabular-nums;font-weight:700}
   .dp-trigger:hover{border-color:var(--scb)}
-  .dp-trigger:focus{outline:none;border-color:var(--scb);box-shadow:0 0 0 2px rgba(106,27,154,0.12)}
+  .dp-trigger:focus{outline:none;border-color:var(--scb);box-shadow:0 0 0 2px rgba(5,109,174,0.12)}
   .dp-popup{position:absolute;z-index:1000;margin-top:6px;left:0;top:100%;
             background:#fff;border:1px solid var(--rule);border-radius:8px;
             box-shadow:0 6px 22px rgba(13,30,60,0.15);padding:12px;
@@ -64,11 +64,11 @@
   .dp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .dp-nav{background:none;border:1px solid transparent;border-radius:6px;cursor:pointer;
           padding:4px 10px;font-size:14px;color:var(--scb);font-family:inherit}
-  .dp-nav:hover{background:#f5edfb}
+  .dp-nav:hover{background:#EAF3FA}
   .dp-title{font-weight:700;font-size:13px;color:var(--ink);background:none;border:1px solid transparent;
             border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;
             display:inline-flex;align-items:center;gap:5px}
-  .dp-title:hover{background:#f5edfb;color:var(--scb)}
+  .dp-title:hover{background:#EAF3FA;color:var(--scb)}
   .dp-title::after{content:"▾";font-size:9px;color:var(--mute)}
   .dp-title.open::after{content:"▴"}
   .dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11.5px}
@@ -77,8 +77,8 @@
   .dp-day{text-align:center;padding:5px 0;cursor:pointer;border-radius:5px;
           color:var(--ink);font-variant-numeric:tabular-nums}
   .dp-day.empty{cursor:default}
-  .dp-day:hover:not(.empty):not(.disabled){background:#f5edfb;color:var(--scb)}
-  .dp-day.selected{background:var(--scb);color:#fff;font-weight:700}
+  .dp-day:hover:not(.empty):not(.disabled){background:#EAF3FA;color:var(--scb)}
+  .dp-day.selected{background:#056DAE;color:#fff;font-weight:700}
   .dp-day.disabled{color:#d4d8de;cursor:not-allowed}
   /* Month + Year selector inside calendar */
   .dp-moyr{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule)}
@@ -90,8 +90,8 @@
   .dp-mo-grid button,.dp-yr-grid button{
     padding:5px 0;font-size:11px;cursor:pointer;border:1px solid var(--rule);
     background:#fff;border-radius:5px;color:var(--ink);font-family:inherit}
-  .dp-mo-grid button:hover,.dp-yr-grid button:hover{background:#f5edfb;color:var(--scb);border-color:var(--scb)}
-  .dp-mo-grid button.current,.dp-yr-grid button.current{background:var(--scb);color:#fff;border-color:var(--scb);font-weight:700}
+  .dp-mo-grid button:hover,.dp-yr-grid button:hover{background:#EAF3FA;color:var(--scb);border-color:var(--scb)}
+  .dp-mo-grid button.current,.dp-yr-grid button.current{background:#056DAE;color:#fff;border-color:#056DAE;font-weight:700}
   .date-note{font-size:12px;color:var(--mute);margin-left:auto}
   .date-note b{color:var(--ink);font-weight:800}
   #chips{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 6px}
@@ -106,7 +106,7 @@
   .view-switch{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:#fff}
   .view-switch button{min-width:48px;height:28px;border:0;border-right:1px solid var(--rule);background:#fff;color:var(--grey);font:800 12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer}
   .view-switch button:last-child{border-right:0}
-  .view-switch button.active{background:var(--scb);color:#fff}
+  .view-switch button.active{background:#056DAE;color:#fff}
   #chart{width:100%;height:560px;margin-top:8px}
   .tbl-wrap{margin-top:10px;overflow:auto}
   table{border-collapse:collapse;width:100%;font-size:12.5px;table-layout:fixed}
@@ -123,7 +123,7 @@
     border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:11px 13px;width:210px;font-size:12px}
   #style-pop .sp-title{font-weight:800;font-size:12.5px;margin:-11px -13px 8px;padding:10px 13px 8px;
     display:flex;align-items:center;gap:6px;cursor:move;user-select:none;touch-action:none;
-    border-bottom:1px solid var(--soft);border-radius:10px 10px 0 0;background:#faf8fc}
+    border-bottom:1px solid var(--soft);border-radius:10px 10px 0 0;background:#F4F9FD}
   #style-pop .sp-title .grip{color:var(--mute);font-size:11px;letter-spacing:1px}
   #style-pop .sp-title .x{margin-left:auto;cursor:pointer;color:var(--mute);font-size:14px}
   #style-pop .sp-title .x:hover{color:var(--ink)}
@@ -145,7 +145,7 @@
   #style-pop .d-opt{flex:1;display:flex;align-items:center;justify-content:center;padding:9px 6px;
     border:1px solid var(--rule);border-radius:6px;cursor:pointer}
   #style-pop .d-opt:hover{border-color:var(--scb)}
-  #style-pop .d-opt.cur{border-color:var(--scb);background:#f5edfb}
+  #style-pop .d-opt.cur{border-color:var(--scb);background:#EAF3FA}
   #style-pop .d-opt .dline{width:100%;border-top-width:2px;border-top-color:#555}
   #style-pop .sp-reset{margin-top:9px;font-size:11.5px;color:var(--mute);cursor:pointer;text-decoration:underline}
   #style-pop .sp-reset:hover{color:var(--scb)}
@@ -281,7 +281,7 @@ const MIN_DATE = "2021-11-17";
 const MAX_DATE = "2026-11-20";
 /* High-contrast palette — purple first (default for the first selected fund),
  * then hues picked to stay distinguishable from each other on a white chart. */
-const PALETTE = ["#6A1B9A","#E11D48","#007FFF","#059669","#FF8C00","#0891B2",
+const PALETTE = ["#056DAE","#E11D48","#007FFF","#059669","#FF8C00","#0891B2",
                  "#DB2777","#1E3A8A","#CA8A04","#7C2D12","#111111","#64748B"];
 const MAXSEL = 12;
 const byId = new Map(META.map(m=>[m.i,m]));

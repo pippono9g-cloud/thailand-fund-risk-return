@@ -7,9 +7,9 @@
 <script src="vendor/plotly-3.0.1.min.js" charset="utf-8"></script>
 <style>
 :root {
-  --scb:    #4F2D7F;   /* Siam Commercial Bank purple */
-  --scb-l:  #EFE9F7;
-  --scb-d:  #3a2160;
+  --scb:    #056DAE;   /* Siam Commercial Bank purple */
+  --scb-l:  #E6F1F9;
+  --scb-d:  #002D72;
   --cyan:   #00A3D9;
   --cyan-d: #007BB0;
   --amber:  #B45309;
@@ -40,7 +40,7 @@ h1 { margin:0; font-size:32px; font-weight:700; letter-spacing:-0.005em; flex:1;
 .tag span { padding:4px 14px; border-right:1px solid var(--ink); background:#fff; }
 .tag span:last-child { border-right:none; }
 .card { border:1px solid var(--rule); border-radius:12px; padding:16px 18px; margin-top:18px;
-  box-shadow:0 1px 3px rgba(79,45,127,0.06); }
+  box-shadow:0 1px 3px rgba(5,109,174,0.06); }
 .panel-title { font-size:15px; font-weight:700; margin:0; }
 .page-notes { margin-top:12px; padding-top:10px; border-top:1px solid var(--rule); }
 
@@ -202,14 +202,14 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 
 .zoom-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 2px; font-size:12.5px; }
 .zoom-row label { font-weight:600; }
-.zoom-presets button.active { background:var(--scb); color:#fff; border-color:var(--scb); }
+.zoom-presets button.active { background:#056DAE; color:#fff; border-color:#056DAE; }
 .zoom-row button:hover { border-color:var(--scb); color:var(--scb); }
-.zoom-row input[type=range] { width:170px; accent-color:var(--scb); touch-action:auto; }
+.zoom-row input[type=range] { width:170px; accent-color:#056DAE; touch-action:auto; }
 .sd-inputs{display:inline-flex;align-items:center;gap:6px;padding:3px 6px;border:1px solid #d8dce2;border-radius:8px;background:#fff}
 .sd-inputs label{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--grey);font-weight:600}
 .sd-inputs input[type=number]{width:60px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;color:var(--ink)}
-.sd-inputs button{padding:5px 10px;background:var(--scb);border-color:var(--scb);color:#fff;font-weight:700}
-.zoom-row .sd-inputs button:hover{background:var(--scb-deep);border-color:var(--scb-deep);color:#fff}
+.sd-inputs button{padding:5px 10px;background:#056DAE;border-color:#056DAE;color:#fff;font-weight:700}
+.zoom-row .sd-inputs button:hover{background:#056DAE;border-color:#056DAE;color:#fff}
 .zoom-row .reset-btn { border-color:var(--scb); color:var(--scb); font-weight:700; }
 .zoom-row .step-btn  { font-weight:700; min-width:34px; padding:5px 8px; font-size:14px; line-height:1; }
 /* Convert Filter to Watermark: same look as the other buttons here (rounded, 12px) in the purple theme:
@@ -217,8 +217,8 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .wm-row .watermark-btn { font:700 12px Arial, Helvetica, "Segoe UI", sans-serif; padding:5px 14px; min-width:196px; text-align:center; white-space:nowrap;
   border:1px solid var(--scb); border-radius:7px; background:#fff; color:var(--scb); cursor:pointer; }
 .wm-row .watermark-btn:hover { border-color:var(--scb); background:var(--scb-l); color:var(--scb-d); }
-.wm-row .watermark-btn.active { background:var(--scb); border-color:var(--scb); color:#fff; }
-.wm-row .watermark-btn.active:hover { background:var(--scb-d); border-color:var(--scb-d); color:#fff; }
+.wm-row .watermark-btn.active { background:#056DAE; border-color:#056DAE; color:#fff; }
+.wm-row .watermark-btn.active:hover { background:#056DAE; border-color:#056DAE; color:#fff; }
 
 #chart { width:100%; height:560px; margin-top:6px;
   /* iPad / touch: route pinch + drag to Plotly instead of letting the browser
@@ -243,7 +243,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card {
   position:fixed; z-index:100; display:none; width:700px; max-width:calc(100vw - 32px); pointer-events:none;
   background:#fff; border:1px solid #cbd5e1; border-radius:14px;
-  box-shadow:0 12px 40px rgba(79,45,127,0.18); padding:0; font-size:12px;
+  box-shadow:0 12px 40px rgba(5,109,174,0.18); padding:0; font-size:12px;
   max-height:calc(100vh - 32px); box-sizing:border-box; overflow:hidden;
 }
 #hover-card .card-head {
@@ -315,7 +315,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card.pinned.has-details .details-toggle { display:flex; }
 #hover-card .details-toggle svg { display:block; transition:transform .15s; }
 #hover-card.details-open .details-toggle svg { transform:rotate(180deg); }
-#hover-card .details-toggle:hover { color:#2f1763; background:transparent; }
+#hover-card .details-toggle:hover { color:#002D72; background:transparent; }
 #hover-card .resize-edge { position:absolute; z-index:10; display:none; touch-action:none; }
 #hover-card.pinned .resize-edge { display:block; }
 #hover-card .resize-edge.corner {
@@ -324,11 +324,11 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 }
 #hover-card .resize-edge.corner::after {
   content:""; position:absolute; right:5px; bottom:5px; width:10px; height:10px;
-  border-right:2px solid #9b8ab6; border-bottom:2px solid #9b8ab6;
+  border-right:2px solid #7a9bb8; border-bottom:2px solid #7a9bb8;
 }
 #hover-card.pinned .resize-edge, #hover-card.pinned .resize-edge * { cursor:inherit; }
 #hover-card.pinned .resize-edge.corner { cursor:nwse-resize; }
-#hover-card.pinned .resize-edge:hover { background:rgba(79,45,127,.10); }
+#hover-card.pinned .resize-edge:hover { background:rgba(5,109,174,.10); }
 /* On a touch screen the card is centred under the chart area so the user
    can read it without their finger covering the data. */
 @media (hover:none) and (pointer:coarse) {
@@ -361,7 +361,7 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 #hover-card .rr-sub { font-size:10.5px; font-weight:700; color:var(--mute); margin-bottom:8px; }
 #hover-card .rr-ids { font-size:9.5px; color:var(--mute); line-height:1.45; margin-bottom:1px; }
 #hover-card .rr-kpis { display:grid; grid-template-columns:repeat(3, 1fr); background:var(--scb-l); border-radius:10px; padding:8px 4px; margin-bottom:6px; }
-#hover-card .rr-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid rgba(79,45,127,.18); min-width:0; }
+#hover-card .rr-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid rgba(5,109,174,.18); min-width:0; }
 #hover-card .rr-kpis > div:first-child { border-left:0; }
 #hover-card .rr-kpis .k { font-size:8.5px; font-weight:700; color:var(--mute); white-space:nowrap; }
 #hover-card .rr-kpis b { font-size:12px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -630,7 +630,7 @@ const FUNDS = [{"code":"ES-TM","name":"Eastspring Treasury Money Fund","cat":"Mo
 
 const WINDOWS = ["1 Week","MTD","1 Month","3 Months","6 Months","YTD","1 Year","3 Years","5 Years"];
 const WIN_SHORT = ["1W","MTD","1M","3M","6M","YTD","1Y","3Y","5Y"];
-const WIN_COLORS = ["#007FFF","#8b5cf6","#10b981","#d97706","#ea580c","#9333ea","#db2777","#0d9488","#4338ca"];
+const WIN_COLORS = ["#007FFF","#0891b2","#10b981","#d97706","#ea580c","#7c8a00","#db2777","#0d9488","#4338ca"];
 
 // state.picks is an array of exact fund codes (each chosen from the Find
 // dropdown). We use an array, not a space-separated string, because some Thai
@@ -912,17 +912,17 @@ const CAT_RET_MEAN = (() => {
 const CAT_COLOR_MAP = {
   "Japan Equity":"#c81e1e", "US Equity":"#1d4ed8", "China Equity - A Shares":"#ea580c", "China Equity":"#ea580c",
   "Greater China Equity":"#c2410c", "Asia Pacific Ex Japan":"#0d9488", "Asia Pacific ex-Japan Equity":"#0d9488",
-  "Emerging Market":"#a21caf", "India Equity":"#ca8a04", "Vietnam Equity":"#15803d", "European Equity":"#0284c7",
+  "Emerging Market":"#b45f06", "India Equity":"#ca8a04", "Vietnam Equity":"#15803d", "European Equity":"#0284c7",
   "ASEAN Equity":"#0e7490",
   "Global Equity":"#1e3a8a", "Global Equity Fully FX Risk Hedge":"#1e40af",
   "Equity Large Cap":"#4338ca", "SET 50 Index Fund":"#3730a3", "Equity Small - Mid Cap":"#6366f1", "Equity General":"#4f46e5",
   "Health Care":"#be185d", "Technology Equity":"#0e7490", "Global Equity - Consumer Goods and Services":"#c0267c",
   "Global Equity - Infrastructure":"#9d174d", "Global Equity - Alternative Energy":"#047857",
   "Other Global Sector Equity":"#7f1d4f", "Energy":"#b45309",
-  "Short Term General Bond":"#7c3aed", "Mid Term General Bond":"#6d28d9", "Mid Term Government Bond":"#5b21b6",
-  "Long Term General Bond":"#4c1d95", "Short Term Government Bond":"#7e57c2",
-  "Global Bond Discretionary F/X Hedge or Unhedge":"#6b21a8", "Emerging Market Bond Discretionary F/X Hedge or Unhedge":"#86198f",
-  "Global Bond Fully F/X Hedge":"#581c87", "High Yield Bond":"#7c2d92",
+  "Short Term General Bond":"#0e7490", "Mid Term General Bond":"#155e75", "Mid Term Government Bond":"#164e63",
+  "Long Term General Bond":"#134e4a", "Short Term Government Bond":"#056DAE",
+  "Global Bond Discretionary F/X Hedge or Unhedge":"#0891b2", "Emerging Market Bond Discretionary F/X Hedge or Unhedge":"#0f766e",
+  "Global Bond Fully F/X Hedge":"#115e59", "High Yield Bond":"#2c7a7b",
   "Aggressive Allocation":"#365314", "Moderate Allocation":"#4d7c0f", "Conservative Allocation":"#577f12",
   "Foreign Investment Allocation":"#6b7a10",
   "Money Market Government":"#64748b", "Money Market General":"#475569",
@@ -941,7 +941,7 @@ const CAT_COLOR = (() => {
 // One colour per Main group, in the same family as its sub-categories where they share one.
 const MAIN_COLOR_MAP = {
   "Equity — Country / Region":"#0f766e", "Thai Equity / Index":"#4338ca", "Equity — Sector / Theme":"#be185d",
-  "Equity — Global / Broad":"#1e3a8a", "Allocation / Multi-asset":"#4d7c0f", "Fixed Income":"#6d28d9",
+  "Equity — Global / Broad":"#1e3a8a", "Allocation / Multi-asset":"#4d7c0f", "Fixed Income":"#155e75",
   "Property / REITs":"#92400e", "Commodities":"#946b00", "Money Market":"#475569", "Other":"#57534e"
 };
 const MAIN_COLOR = (() => {
@@ -1111,7 +1111,7 @@ function rrStatsHTML(f, sp, winLabel, sd){
   const mk = (label, val, cat, pct, proxy) => {
     if (proxy) { val = "—"; pct = null; proxy = false; }   // never show the fund's own proxied / implied figure; the category value stays
     const hasL2 = cat!=null || pct!=null;
-    return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#9333ea">*</span>':'')+'</b></div>' +
+    return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#7c8a00">*</span>':'')+'</b></div>' +
       (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+msPct(Math.round(pct)) : '')+'</span><span>'+(cat!=null ? PEER_TXT[peerLevel].short+' '+cat : '')+'</span></div>' : '') + '</div>';
   };
   // A young fund's 1Y figure is only an implied one, so it is not shown.
@@ -1305,7 +1305,7 @@ function buildSpiderSVG(sp, winCap, avgTxt){
     svg += '<text x="'+g.x+'" y="'+g.y+'" font-size="15" font-weight="800" fill="'+g.c+'" text-anchor="middle"><title>'+g.tip+'</title>'+g.t+'</text>';
   if (hasBench) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = ' + (avgTxt || 'sub-category avg') + '</text>';
   // Data timeframe the radar (and the statistics beside it) are based on.
-  svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
+  svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#155e75" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
 }
 
@@ -1439,7 +1439,7 @@ function drawChart(list){
     text: arr.map(codeOrBlank),
     hovertemplate: "<b>%{text}</b><extra></extra>",
     mode: "markers", type: "scattergl", name, marker,
-    hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
+    hoverlabel: { bgcolor:"#ffffff", bordercolor:"#056DAE", font:{size:11, color:"#056DAE"} }
   });
 
   const traces = [];
@@ -1456,7 +1456,7 @@ function drawChart(list){
         size: watermarkPts.map(f=>Math.max(4, Math.min(9, f.size || 6))),
         line: { width:0, color:"rgba(0,0,0,0)" }
       },
-      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#4F2D7F", font:{size:11, color:"#4F2D7F"} }
+      hoverlabel: { bgcolor:"#ffffff", bordercolor:"#056DAE", font:{size:11, color:"#056DAE"} }
     });
   }
   const markerSize = (arr, activeLineWidth, baseLineWidth) => arr.map(f => {
@@ -1464,8 +1464,8 @@ function drawChart(list){
     return state.watermark ? Math.max(4, size - Math.max(0, activeLineWidth - baseLineWidth)) : size;
   });
   const focusOpacity = 0.55;
-  const directLine = state.watermark ? {width:1.4, color:"#4F2D7F"} : {width:0.5, color:"#ffffff"};
-  const proxyLine = state.watermark ? {width:1.8, color:"#4F2D7F"} : {width:1.8, color:"#B45309"};
+  const directLine = state.watermark ? {width:1.4, color:"#056DAE"} : {width:0.5, color:"#ffffff"};
+  const proxyLine = state.watermark ? {width:1.8, color:"#056DAE"} : {width:1.8, color:"#B45309"};
   traces.push(
     mkTrace(direct, "direct", { color: col, opacity:focusOpacity, size: markerSize(direct, directLine.width, 0.5), line:directLine }),
     mkTrace(proxy, "proxy", { color: col, opacity:focusOpacity, size: markerSize(proxy, proxyLine.width, 1.8), line:proxyLine })
@@ -1488,7 +1488,7 @@ function drawChart(list){
       // very long names so the tag doesn't swallow the chart.
       text: pinnedPts.map(f => f.code + " — " + ((f.name||"").length > 30 ? f.name.slice(0,29) + "…" : (f.name||""))),
       textposition: "top center",
-      textfont: { color:"#4F2D7F", size:11, family:"Arial, sans-serif" },
+      textfont: { color:"#056DAE", size:11, family:"Arial, sans-serif" },
       hovertemplate: " <extra></extra>",
       mode: "markers+text", type: "scatter", name: "locked card selection",
       marker: {
@@ -1496,7 +1496,7 @@ function drawChart(list){
         size: pinnedPts.map(f => Math.max(6, Math.min(14, f.size || 8))),
         color: col,
         opacity: 1,
-        line: { color:"#4F2D7F", width:2.5 }
+        line: { color:"#056DAE", width:2.5 }
       },
       showlegend: false
     });
@@ -1610,7 +1610,7 @@ function drawChart(list){
 const hairPill = (cx, cy, txt, anchor) => {
   const w = txt.length * 6.6 + 10, rx = anchor === "end" ? cx - w : cx - w / 2;
   return '<rect x="' + rx.toFixed(1) + '" y="' + (cy - 9).toFixed(1) + '" width="' + w.toFixed(1) +
-    '" height="18" rx="3" fill="#4F2D7F"/><text x="' + (rx + w / 2).toFixed(1) + '" y="' + (cy + 4).toFixed(1) +
+    '" height="18" rx="3" fill="#056DAE"/><text x="' + (rx + w / 2).toFixed(1) + '" y="' + (cy + 4).toFixed(1) +
     '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial,sans-serif">' + txt + '</text>';
 };
 function hideHairlines(){ const s = document.getElementById("rr-hair"); if (s) s.style.display = "none"; }
@@ -1632,9 +1632,9 @@ function drawHairlines(gd, p){
   const pill = hairPill;
   s.innerHTML =
     '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + y1.toFixed(1) +
-      '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+      '" stroke="#056DAE" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
     '<line x1="' + x0.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
-      '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+      '" stroke="#056DAE" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
     pill(px, y1 + 12, p.x.toFixed(2) + "%", "middle") +
     pill(x0 - 4, py, (p.y > 0 ? "+" : "") + p.y.toFixed(2) + "%", "end");
   s.style.display = "block";
@@ -1661,9 +1661,9 @@ function drawPinnedHairlines(){
     const px = xa._offset + xa.l2p(xa.d2l(vx)), py = ya._offset + ya.l2p(ya.d2l(vy));
     if (!(px >= x0 - 1 && px <= x0 + xa._length + 1 && py >= y0 - 1 && py <= y1 + 1)) return;   // off-screen: no lines
     h += '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + y1.toFixed(1) +
-           '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+           '" stroke="#056DAE" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
          '<line x1="' + x0.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
-           '" stroke="#4F2D7F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
+           '" stroke="#056DAE" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>' +
          hairPill(px, y1 + 12, vx.toFixed(2) + "%", "middle") +
          hairPill(x0 - 4, py, (vy > 0 ? "+" : "") + vy.toFixed(2) + "%", "end");
   });

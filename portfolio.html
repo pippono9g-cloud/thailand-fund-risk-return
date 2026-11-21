@@ -6,7 +6,7 @@
 <title>Portfolio Analysts · Thailand Mutual Funds</title>
 <style>
 :root {
-  --scb:#4f238a; --cyan:#00aef0; --ink:#0b1a3a; --grey:#6b7280; --mute:#9ca3af;
+  --scb:#056DAE; --cyan:#00aef0; --ink:#0b1a3a; --grey:#6b7280; --mute:#9ca3af;
   --rule:#dbe1ea; --soft:#eef2f7; --bg:#fafbfd; --green:#15803d; --red:#b91c1c;
   --amber:#92400e; --grid:#e5e7eb;
 }
@@ -213,7 +213,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .basis-toggle { display:flex; margin-left:auto; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
 .basis-toggle button { border:0; background:#fff; color:var(--grey); padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; }
 .basis-toggle button + button { border-left:1px solid var(--rule); }
-.basis-toggle button.active { background:var(--scb); color:#fff; }
+.basis-toggle button.active { background:#056DAE; color:#fff; }
 .big-ret { margin:6px 0 16px; padding:18px 16px; border-radius:8px;
            background:linear-gradient(135deg, #f8fafe, #f0fafe); border:1px solid var(--soft);
            text-align:center; }
@@ -241,7 +241,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .donut text { font-size:11px; fill:var(--grey); }
 .donut-seg { cursor:pointer; transition:opacity .12s; }
 .donut-seg:hover { opacity:.82; }
-#donut-tip.pinned { pointer-events:auto; cursor:grab; user-select:none; box-shadow:0 12px 40px rgba(79,45,127,.28); }
+#donut-tip.pinned { pointer-events:auto; cursor:grab; user-select:none; box-shadow:0 12px 40px rgba(5,109,174,.28); }
 #donut-tip.pinned.dragging { cursor:grabbing; }
 #donut svg.has-sel .donut-seg:not(.sel) { opacity:.22; }   /* a slice was clicked: the other slices drop back */
 #donut svg.has-sel .donut-seg.sel { opacity:1; }
@@ -254,19 +254,19 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .model-btns button.model-opp { flex:0 0 auto; padding:4px 10px; margin-left:6px; border-left:3px solid #db2777; }
 .model-btns button.model-opp:disabled { opacity:.45; cursor:not-allowed; }
 .model-btns button:hover { border-color:var(--cyan); color:var(--ink); }
-.model-btns button.active { background:#5b2a86; border-color:#5b2a86; color:#fff; }
+.model-btns button.active { background:#056DAE; border-color:#056DAE; color:#fff; }
 .model-sub { text-align:center; font-size:11px; color:var(--grey); font-weight:600; }
 .model-active { margin-top:2px; color:var(--ink); } .model-active b { font-weight:800; }
 .model-note { font-size:10.5px; color:var(--grey); text-align:center; }
 /* Allocation pie info box: same theme as the Risk & Return Fund Card (white card, navy title, lavender KPI strip, green / red figures). */
 .donut-tip { position:absolute; display:none; pointer-events:none; z-index:6; background:#f1f2f4; color:#1a1a1a;
   font:12px/1.45 Arial, Helvetica, "Segoe UI", "Noto Sans Thai", sans-serif; padding:12px 14px 10px; border-radius:14px; border:1px solid #d1d5db;
-  width:max-content; min-width:270px; max-width:min(460px, 92vw); box-shadow:0 12px 40px rgba(79,45,127,.18); }
+  width:max-content; min-width:270px; max-width:min(460px, 92vw); box-shadow:0 12px 40px rgba(5,109,174,.18); }
 .donut-tip .dt-head { margin-bottom:4px; }
 .donut-tip .dt-title { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13.5px; font-weight:800; color:#0b2a5b; letter-spacing:-0.01em; line-height:1.25; }
 .donut-tip .dt-bar { flex:0 0 5px; align-self:stretch; min-height:15px; border-radius:3px; }
-.donut-tip .dt-kpis { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:#EFE9F7; border-radius:10px; padding:8px 4px; }
-.donut-tip .dt-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 10px; border-left:1px solid rgba(79,45,127,.18); min-width:0; }
+.donut-tip .dt-kpis { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:#E6F1F9; border-radius:10px; padding:8px 4px; }
+.donut-tip .dt-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 10px; border-left:1px solid rgba(5,109,174,.18); min-width:0; }
 .donut-tip .dt-kpis > div:first-child { border-left:0; }
 .donut-tip .dt-kpis .k { font-size:9.5px; font-weight:700; color:#666; white-space:nowrap; }
 .donut-tip .dt-kpis b { font-size:13px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -495,7 +495,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
 #hover-card {
   position:fixed; z-index:100; display:none; width:700px; max-width:calc(100vw - 32px); pointer-events:none;
   background:#fff; border:1px solid #cbd5e1; border-radius:14px;
-  box-shadow:0 12px 40px rgba(79,45,127,0.18); padding:0; font-size:12px;
+  box-shadow:0 12px 40px rgba(5,109,174,0.18); padding:0; font-size:12px;
   max-height:calc(100vh - 32px); box-sizing:border-box; overflow:hidden;
 }
 #hover-card .card-head {
@@ -567,7 +567,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
 #hover-card.pinned.has-details .details-toggle { display:flex; }
 #hover-card .details-toggle svg { display:block; transition:transform .15s; }
 #hover-card.details-open .details-toggle svg { transform:rotate(180deg); }
-#hover-card .details-toggle:hover { color:#2f1763; background:transparent; }
+#hover-card .details-toggle:hover { color:#002D72; background:transparent; }
 #hover-card .resize-edge { position:absolute; z-index:10; display:none; touch-action:none; }
 #hover-card.pinned .resize-edge { display:block; }
 #hover-card .resize-edge.corner {
@@ -576,11 +576,11 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
 }
 #hover-card .resize-edge.corner::after {
   content:""; position:absolute; right:5px; bottom:5px; width:10px; height:10px;
-  border-right:2px solid #9b8ab6; border-bottom:2px solid #9b8ab6;
+  border-right:2px solid #7a9bb8; border-bottom:2px solid #7a9bb8;
 }
 #hover-card.pinned .resize-edge, #hover-card.pinned .resize-edge * { cursor:inherit; }
 #hover-card.pinned .resize-edge.corner { cursor:nwse-resize; }
-#hover-card.pinned .resize-edge:hover { background:rgba(79,45,127,.10); }
+#hover-card.pinned .resize-edge:hover { background:rgba(5,109,174,.10); }
 /* On a touch screen the card is centred under the chart area so the user
    can read it without their finger covering the data. */
 @media (hover:none) and (pointer:coarse) {
@@ -613,7 +613,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
 #hover-card .rr-sub { font-size:10.5px; font-weight:700; color:var(--mute); margin-bottom:8px; }
 #hover-card .rr-ids { font-size:9.5px; color:var(--mute); line-height:1.45; margin-bottom:1px; }
 #hover-card .rr-kpis { display:grid; grid-template-columns:repeat(3, 1fr); background:var(--scb-l); border-radius:10px; padding:8px 4px; margin-bottom:6px; }
-#hover-card .rr-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid rgba(79,45,127,.18); min-width:0; }
+#hover-card .rr-kpis > div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid rgba(5,109,174,.18); min-width:0; }
 #hover-card .rr-kpis > div:first-child { border-left:0; }
 #hover-card .rr-kpis .k { font-size:8.5px; font-weight:700; color:var(--mute); white-space:nowrap; }
 #hover-card .rr-kpis b { font-size:12px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -679,7 +679,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
 }
 
 /* Risk & Return Card: the dashboard's palette applies inside the Card only */
-#hover-card, .card-menu, .card-toast { --scb:#4F2D7F; --scb-l:#EFE9F7; --scb-d:#3a2160; --cyan:#00A3D9; --amber:#B45309;
+#hover-card, .card-menu, .card-toast { --scb:#056DAE; --scb-l:#E6F1F9; --scb-d:#002D72; --cyan:#00A3D9; --amber:#B45309;
   --ink:#1a1a1a; --grey:#4d4d4d; --mute:#666666; --rule:#cccccc; --grid:#e5e5e5; --soft:#f2f2f2; --green:#047857; --red:#b91c1c;
   font-family:Arial, Helvetica, "Segoe UI", "Noto Sans Thai", sans-serif; }
 #hover-card { font-size:12px; line-height:1.45; color:#1a1a1a; text-align:left; letter-spacing:0; text-transform:none; font-weight:400; }
@@ -1673,13 +1673,13 @@ const CAT_COLOR = {
   "Equity — Country / Region": "#1e40af",   // deep blue
   "Equity — Global / Broad":   "#3b82f6",   // mid blue
   "Equity — Sector / Theme":   "#06b6d4",   // cyan
-  "Thai Equity / Index":       "#4f238a",   // SCB purple
+  "Thai Equity / Index":       "#056DAE",   // SCB purple
   "Allocation / Multi-asset":  "#f59e0b",   // amber
   "Fixed Income":              "#15803d",   // green
   "Money Market":              "#84cc16",   // lime
   "Property / REITs":          "#b45309",   // brown
   "Commodities":               "#dc2626",   // red
-  "Alternatives / Private":    "#9333ea",   // violet
+  "Alternatives / Private":    "#7c8a00",   // violet
   "Other":                     "#6b7280",   // grey
   "Opportunistic":             "#db2777",   // pink (SCB FIRST opportunistic sleeve; only used when the Opportunistic switch is on)
 };
@@ -1788,7 +1788,7 @@ function groupByCat(curves){
 }
 
 /* ---------- performance chart: each holding + portfolio, rebased to 100 ---------- */
-const LINE_COLORS = ["#00aef0","#f59e0b","#15803d","#db2777","#9333ea","#0d9488","#ea580c","#2563eb","#84cc16","#b45309","#0891b2","#dc2626","#4338ca","#65a30d","#c026d3"];
+const LINE_COLORS = ["#00aef0","#f59e0b","#15803d","#db2777","#7c8a00","#0d9488","#ea580c","#2563eb","#84cc16","#b45309","#0891b2","#dc2626","#4338ca","#65a30d","#9a3412"];
 
 function drawPerfChart(curves){
   const $w = document.getElementById("chart-wrap");
@@ -2045,17 +2045,17 @@ const CAT_RET_MEAN = (() => {
 const CAT_COLOR_MAP = {
   "Japan Equity":"#c81e1e", "US Equity":"#1d4ed8", "China Equity - A Shares":"#ea580c", "China Equity":"#ea580c",
   "Greater China Equity":"#c2410c", "Asia Pacific Ex Japan":"#0d9488", "Asia Pacific ex-Japan Equity":"#0d9488",
-  "Emerging Market":"#a21caf", "India Equity":"#ca8a04", "Vietnam Equity":"#15803d", "European Equity":"#0284c7",
+  "Emerging Market":"#b45f06", "India Equity":"#ca8a04", "Vietnam Equity":"#15803d", "European Equity":"#0284c7",
   "ASEAN Equity":"#0e7490",
   "Global Equity":"#1e3a8a", "Global Equity Fully FX Risk Hedge":"#1e40af",
   "Equity Large Cap":"#4338ca", "SET 50 Index Fund":"#3730a3", "Equity Small - Mid Cap":"#6366f1", "Equity General":"#4f46e5",
   "Health Care":"#be185d", "Technology Equity":"#0e7490", "Global Equity - Consumer Goods and Services":"#c0267c",
   "Global Equity - Infrastructure":"#9d174d", "Global Equity - Alternative Energy":"#047857",
   "Other Global Sector Equity":"#7f1d4f", "Energy":"#b45309",
-  "Short Term General Bond":"#7c3aed", "Mid Term General Bond":"#6d28d9", "Mid Term Government Bond":"#5b21b6",
-  "Long Term General Bond":"#4c1d95", "Short Term Government Bond":"#7e57c2",
-  "Global Bond Discretionary F/X Hedge or Unhedge":"#6b21a8", "Emerging Market Bond Discretionary F/X Hedge or Unhedge":"#86198f",
-  "Global Bond Fully F/X Hedge":"#581c87", "High Yield Bond":"#7c2d92",
+  "Short Term General Bond":"#0e7490", "Mid Term General Bond":"#155e75", "Mid Term Government Bond":"#164e63",
+  "Long Term General Bond":"#134e4a", "Short Term Government Bond":"#056DAE",
+  "Global Bond Discretionary F/X Hedge or Unhedge":"#0891b2", "Emerging Market Bond Discretionary F/X Hedge or Unhedge":"#0f766e",
+  "Global Bond Fully F/X Hedge":"#115e59", "High Yield Bond":"#2c7a7b",
   "Aggressive Allocation":"#365314", "Moderate Allocation":"#4d7c0f", "Conservative Allocation":"#577f12",
   "Foreign Investment Allocation":"#6b7a10",
   "Money Market Government":"#64748b", "Money Market General":"#475569",
@@ -2074,7 +2074,7 @@ const CAT_COLOR = (() => {
 // One colour per Main group, in the same family as its sub-categories where they share one.
 const MAIN_COLOR_MAP = {
   "Equity — Country / Region":"#0f766e", "Thai Equity / Index":"#4338ca", "Equity — Sector / Theme":"#be185d",
-  "Equity — Global / Broad":"#1e3a8a", "Allocation / Multi-asset":"#4d7c0f", "Fixed Income":"#6d28d9",
+  "Equity — Global / Broad":"#1e3a8a", "Allocation / Multi-asset":"#4d7c0f", "Fixed Income":"#155e75",
   "Property / REITs":"#92400e", "Commodities":"#946b00", "Money Market":"#475569", "Other":"#57534e"
 };
 const MAIN_COLOR = (() => {
@@ -2244,7 +2244,7 @@ function rrStatsHTML(f, sp, winLabel, sd){
   const mk = (label, val, cat, pct, proxy) => {
     if (proxy) { val = "—"; pct = null; proxy = false; }   // never show the fund's own proxied / implied figure; the category value stays
     const hasL2 = cat!=null || pct!=null;
-    return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#9333ea">*</span>':'')+'</b></div>' +
+    return '<div class="rr-stat"><div class="l1"><span>'+label+'</span><b>'+val+(proxy?'<span style="color:#7c8a00">*</span>':'')+'</b></div>' +
       (hasL2 ? '<div class="l2"><span>'+(pct!=null ? '%ile '+msPct(Math.round(pct)) : '')+'</span><span>'+(cat!=null ? PEER_TXT[peerLevel].short+' '+cat : '')+'</span></div>' : '') + '</div>';
   };
   // A young fund's 1Y figure is only an implied one, so it is not shown.
@@ -2438,7 +2438,7 @@ function buildSpiderSVG(sp, winCap, avgTxt){
     svg += '<text x="'+g.x+'" y="'+g.y+'" font-size="15" font-weight="800" fill="'+g.c+'" text-anchor="middle"><title>'+g.tip+'</title>'+g.t+'</text>';
   if (hasBench) svg += '<text x="'+(W-2)+'" y="'+(H-2)+'" font-size="9" fill="#475569" text-anchor="end">dashed = ' + (avgTxt || 'sub-category avg') + '</text>';
   // Data timeframe the radar (and the statistics beside it) are based on.
-  svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#6d28d9" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
+  svg += '<text x="2" y="'+(H-2)+'" font-size="9" text-anchor="start"><tspan fill="#94a3b8">based on </tspan><tspan fill="#155e75" font-weight="700">'+(winCap||'1 Year')+'</tspan></text>';
   return svg + "</svg>";
 }
 

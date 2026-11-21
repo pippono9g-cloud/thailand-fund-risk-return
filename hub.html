@@ -7,31 +7,31 @@
 <title>Investment Insights Hub</title>
 <style>
   :root{
-    --scb:#4f2d7f;--scb-deep:#2d1a4a;--scb-soft:#f5f1fa;--cyan:#00a3d9;
-    --ink:#1b1b1f;--muted:#67636d;--line:#ded9e7;--white:#fff;
+    --scb:#056DAE;--scb-deep:#002D72;--scb-soft:#EEF5FB;--cyan:#00a3d9;
+    --ink:#1b1b1f;--muted:#67636d;--line:#d9e2ec;--white:#fff;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--scb-soft);color:var(--ink);
     font-family:Arial,Helvetica,"Segoe UI","Noto Sans Thai",sans-serif}
   body{display:flex;flex-direction:column;min-height:100vh}
-  .topbar{background:linear-gradient(105deg,var(--scb-deep),#3d2263);color:#fff;
+  .topbar{background:#003B70;color:#fff;
     box-shadow:0 2px 12px rgba(26,12,45,.18);position:relative;z-index:2}
   .topbar-inner{max-width:1500px;margin:auto;padding:0 24px;display:flex;align-items:stretch;gap:22px}
-  .brand{display:flex;align-items:center;gap:10px;padding:11px 0;min-width:max-content}
-  .brand-mark{width:30px;height:30px;display:grid;place-items:center;color:#fff;flex:0 0 30px}
-  .brand-mark svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .brand-text{height:30px;display:flex;flex-direction:column;justify-content:space-between}
-  .brand-text strong{display:block;font-size:14px;line-height:17px;letter-spacing:.01em}.brand-text span{display:block;font-size:10px;line-height:12px;color:#d8cbea}
+  .brand{display:flex;align-items:center;padding:4px 0;min-width:max-content}.brand-logo{display:block;height:68px;width:auto}
+  .brand-mark{width:36px;height:36px;display:grid;place-items:center;color:#056DAE;flex:0 0 36px}
+  .brand-mark svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .brand-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+  .brand-text strong{display:block;font-size:22px;line-height:26px;font-weight:800;letter-spacing:.005em}.brand-text span{display:block;font-size:11px;line-height:13px;color:#cfe2f3}
   .nav{display:flex;align-items:stretch;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1}
   .nav::-webkit-scrollbar{display:none}
-  .nav button,.friend-link{border:0;border-bottom:3px solid transparent;background:transparent;color:#d8cbea;
+  .nav button,.friend-link{border:0;border-bottom:3px solid transparent;background:transparent;color:#cfe2f3;
     padding:15px 16px 12px;font-family:inherit;font-size:13px;line-height:1.2;font-weight:800;white-space:nowrap;cursor:pointer;text-decoration:none;
     display:flex;align-items:center;transition:.15s ease}
   .nav button:hover,.friend-link:hover{color:#fff;background:rgba(255,255,255,.06)}
-  .nav button.active{color:#fff;border-bottom-color:var(--cyan);background:rgba(255,255,255,.04)}
-  .signal-select{align-self:center;margin-left:auto;padding:8px 32px 8px 11px;border:1px solid #80699f;
-    border-radius:8px;background:#3a225c;color:#dff6ff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
-  .mobile-select{display:none;width:100%;margin:10px 0;padding:11px 38px 11px 12px;border:1px solid #8d78aa;
+  .nav button.active{color:#fff;border-bottom-color:#056DAE;background:rgba(255,255,255,.04)}
+  .signal-select{align-self:center;margin-left:auto;padding:8px 32px 8px 11px;border:1px solid #7a9bb8;
+    border-radius:8px;background:#002D72;color:#dff6ff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+  .mobile-select{display:none;width:100%;margin:10px 0;padding:11px 38px 11px 12px;border:1px solid #7a9bb8;
     border-radius:9px;background:#fff;color:var(--scb-deep);font-family:inherit;font-size:14px;font-weight:800}
   .workspace{position:relative;flex:1;min-height:0;background:#fff}
   .panel{position:absolute;inset:0;display:none}.panel.active{display:block}
@@ -50,7 +50,7 @@
   .signals-head h1{font-size:25px;margin:0 0 6px}.signals-head p{font-size:12px;color:var(--muted);margin:2px 0;line-height:1.55}
   .source-credit{white-space:nowrap;color:var(--scb);font-size:12px;text-decoration:none;font-weight:700}
   .signal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:18px}
-  .signal-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#faf9fc}
+  .signal-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#F4F9FD}
   .signal-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.signal-ticker{font-weight:800;color:var(--scb-deep)}
   .signal-price{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700}.signal-label{font-size:11px;color:#888;margin:3px 0 8px}
   .signal-status{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:7px}
@@ -65,10 +65,7 @@
 <body>
 <header class="topbar">
   <div class="topbar-inner">
-    <div class="brand" aria-label="Investment Insights Hub">
-      <div class="brand-mark" aria-hidden="true"><svg viewBox="3 3 18 20"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/><path d="M4 21h16"/></svg></div>
-      <div class="brand-text"><strong>Investment Insights Hub</strong><span>Fund analytics · Market signals · Long-term context</span></div>
-    </div>
+    <a class="brand" href="#risk" aria-label="Investment Insight Hub"><img class="brand-logo" src="hub-logo.png" alt="Investment Insight Hub" width="204" height="68"></a>
     <nav class="nav" aria-label="Dashboard menu">
       <button type="button" data-panel="risk" class="active">Risk vs Return</button>
       <button type="button" data-panel="frontier">Efficient Frontier</button>
