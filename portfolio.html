@@ -178,6 +178,8 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
 .h-row.excluded { background:#fff7ed; }
 .h-row.excluded .h-name, .h-row.excluded .h-meta, .h-row.excluded .h-cat { opacity:.55; }
 .h-row.excluded .exclude-toggle { background:#fff7ed; border-color:#fdba74; color:var(--amber); }
+.h-row.opp-fund { background:#fdf2f8; }
+.h-row.opp-fund .exclude-toggle { background:#fdf2f8; border-color:#f9a8d4; color:#be185d; }
 .h-row.just-include { background:#eff6ff; }
 .h-row.just-include .exclude-toggle { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
 .h-empty { padding:18px 6px; text-align:center; color:var(--mute); font-size:13px; font-style:italic; }
@@ -389,6 +391,7 @@ h1 { font-size:22px; margin:0 0 2px; color:var(--scb); letter-spacing:-0.01em; }
   color:#9a3412; font-size:7.5px; font-weight:700; line-height:1; letter-spacing:-.2px; cursor:pointer; white-space:nowrap; z-index:2;
   display:flex; align-items:center; justify-content:center; }
 .cat-legend .leg-detail-exclude.st-exclude { background:#fff7ed; }
+.cat-legend .leg-detail-exclude.st-opp { background:#fdf2f8; border-color:#f9a8d4; color:#be185d; }
 .cat-legend .leg-detail-exclude.st-just { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
 .cat-legend .leg-detail-exclude:hover { background:#ffedd5; border-color:#f97316; }
 /* Fund rows sit inside a tinted Asset-class box (7px details padding + 8px box padding = 15px): keep the status button outside that box. */
@@ -742,7 +745,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
           </div>
           <input type="file" id="load-file" accept="application/json,.json" style="display:none" onchange="loadPortfolioFile(this)">
         </div>
-        <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged).</div>
+        <div class="status-note"><b>Status</b> (button at the right of each fund; click to cycle) · <b>I = Include</b>: counted in Allocation, Return, Contribution and Risk · <b>Ex = Exclude</b>: not counted in any of them · <b>Ju = Just Include</b>: shown in Allocation only (Return and Contribution 0%, historical performance unchanged) · <b>Opp = Opportunistic</b>: counted like Include, but the fund's Asset class and Sub-sector become Opportunistic.</div>
       </div>
       </div>
       <div class="editor-rail card" aria-label="Fund inputs hidden">
@@ -782,7 +785,7 @@ details { margin-top:10px; } summary { cursor:pointer; font-weight:600; }
         <div id="data-status" class="data-status" role="status"></div>
 
         <div class="cat-legend" id="cat-legend"></div>
-        <div class="status-note"><b>Include</b> = counted in Allocation, Return, Contribution and Risk · <b>Exclude</b> = not counted in any of them · <b>Just Include</b> = counted in Allocation only (0% return)</div>
+        <div class="status-note"><b>Include</b> = counted in Allocation, Return, Contribution and Risk · <b>Exclude</b> = not counted in any of them · <b>Just Include</b> = counted in Allocation only (0% return) · <b>Opportunistic</b> = counted like Include, grouped as Opportunistic</div>
 
       </div>
       </div>
@@ -1177,14 +1180,18 @@ function fmtPct(v, dp=2){ return v==null? "—" : (v>=0?"+":"") + v.toFixed(dp) 
 function fmtWeight(v){ return `${v.toFixed(Math.abs(v)<1 ? 2 : 1)}%`; }
 function pctClass(v){ if (v==null) return "zero"; return v>0?"pos":v<0?"neg":"zero"; }
 function holdingStatus(h){ return h.status || (h.excluded ? "exclude" : "include"); }
-function isHistorical(h){ return holdingStatus(h) === "include"; }
+function isHistorical(h){ const st = holdingStatus(h); return st === "include" || st === "opp"; }   // Opportunistic = Include for every calculation; it only regroups the fund
 function isAllocated(h){ return holdingStatus(h) !== "exclude"; }
 function isJustIncluded(h){ return holdingStatus(h) === "just"; }
-function statusLabel(h){ return holdingStatus(h) === "exclude" ? "Exclude" : holdingStatus(h) === "just" ? "Just Include" : "Include"; }
+function statusLabel(h){ const st = holdingStatus(h); return st === "exclude" ? "Exclude" : st === "just" ? "Just Include" : st === "opp" ? "Opportunistic" : "Include"; }
+function statusShort(h){ const st = holdingStatus(h); return st === "exclude" ? "Exclude" : st === "just" ? "Just Include" : st === "opp" ? "Opp" : "Include"; }
+// Opportunistic status: the fund stays fully Included (Allocation, Return, Contribution, Risk) but its Asset class and Sub-sector become "Opportunistic".
+function holdingFund(h){ const f = byCode[h.code]; return f && holdingStatus(h) === "opp" ? {...f, main:"Opportunistic", cat:"Opportunistic"} : f; }
 function statusTip(h){
   const st = holdingStatus(h);
   return st === "exclude" ? "Exclude: not counted in Allocation, Return, Contribution or Risk."
     : st === "just" ? "Just Include: counted in Allocation only."
+    : st === "opp" ? "Opportunistic: counted like Include, but its Asset class and Sub-sector are shown as Opportunistic."
     : "Include: counted in Allocation, Return, Contribution and Risk.";
 }
 function badgeFor(f){
@@ -1313,14 +1320,14 @@ function cycleHoldingStatus(code){
   const h=state.holdings.find(x=>x.code===code);
   if (!h) return;
   const current=holdingStatus(h);
-  h.status=current==="include" ? "exclude" : current==="exclude" ? "just" : "include";
+  h.status=current==="include" ? "exclude" : current==="exclude" ? "just" : current==="just" ? "opp" : "include";
   delete h.excluded;
   render();
 }
 
 function setHoldingStatus(code,status){
   const h=state.holdings.find(x=>x.code===code);
-  if (!h || !["include","exclude","just"].includes(status)) return;
+  if (!h || !["include","exclude","just","opp"].includes(status)) return;
   h.status=status;
   delete h.excluded;
   render();
@@ -1365,7 +1372,7 @@ function rearrangeByRisk(){
   if (curves) for (const leg of curves.legs) legByCode[leg.code]=leg;
   const mainLegs={}, subLegs={};
   for (const h of state.holdings) {
-    const f=byCode[h.code], leg=legByCode[h.code];
+    const f=holdingFund(h), leg=legByCode[h.code];
     if (!f || !leg) continue;
     (mainLegs[f.main || "Other"] ||= []).push(leg);
     (subLegs[`${f.main || "Other"}\u0000${f.cat || "Uncategorised"}`] ||= []).push(leg);
@@ -1373,7 +1380,7 @@ function rearrangeByRisk(){
   const mainSd=Object.fromEntries(Object.entries(mainLegs).map(([k,v])=>[k,sdForLegGroup(v)]));
   const subSd=Object.fromEntries(Object.entries(subLegs).map(([k,v])=>[k,sdForLegGroup(v)]));
   const key = h => {
-    const f=byCode[h.code] || {};
+    const f=holdingFund(h) || {};
     const main=f.main || "Other", sub=f.cat || "Uncategorised";
     const leg=legByCode[h.code];
     const sd=leg ? sdFromSeries(leg.series) : null;
@@ -1517,7 +1524,7 @@ function renderHoldingsList(){
     const legByCode = {};
     if (curves) for (const l of curves.legs) legByCode[l.code] = l;
     $h.innerHTML = state.holdings.map(h => {
-      const f = byCode[h.code]; if (!f) return "";
+      const f = holdingFund(h); if (!f) return "";
       const tr = badgeFor(f);
       const leg = legByCode[h.code];
       const status=holdingStatus(h), excluded=status==="exclude", just=status==="just";
@@ -1542,7 +1549,7 @@ function renderHoldingsList(){
         : leg
         ? `Implied starting weight on ${curves.dates[0]} — back-solved so that, left untouched (no rebalancing), it drifts into today's ${h.w}% Current Weight.`
         : `Unavailable for the selected period — check NAV coverage.`;
-      return `<div class="h-row ${excluded ? 'excluded' : just ? 'just-include' : ''}" data-code="${h.code}">
+      return `<div class="h-row ${excluded ? 'excluded' : just ? 'just-include' : status==='opp' ? 'opp-fund' : ''}" data-code="${h.code}">
         <div class="h-title" title="${f.name}"><span class="h-name">${f.code}${tr}</span></div>
         <div class="h-cat-line" title="${f.name} · ${f.cat}">${f.name} · ${f.cat}</div>
         <div>
@@ -1558,7 +1565,7 @@ function renderHoldingsList(){
           <div class="exp-ret ${pctClass(ret)}" title="NAV price return · ${WINDOWS[state.win]} · distributions excluded">${hist}</div>
           <div class="sd-val ${sdReal == null ? 'naive' : ''}" title="${excluded ? 'Excluded from Allocation and Performance.' : just ? 'Allocation only; historical risk is unchanged.' : sdTitle}">${excluded || just ? '' : 'SD '}${sdLabel}</div>
         </div>
-        <button class="exclude-toggle" aria-label="${statusLabel(h)} status for ${f.code}; click for next status" data-tip="${statusTip(h)}" onclick="cycleHoldingStatus('${h.code}')">${statusLabel(h)}</button>
+        <button class="exclude-toggle" aria-label="${statusLabel(h)} status for ${f.code}; click for next status" data-tip="${statusTip(h)}" onclick="cycleHoldingStatus('${h.code}')">${statusShort(h)}</button>
         <button class="rm" aria-label="Remove ${f.code}" title="Remove" onclick="removeFund('${h.code}')">×</button>
       </div>`;
     }).join("");
@@ -1773,7 +1780,7 @@ function groupByCat(curves){
   for (const h of state.holdings) {
     if (!h.w) continue;
     if (!isAllocated(h)) continue;
-    const f = byCode[h.code]; if (!f) continue;
+    const f = holdingFund(h); if (!f) continue;
     const main=effMain(f), sub=effCat(f);
     const key = useSub ? `${main}\u0000${sub}` : main;
     const leg = legByCode[h.code];
@@ -2882,7 +2889,7 @@ function drawRiskReturnDots(curves){
   const pts = [];
   for (const h of state.holdings) {
     if (!h.w) continue;
-    const f = byCode[h.code]; if (!f) continue;
+    const f = holdingFund(h); if (!f) continue;
     const leg = legByCode[h.code];
     const sd = leg ? sdFromSeries(leg.series) : null;
     const ret = leg ? (leg.g - 1) * 100 : null;
@@ -3377,7 +3384,7 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
   },{});
   // Fund rows (return / contribution / weights / status button) shown under a category row.
   const detailHtml = pred => state.holdings.filter(h=>{
-    const f=byCode[h.code]; return isAllocated(h) && f && pred(f);
+    const f=holdingFund(h); return isAllocated(h) && f && pred(f);
   }).map(h=>{
         const leg=legByCode[h.code];
         const just=isJustIncluded(h);
@@ -3385,14 +3392,14 @@ function drawDonut(sumw, curves, excludedWeight=0, justIncludedWeight=0){
         const contrib=just ? 0 : (leg && ret!=null ? (state.basis==="fund"?leg.fundStartW:leg.startW)*ret : null);
         const investWeight=sumw<=0 ? null : h.w/sumw*100;
         const issue=(!just && !leg && curves) ? curves.issues.find(i=>i.code===h.code) : null;
-        const status=just ? "Just Include · Allocation only" : (!leg ? (issue ? noDataText(h.code, issue.reason, true) : "Include · no data — Allocation only") : "Include");
+        const status=just ? "Just Include · Allocation only" : (!leg ? (issue ? noDataText(h.code, issue.reason, true) : "Include · no data — Allocation only") : (holdingStatus(h)==="opp" ? "Opportunistic" : "Include"));
         return `<div class="leg-detail-row ${just ? 'just-include' : ''}">
           <span class="leg-detail-code" title="${byCode[h.code].name}">${h.code}${status ? `<small class="leg-detail-status">${status}</small>` : ''}</span>
           <span class="leg-detail-num ${pctClass(ret)}">${fmtPct(ret,2)}</span>
           <span class="leg-detail-num ${pctClass(contrib)}">${fmtPct(contrib,2)}</span>
           <span class="leg-detail-num pf">${fmtWeight(h.w)}</span>
           <span class="leg-detail-num iv">${investWeight==null?'—':fmtWeight(investWeight)}</span>
-          <button class="leg-detail-exclude st-${holdingStatus(h)}" data-code="${encodeURIComponent(h.code)}" data-tip="${statusTip(h)}" aria-label="${statusLabel(h)} status for ${h.code}; click for next status">${holdingStatus(h)==="exclude"?"Ex":holdingStatus(h)==="just"?"Ju":"I"}</button>
+          <button class="leg-detail-exclude st-${holdingStatus(h)}" data-code="${encodeURIComponent(h.code)}" data-tip="${statusTip(h)}" aria-label="${statusLabel(h)} status for ${h.code}; click for next status">${holdingStatus(h)==="exclude"?"Ex":holdingStatus(h)==="just"?"Ju":holdingStatus(h)==="opp"?"Op":"I"}</button>
         </div>`;
   }).join("");
   const modelOn = state.showModel, efOn = state.showEF;   // Sub-sector view: the values sit on the Asset-class header rows
@@ -3527,7 +3534,7 @@ function applySaved(saved){
     res.skipped=saved.holdings.filter(h=>h && !byCode[h.code]).map(h=>String(h.code));
     state.holdings=saved.holdings.filter(h=>h && byCode[h.code] && !seen.has(h.code) && seen.add(h.code)).slice(0,MAX_FUNDS).map(h=>{
       const w=Math.min(remaining,Math.max(0,Number(h.w)||0)); remaining-=w;
-      const status=["include","exclude","just"].includes(h.status) ? h.status : (h.excluded===true ? "exclude" : "include");
+      const status=["include","exclude","just","opp"].includes(h.status) ? h.status : (h.excluded===true ? "exclude" : "include");
       return {code:h.code,w,status};
     });
     if (Number.isInteger(saved.win) && saved.win>=0 && saved.win<WINDOWS.length) state.win=saved.win;
