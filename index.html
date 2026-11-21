@@ -445,7 +445,12 @@ details.method .body { background:var(--soft); border-radius:8px; padding:10px 1
 .badge.tr-proxy { background:#dbeafe; color:#1e40af; }
 .badge.tr-orphan { background:#fce7f3; color:#9d174d; }
 
-.tables { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+.tables { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:12px; }
+.tables.collapsed { display:none; }
+/* one rule + one button hides / shows both Top-20 and Worst-20 tables */
+.tables-head { position:relative; height:0; margin:18px 0 0; border-top:1px solid var(--rule); }
+.tables-head .filters-toggle { position:absolute; right:0; top:-12px; background:#fff; }
+.tables-head-label { position:absolute; left:0; top:-9px; padding-right:8px; background:#fff; font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
 .table-wrap { border:1px solid var(--rule); border-radius:10px; overflow:hidden; }
 .table-wrap header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--soft); font-weight:700; font-size:13px; }
 .table-wrap header .hint { font-weight:400; font-size:12px; color:var(--mute); }
@@ -608,7 +613,8 @@ table .badge { font-size:7px; padding:0 3px; margin-left:3px; }
   </div>
   </div>
 
-  <div class="tables">
+  <div class="tables-head"><span class="tables-head-label">Top &amp; Worst 20 funds</span><button class="filters-toggle" id="tables-toggle" type="button" title="Show Top / Worst 20" aria-expanded="false">▴</button></div>
+  <div class="tables collapsed" id="tables">
     <div class="table-wrap">
       <header><span id="top-title">Top 20 funds</span><span class="hint" id="top-scope">Visible chart area</span></header>
       <div class="table-scroll"><table id="top-table"></table></div>
@@ -2413,6 +2419,13 @@ $("filters-toggle").onclick = () => {
   $("filters-toggle").textContent = collapsed ? "▴" : "▾";
   $("filters-toggle").title = collapsed ? "Show filters" : "Hide filters";
   $("filters-toggle").setAttribute("aria-expanded", String(!collapsed));
+};
+// One button hides / shows both the Top-20 and Worst-20 tables (hidden by default).
+$("tables-toggle").onclick = () => {
+  const c = $("tables").classList.toggle("collapsed");
+  $("tables-toggle").textContent = c ? "▴" : "▾";
+  $("tables-toggle").title = c ? "Show Top / Worst 20" : "Hide Top / Worst 20";
+  $("tables-toggle").setAttribute("aria-expanded", String(!c));
 };
 document.addEventListener("click", e => { if (!$("help-pop").contains(e.target) && e.target !== $("help-btn")) $("help-pop").classList.remove("show"); });
 document.addEventListener("click", e => { const d = document.querySelector(".wdrop.open"); if (d && !d.contains(e.target)) d.classList.remove("open"); });
