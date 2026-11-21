@@ -30,7 +30,6 @@
   .nav>button.active,.more-btn.active{font-weight:700;border-bottom-color:#4da3ff;background:rgba(255,255,255,.05)}
   .nav>*{flex:0 0 auto}
   .more{position:relative;display:flex;align-items:stretch}
-  .more-all{display:none}
   .more-all .more-menu{left:auto;right:0}
   .more-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
   .more.open .more-btn svg{transform:rotate(180deg)}
@@ -101,14 +100,6 @@
       <button type="button" data-panel="matrend">Trend</button>
       <button type="button" data-panel="growth">Growth Comparison</button>
       <button type="button" data-panel="portfolio">Portfolio Analysts</button>
-      <button type="button" data-panel="longterm">Long-term Markets</button>
-      <div class="more">
-        <button type="button" class="more-btn" aria-haspopup="true" aria-expanded="false">Market Signals<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
-        <div class="more-menu" role="menu">
-          <button type="button" role="menuitem" data-signal="signals">Market Signals</button>
-          <button type="button" role="menuitem" data-signal="set100">SET100 Signals</button>
-        </div>
-      </div>
       <div class="more more-all" id="more-all">
         <button type="button" class="more-btn" aria-haspopup="true" aria-expanded="false">More<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
         <div class="more-menu" role="menu"></div>
@@ -141,23 +132,23 @@
 <main class="workspace">
   <section id="panel-risk" class="panel active" aria-label="Risk vs Return dashboard">
     <div class="loading">กำลังโหลด Risk vs Return…</div>
-    <iframe data-src="index.html" title="Thailand Fund Risk vs Return"></iframe>
+    <iframe data-src="index.html?v=462fb48ab0d8f6d1" title="Thailand Fund Risk vs Return"></iframe>
   </section>
   <section id="panel-frontier" class="panel" aria-label="Efficient Frontier dashboard">
     <div class="loading">กำลังโหลด Efficient Frontier…</div>
-    <iframe data-src="frontier.html" title="Thailand Fund Efficient Frontier"></iframe>
+    <iframe data-src="frontier.html?v=32d8cd6edc8eaea1" title="Thailand Fund Efficient Frontier"></iframe>
   </section>
   <section id="panel-trend" class="panel" aria-label="Flow dashboard">
     <div class="loading">กำลังโหลด Flow…</div>
-    <iframe data-src="trend.html" title="Thailand Fund Flow"></iframe>
+    <iframe data-src="trend.html?v=b5038bc1328eecb0" title="Thailand Fund Flow"></iframe>
   </section>
   <section id="panel-matrend" class="panel" aria-label="Trend dashboard (MA Quadrant)">
     <div class="loading">กำลังโหลด Trend…</div>
-    <iframe data-src="ma-quadrant.html" title="Thailand Fund Trend (MA Quadrant)"></iframe>
+    <iframe data-src="ma-quadrant.html?v=84401c55dfe7afcc" title="Thailand Fund Trend (MA Quadrant)"></iframe>
   </section>
   <section id="panel-growth" class="panel" aria-label="Growth Comparison dashboard">
     <div class="loading">กำลังโหลด Growth Comparison…</div>
-    <iframe data-src="growth.html" title="Thailand Fund Growth Comparison"></iframe>
+    <iframe data-src="growth.html?v=1f1442016ba45234" title="Thailand Fund Growth Comparison"></iframe>
   </section>
   <section id="panel-longterm" class="panel" aria-label="Long-term Markets dashboard">
     <div class="loading">กำลังโหลด Long-term Markets…</div>
@@ -165,7 +156,7 @@
   </section>
   <section id="panel-portfolio" class="panel" aria-label="Portfolio Analysts dashboard">
     <div class="loading">กำลังโหลด Portfolio Analysts…</div>
-    <iframe data-src="portfolio.html" title="Thailand Fund Portfolio Analysts"></iframe>
+    <iframe data-src="portfolio.html?v=7915e66c8c099038" title="Thailand Fund Portfolio Analysts"></iframe>
   </section>
   <section id="panel-signals" class="panel signals-panel" aria-label="Market Signals">
     <div class="signals-wrap"><div class="signals-head"><div><h1>Market Signals</h1><p id="signals-method">กำลังโหลดข้อมูล…</p><p id="signals-updated"></p></div><a class="source-credit" href="https://arnupapchomsri-cloud.github.io/market-signal/hub.html" target="_blank" rel="noopener noreferrer">Data by Arnupap ↗</a></div><div id="signals-body"><div class="signal-error">กำลังโหลดข้อมูล…</div></div></div>
@@ -182,7 +173,7 @@
   var valid={risk:1,frontier:1,trend:1,matrend:1,growth:1,longterm:1,portfolio:1,signals:1,set100:1};
   var buttons=[].slice.call(document.querySelectorAll("[data-panel]"));
   var select=document.querySelector(".mobile-select");
-  var moreBox=document.querySelector(".more:not(.more-all)"),moreBtn=moreBox.querySelector(".more-btn"),moreItems=[].slice.call(moreBox.querySelectorAll("[data-signal]")),loaded={};
+  var loaded={};
   var feeds={signals:{url:"https://arnupapchomsri-cloud.github.io/market-signal/data/signals.json",method:"signals-method",updated:"signals-updated",body:"signals-body"},set100:{url:"https://arnupapchomsri-cloud.github.io/market-signal/data/set100_signals.json",method:"set100-method",updated:"set100-updated",body:"set100-body"}};
   function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
   function statusClass(status){return status==="UPTREND"?"up":status==="DOWNTREND"?"down":"mixed";}
@@ -227,15 +218,11 @@
     var panel=document.getElementById("panel-"+name),frame=panel.querySelector("iframe");
     if(frame&&!frame.getAttribute("src")){
       var target=frame.getAttribute("data-src");
-      // Refresh our own dashboards and the separately deployed Long-term Markets
-      // page when the Hub loads, so an iframe cannot retain an older release.
-      // The version is the file's Last-Modified stamp, so a new release is always
-      // picked up while an unchanged file comes from the browser cache. If the
-      // stamp cannot be read we fall back to Date.now() (always fresh, as before).
+      // Local page versions are stamped by the daily publisher.
       if(frame.getAttribute("data-pending"))return finishShow(name,writeHash);
       frame.setAttribute("data-pending","1");
       armSlowNotice(frame,name);
-      if(target&&(!/^https?:\/\//.test(target)||/^https:\/\/pippono9g-cloud\.github\.io\/longterm-markets-chart\//.test(target)))
+      if(target && /^https:\/\/pippono9g-cloud\.github\.io\/longterm-markets-chart\//.test(target))
         versionFor(target,function(v){frame.setAttribute("src",target+(target.indexOf("?")===-1?"?":"&")+"v="+v);});
       else frame.setAttribute("src",target);
     }
@@ -244,15 +231,14 @@
   function finishShow(name,writeHash){
     if(feeds[name])loadSignals(name);
     select.value=name;
-    current=name;moreBtn.classList.toggle("active",!!feeds[name]);markOverflow(name);
-    moreItems.forEach(function(i){i.classList.toggle("active",i.getAttribute("data-signal")===name);});
+    current=name;markOverflow(name);
     if(writeHash&&location.hash!=="#"+name)history.replaceState(null,"","#"+name);
   }
   buttons.forEach(function(button){button.addEventListener("click",function(){show(button.getAttribute("data-panel"),true);});});
   select.addEventListener("change",function(){show(select.value,true);});
-  function closeMore(){moreBox.classList.remove("open");moreBtn.setAttribute("aria-expanded","false");moreAll.classList.remove("open");moreAllBtn.setAttribute("aria-expanded","false");}
+  function closeMore(){moreAll.classList.remove("open");moreAllBtn.setAttribute("aria-expanded","false");}
   var nav=document.querySelector(".nav"),moreAll=document.getElementById("more-all"),moreAllBtn=moreAll.querySelector(".more-btn"),moreAllMenu=moreAll.querySelector(".more-menu");
-  var navItems=buttons.slice().concat([moreBox]),NAMES={},overflowed=[];
+  var navItems=buttons.slice(),NAMES={},overflowed=[],STATIC=[["longterm","Long-term Markets"],["signals","Market Signals"],["set100","SET100 Signals"]];
   buttons.forEach(function(b){NAMES[b.getAttribute("data-panel")]=b.textContent.trim();});
   function markOverflow(cur){
     var inMore=false;
@@ -261,27 +247,19 @@
   }
   function layout(){
     navItems.forEach(function(el){el.style.display="";});
-    moreAll.style.display="none";moreAllMenu.innerHTML="";overflowed=[];
-    var avail=nav.clientWidth,w=navItems.map(function(el){return el.offsetWidth;}),sum=w.reduce(function(a,b){return a+b;},0);
-    if(sum<=avail)return markOverflow(current);
-    moreAll.style.display="flex";
+    moreAllMenu.innerHTML="";overflowed=[];
+    var avail=nav.clientWidth,w=navItems.map(function(el){return el.offsetWidth;});
     var room=avail-moreAll.offsetWidth,used=0,cut=navItems.length;
     for(var k=0;k<navItems.length;k++){if(used+w[k]>room){cut=k;break;}used+=w[k];}
-    for(var j=cut;j<navItems.length;j++){
-      var el=navItems[j];el.style.display="none";
-      if(el===moreBox)overflowed.push(["signals","Market Signals"],["set100","SET100 Signals"]);
-      else{var n=el.getAttribute("data-panel");overflowed.push([n,NAMES[n]]);}
-    }
-    overflowed.forEach(function(o){var b=document.createElement("button");b.type="button";b.setAttribute("role","menuitem");b.setAttribute("data-go",o[0]);b.textContent=o[1];moreAllMenu.appendChild(b);});
+    for(var j=cut;j<navItems.length;j++){var el=navItems[j];el.style.display="none";var n=el.getAttribute("data-panel");overflowed.push([n,NAMES[n]]);}
+    overflowed.concat(STATIC).forEach(function(o){var b=document.createElement("button");b.type="button";b.setAttribute("role","menuitem");b.setAttribute("data-go",o[0]);b.textContent=o[1];moreAllMenu.appendChild(b);});
     markOverflow(current);
   }
   var current="risk";
-  moreAllBtn.addEventListener("click",function(e){e.stopPropagation();closeContact();moreBox.classList.remove("open");var o=moreAll.classList.toggle("open");moreAllBtn.setAttribute("aria-expanded",o?"true":"false");});
+  moreAllBtn.addEventListener("click",function(e){e.stopPropagation();closeContact();var o=moreAll.classList.toggle("open");moreAllBtn.setAttribute("aria-expanded",o?"true":"false");});
   moreAllMenu.addEventListener("click",function(e){var t=e.target.closest("[data-go]");if(!t)return;show(t.getAttribute("data-go"),true);closeMore();});
   window.addEventListener("resize",layout);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(layout);
-  moreBtn.addEventListener("click",function(e){e.stopPropagation();if(typeof closeContact==="function")closeContact();var o=moreBox.classList.toggle("open");moreBtn.setAttribute("aria-expanded",o?"true":"false");});
-  moreItems.forEach(function(i){i.addEventListener("click",function(){show(i.getAttribute("data-signal"),true);closeMore();});});
   document.addEventListener("click",closeMore);
   var contactBox=document.querySelector(".contact"),contactBtn=contactBox.querySelector(".contact-btn");
   function closeContact(){contactBox.classList.remove("open");contactBtn.setAttribute("aria-expanded","false");}
